@@ -1,7 +1,7 @@
 /* Wavelet filtering routines */
 
 /*
- * Copyright (c) 2010-2011 Paulo Matias
+ * Copyright (c) 2010-2012 Paulo Matias
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above

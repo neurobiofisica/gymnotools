@@ -57,7 +57,7 @@ void cwpt_tree_select(float *in, float *out, unsigned int n, cwpt_stop_point *ps
 typedef double(*bestbasis_cb_t)(void *arg, int level, unsigned int off, unsigned int n);
 typedef enum {
     BESTBASIS_MIN,
-    BESTBASIS_MAX,
+    BESTBASIS_MAX
 } bestbasis_optim_t;
 
 cwpt_stop_point *bestbasis_find(bestbasis_cb_t cb, void *arg, bestbasis_optim_t optim, unsigned int n, unsigned int *nps);
