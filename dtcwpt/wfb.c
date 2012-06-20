@@ -16,18 +16,19 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* Based on the public domain code from Numerical Recipes at:
+/* Based on public domain code from Numerical Recipes available at:
  * http://www.nr.com/pubdom/pwt.c.txt
  */
 
 #include "wfb.h"
 
-/* Analysis Filter Bank
- * filt: wavelet filter
- * in: input vector
- * n: size of the input vector
- * hout: low-pass filter output  (size: n/2)
- * gout: high-pass filter output (size: n/2)
+/**
+ * Analysis Filter Bank
+ * @param filt wavelet filter
+ * @param in input vector
+ * @param n size of the input vector
+ * @param hout low-pass filter output  (size: n/2)
+ * @param gout high-pass filter output (size: n/2)
  */
 void afb(wavelet_filt *filt, float *in, unsigned int n, float *hout, float *gout) {
     unsigned int i,ii,j,k,n1,ni,nmod,ncoef;
@@ -55,12 +56,13 @@ void afb(wavelet_filt *filt, float *in, unsigned int n, float *hout, float *gout
     }
 }
 
-/* Synthesis Filter Bank
- * filt: wavelet filter
- * hin: low-frequency input vector
- * gin: high-frequency input vector
- * n: size of the output vector
- * out: output vector
+/**
+ * Synthesis Filter Bank
+ * @param filt wavelet filter
+ * @param hin low-frequency input vector
+ * @param gin high-frequency input vector
+ * @param n size of the output vector
+ * @param out output vector
  */
 void sfb(wavelet_filt *filt, float *hin, float *gin, unsigned int n, float *out) {
     unsigned int i,ii,j,k,jf,n1,ni,nmod,ncoef;
