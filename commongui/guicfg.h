@@ -8,5 +8,6 @@
  */
 
 static const int PlotDialogNumPoints = 25000;
+static const float MaxAmplitude = 10.;
 
 #endif // COMMONGUI_GUICFG_H

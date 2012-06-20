@@ -7,13 +7,20 @@ RESOURCES += \
     resource.qrc
 
 SOURCES += \
-    main.cpp
+    main.cpp \
+    sigparamselectiondialog.cpp \
+    fileminmaxfinder.cpp
 
 HEADERS += \
-    guicfg.h
+    sigparamselectiondialog.h \
+    progressthread.h \
+    fileminmaxfinder.h
 
 CONFIG += qwt
 INCLUDEPATH += ..
 LIBS += -L../common -lcommon
 LIBS += -L../commongui -lcommongui
+
+FORMS += \
+    sigparamselectiondialog.ui
 
