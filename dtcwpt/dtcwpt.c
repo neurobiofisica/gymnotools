@@ -31,11 +31,12 @@
 #include "wfb.h"
 #include "dtcwpt.h"
 
-/* Computes a full CWPT tree
- * filt: CWPT filters
- * in: input vector
- * n: size of the input vector (n >= 2^2)
- * out: output vector (size: [log2(n)+1]*n)
+/**
+ * Computes a full CWPT tree
+ * @param filt CWPT filters
+ * @param in input vector
+ * @param n size of the input vector (n >= 2^2)
+ * @param out output vector (size: [log2(n)+1]*n)
  */
 void cwpt_fulltree(cwpt_filt *filt, float *in, unsigned int n, float *out) {
     unsigned int n2 = n >> 1;
@@ -70,10 +71,12 @@ void cwpt_fulltree(cwpt_filt *filt, float *in, unsigned int n, float *out) {
     }
 }
 
-/* Mix two CWPT trees to compute an approximately shift-invariant DT-CWPT
- * tree1, tree2: CWPT trees
- * n: size of each CWPT tree
- * out: output vector (size: n, may be the same as tree1 or tree2)
+/**
+ * Mix two CWPT trees to compute an approximately shift-invariant DT-CWPT
+ * @param tree1 CWPT tree
+ * @param tree2 CWPT tree
+ * @param n size of each CWPT tree
+ * @param out output vector (size: n, may be the same as tree1 or tree2)
  */
 void dtcwpt_mix(float *tree1, float *tree2, unsigned int n, float *out) {
     unsigned int i;
@@ -84,12 +87,13 @@ void dtcwpt_mix(float *tree1, float *tree2, unsigned int n, float *out) {
     }
 }
 
-/* Inverts the given level of a CWPT
- * filt: CWPT filters
- * in: input vector
- * n: size of the input vector (n >= 2^2)
- * level: transform level of the input vector (level > 0)
- * out: output vector (size: n)
+/**
+ * Inverts the given level of a CWPT
+ * @param filt CWPT filters
+ * @param in input vector
+ * @param n size of the input vector (n >= 2^2)
+ * @param level transform level of the input vector (level > 0)
+ * @param out output vector (size: n)
  */
 void invcwpt_level(cwpt_filt *filt, float *in, unsigned int n, unsigned int level, float *out) {
     unsigned int n2 = n >> 1;
@@ -140,7 +144,9 @@ void invcwpt_level(cwpt_filt *filt, float *in, unsigned int n, unsigned int leve
     free(tmp);
 }
 
-/* Recursive function to prepare a transform */
+/**
+ * Recursive function to prepare a transform
+ */
 static void _prep(prepared_cwpt *cwpt, unsigned int n, int level, int node) {
     unsigned int i;
     prepared_cwpt_stmt *stmt;
@@ -195,7 +201,9 @@ static void _prep(prepared_cwpt *cwpt, unsigned int n, int level, int node) {
     _prep(cwpt, n>>1, level+1, (node<<1)|1);
 }
 
-/* Callback to compare two stop points for sorting */
+/**
+ * Callback to compare two stop points for sorting
+ */
 static int _prep_sort(const void *a1, const void *a2) {
     const cwpt_stop_point *p1 = a1, *p2 = a2;
     int diff =  (p1->node << p2->level) - (p2->node << p1->level);
@@ -204,10 +212,12 @@ static int _prep_sort(const void *a1, const void *a2) {
     return p1->level - p2->level;
 }
 
-/* Prepare a CWPT
- * filt: CWPT filters
- * n: size of the input vector
- * ps: stop points (last level nodes, may be modified for sorting)
+/**
+ * Prepare a CWPT
+ * @param filt CWPT filters
+ * @param n size of the input vector
+ * @param ps stop points (last level nodes, may be modified for sorting)
+ * @returns a prepared packet transform
  */
 prepared_cwpt *cwpt_prepare(cwpt_filt *filt, unsigned int n, cwpt_stop_point *ps, unsigned int nps) {
     prepared_cwpt *cwpt;
@@ -226,10 +236,11 @@ prepared_cwpt *cwpt_prepare(cwpt_filt *filt, unsigned int n, cwpt_stop_point *ps
     return cwpt;
 }
 
-/* Computes a prepared CWPT
- * cwpt: prepared packet transform
- * in: input/output vector
- * tmp: temporary vector (same size as in)
+/**
+ * Computes a prepared CWPT
+ * @param cwpt prepared packet transform
+ * @param in input/output vector
+ * @param tmp temporary vector (same size as in)
  */
 void cwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp) {
     int i;
@@ -241,10 +252,11 @@ void cwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp) {
     }
 }
 
-/* Computes the inverse of a prepared CWPT
- * cwpt: prepared packet transform
- * in: input/output vector
- * tmp: temporary vector (same size as in)
+/**
+ * Computes the inverse of a prepared CWPT
+ * @param cwpt prepared packet transform
+ * @param in input/output vector
+ * @param tmp temporary vector (same size as in)
  */
 void invcwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp) {
     int i;
@@ -256,20 +268,22 @@ void invcwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp) {
     }
 }
 
-/* Free a prepared CWPT
- * cwpt: prepared packet transform
+/**
+ * Free a prepared CWPT
+ * @param cwpt prepared packet transform
  */
 void cwpt_free(prepared_cwpt *cwpt) {
     free(cwpt->stmts);
     free(cwpt);
 }
 
-/* Select elements from a full tree acording to a list of stop points.
- * in: full tree (size: [1+log(n)]*n)
- * out: output vector (size: n)
- * n: size of the output vector
- * ps: stop point list
- * nps: number of stop points
+/**
+ * Select elements from a full tree acording to a list of stop points.
+ * @param in full tree (size: [1+log(n)]*n)
+ * @param out output vector (size: n)
+ * @param n size of the output vector
+ * @param ps stop point list
+ * @param nps number of stop points
  */
 void cwpt_tree_select(float *in, float *out, unsigned int n, cwpt_stop_point *ps, unsigned int nps) {
     unsigned int i, m, maxlevel=0;
@@ -287,9 +301,15 @@ void cwpt_tree_select(float *in, float *out, unsigned int n, cwpt_stop_point *ps
     }
 }
 
-/* Finds the best basis in a full tree by calling the callback to get a metric
- * cb: callback
- * n: size of the transform
+/**
+ * Finds the best basis in a full tree by calling the callback to get a measure
+ * @param cb callback
+ * @param arg first argument passed to the callback
+ * @param optim chooses whether the measure will be maximized or minimized
+ * @param n size of the transform
+ * @param nps_ pointer to an integer which will hold the number of stop points
+ * @returns pointer to a list of stop points
+ *
  */
 cwpt_stop_point *bestbasis_find(bestbasis_cb_t cb, void *arg, bestbasis_optim_t optim, unsigned int n, unsigned int *nps_) {
     unsigned int m, off, off2, nps;
