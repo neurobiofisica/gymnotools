@@ -8,3 +8,11 @@ CONFIG += qwt
 RESOURCES += \
     resource.qrc
 
+HEADERS += \
+    guicfg.h
+
+INCLUDEPATH += ..
+LIBS += -L../common -lcommon
+
+SOURCES += \
+    main.cpp
