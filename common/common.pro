@@ -1,4 +1,6 @@
 TEMPLATE = lib
 CONFIG = staticlib
-SOURCES = 
-HEADERS = sigcfg.h
+SOURCES = \ 
+    sigutil.cpp
+HEADERS = sigcfg.h \
+    sigutil.h
