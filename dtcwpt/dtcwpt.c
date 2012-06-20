@@ -309,7 +309,6 @@ void cwpt_tree_select(float *in, float *out, unsigned int n, cwpt_stop_point *ps
  * @param n size of the transform
  * @param nps_ pointer to an integer which will hold the number of stop points
  * @returns pointer to a list of stop points
- *
  */
 cwpt_stop_point *bestbasis_find(bestbasis_cb_t cb, void *arg, bestbasis_optim_t optim, unsigned int n, unsigned int *nps_) {
     unsigned int m, off, off2, nps;
