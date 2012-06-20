@@ -1,2 +1,2 @@
 TEMPLATE = subdirs
-SUBDIRS = dsfmt dtcwpt svm
+SUBDIRS = dsfmt dtcwpt common svm
