@@ -1,8 +1,8 @@
 <RCC>
     <qresource prefix="/icon">
-        <file alias="go">icon/go.png</file>
-        <file alias="left">icon/left.png</file>
-        <file alias="right">icon/right.png</file>
-        <file alias="waveform">icon/waveform.png</file>
+        <file alias="go">../commongui/icon/go.png</file>
+        <file alias="left">../commongui/icon/left.png</file>
+        <file alias="right">../commongui/icon/right.png</file>
+        <file alias="waveform">../commongui/icon/waveform.png</file>
     </qresource>
 </RCC>
