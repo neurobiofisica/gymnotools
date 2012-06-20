@@ -1,7 +1,15 @@
+QT += core
+QT -= gui
+
 TEMPLATE = lib
-CONFIG = staticlib
+CONFIG += staticlib
+
 SOURCES = \ 
-    sigutil.cpp
+    sigutil.cpp \
+    signalbuffer.cpp \
+    signalfile.cpp
 HEADERS = sigcfg.h \
     sigutil.h \
-    resizablebuffer.h
+    resizablebuffer.h \
+    signalbuffer.h \
+    signalfile.h
