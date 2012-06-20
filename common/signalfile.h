@@ -13,8 +13,24 @@ public:
     explicit SignalFile(QObject *parent)                      : QFile(parent)      ,filter(NULL),filterLen(0) {}
     explicit SignalFile(const QString &name, QObject *parent) : QFile(name, parent),filter(NULL),filterLen(0) {}
     ~SignalFile();
+
+    /**
+     * Read channel data to a SignalBuffer
+     * @param buf the SignalBuffer
+     */
     void readCh(SignalBuffer &buf);
+
+    /**
+     * Set a lowpass filter to be used by readFilteredCh
+     * @param numtaps number of taps
+     * @param cutoff cut-off frequency
+     */
     void setFilter(int numtaps, float cutoff);
+
+    /**
+     * Read lowpass-filtered channel data to a SignalBuffer
+     * @param buf the SignalBuffer
+     */
     void readFilteredCh(SignalBuffer &buf);
 private:
     ResizableBuffer internalBuffer;
