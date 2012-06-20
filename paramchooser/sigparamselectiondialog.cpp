@@ -16,7 +16,6 @@
 
 static const int PassItems = PlotDialogNumPoints*NumChannels;
 static const int PassBytes = PassItems*sizeof(float);
-static const float SaturationMinMaxFactor = 0.95;
 
 SigParamSelectionDialog::SigParamSelectionDialog(const QString &filename, QWidget *parent) :
     QDialog(parent),
@@ -473,8 +472,8 @@ SigParamSaturationDialog::SigParamSaturationDialog(const QString &filename, doub
 
     findBuf = new float[PassItems];
 
-    sigMin = SaturationMinMaxFactor*min;
-    sigMax = SaturationMinMaxFactor*max;
+    sigMin = min;
+    sigMax = max;
 }
 
 SigParamSaturationDialog::~SigParamSaturationDialog()
