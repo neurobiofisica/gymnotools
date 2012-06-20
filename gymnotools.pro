@@ -1,2 +1,5 @@
 TEMPLATE = subdirs
-SUBDIRS = common dsfmt dtcwpt paramchooser svm
+SUBDIRS = common commongui dsfmt dtcwpt paramchooser svm
+
+commongui.depends = common
+paramchooser.depends = commongui

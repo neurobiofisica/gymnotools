@@ -1,5 +1,5 @@
-#ifndef GUICFG_H
-#define GUICFG_H
+#ifndef PARAMCHOOSER_GUICFG_H
+#define PARAMCHOOSER_GUICFG_H
 
 #include "common/sigcfg.h"
 
@@ -8,7 +8,6 @@
  */
 
 static const float MaxAmplitude = 10.;
-static const int PlotDialogNumPoints = 25000;
 static const int EODsPerWindow = 15;
 
 /*
@@ -17,4 +16,4 @@ static const int EODsPerWindow = 15;
 
 static const int CurvesPerWindow = EODsPerWindow * NumChannels;
 
-#endif // GUICFG_H
+#endif // PARAMCHOOSER_GUICFG_H
