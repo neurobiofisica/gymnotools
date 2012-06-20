@@ -78,13 +78,13 @@ private:
     QwtPlotZoomer *zoomer2;
 };
 
-class SigParamDetectionDialog : public SigParamSelectionDialog
+class SigParamThresholdDialog : public SigParamSelectionDialog
 {
     Q_OBJECT
 
 public:
-    explicit SigParamDetectionDialog(const QString &filename, int numtaps, float cutoff, double threshold, QWidget *parent = 0);
-    ~SigParamDetectionDialog();
+    explicit SigParamThresholdDialog(const QString &filename, int numtaps, float cutoff, double threshold, QWidget *parent = 0);
+    ~SigParamThresholdDialog();
 
     QDoubleSpinBox *sbThreshold;
 

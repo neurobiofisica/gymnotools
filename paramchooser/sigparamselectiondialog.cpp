@@ -1,4 +1,6 @@
+#include <stdlib.h>
 #include <QInputDialog>
+#include <QMessageBox>
 #include <QLabel>
 
 #include <qwt_plot_curve.h>
@@ -22,7 +24,10 @@ SigParamSelectionDialog::SigParamSelectionDialog(const QString &filename, QWidge
     ui(new Ui::SigParamSelectionDialog)
 {
     file.setFileName(filename);
-    file.open(QFile::ReadOnly);
+    if(!file.open(QFile::ReadOnly)) {
+        QMessageBox::critical(NULL, "Error opening file", QString("Error opening '%1'.").arg(filename));
+        exit(1);
+    }
     curPos = 0;
 
     ui->setupUi(this);
@@ -210,7 +215,7 @@ void SigParamLowpassDialog::posChanged()
     zoomer2->setZoomBase();
 }
 
-SigParamDetectionDialog::SigParamDetectionDialog(const QString &filename, int numtaps, float cutoff, double threshold, QWidget *parent) :
+SigParamThresholdDialog::SigParamThresholdDialog(const QString &filename, int numtaps, float cutoff, double threshold, QWidget *parent) :
     SigParamSelectionDialog(filename, parent)
 {
     setWindowTitle("Detection threshold");
@@ -249,17 +254,17 @@ SigParamDetectionDialog::SigParamDetectionDialog(const QString &filename, int nu
     file.setFilter(numtaps, cutoff);
 
     if(changePosWithoutCallingVirtual(0))
-        SigParamDetectionDialog::posChanged();
+        SigParamThresholdDialog::posChanged();
 }
 
-SigParamDetectionDialog::~SigParamDetectionDialog()
+SigParamThresholdDialog::~SigParamThresholdDialog()
 {
     delete buffer;
     delete [] ydata;
     delete [] shadowData;
 }
 
-void SigParamDetectionDialog::posChanged()
+void SigParamThresholdDialog::posChanged()
 {
     // set autoscale back (may have been unset by zoomer)
     plot->setAxisAutoScale(QwtPlot::xBottom);
@@ -269,7 +274,7 @@ void SigParamDetectionDialog::posChanged()
     zoomer->setZoomBase();
 }
 
-void SigParamDetectionDialog::replotData()
+void SigParamThresholdDialog::replotData()
 {
     file.seek(curPos);
     file.readFilteredCh(*buffer);

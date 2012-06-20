@@ -14,7 +14,8 @@ SOURCES += \
 HEADERS += \
     sigparamselectiondialog.h \
     progressthread.h \
-    fileminmaxfinder.h
+    fileminmaxfinder.h \
+    defaultparams.h
 
 CONFIG += qwt
 INCLUDEPATH += ..
