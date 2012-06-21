@@ -17,7 +17,7 @@ HEADERS += \
     fileminmaxfinder.h \
     defaultparams.h
 
-CONFIG += qwt
+CONFIG += qwt console
 INCLUDEPATH += ..
 LIBS += -L../common -lcommon
 LIBS += -L../commongui -lcommongui
