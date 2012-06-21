@@ -1,7 +1,7 @@
 QT += gui core
 
 TEMPLATE = lib
-CONFIG += staticlib
+CONFIG = qt staticlib
 
 HEADERS += \
     vieworiginalsignaldialog.h \

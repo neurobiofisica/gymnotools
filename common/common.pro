@@ -2,7 +2,7 @@ QT += core
 QT -= gui
 
 TEMPLATE = lib
-CONFIG += staticlib
+CONFIG = qt staticlib
 
 SOURCES = \ 
     sigutil.cpp \
