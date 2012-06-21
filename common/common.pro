@@ -13,4 +13,5 @@ HEADERS = sigcfg.h \
     sigutil.h \
     resizablebuffer.h \
     signalbuffer.h \
-    signalfile.h
+    signalfile.h \
+    commoninit.h

@@ -4,9 +4,9 @@
 
 #include <QApplication>
 #include <QString>
-#include <QTextCodec>
 #include <QMessageBox>
 
+#include "common/commoninit.h"
 #include "sigparamselectiondialog.h"
 #include "fileminmaxfinder.h"
 #include "defaultparams.h"
@@ -112,8 +112,7 @@ static int usage() {
 int main(int argc, char **argv)
 {
     QApplication *app = new QApplication(argc, argv);
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
-    setlocale(LC_NUMERIC, "C");
+    commonInit();
     progname = argv[0];
 
     if(argc >= 2) {
