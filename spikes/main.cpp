@@ -15,8 +15,9 @@ static int usage(const char *progname) {
             "  -c|--cutoff=c       Cutoff frequency (lowpass filter)\n"
             "  -d|--detection=d    Threshold for detecting a spike\n"
             "  -l|--minlevel=l     Minimum level to stop detection\n"
-            "  -r|--minratio=r     Ratio of the maximum amplitude to stop detection\n"
-            "  -s|--stopsamples=s  Samples below level to stop detection\n");
+            "  -r|--minratio=r     Ratio of the maximum level to stop detection\n"
+            "  -s|--stopsamples=s  Samples below level to stop detection\n"
+            "  -e|--exclude=file   File containing intervals/channels to exclude\n");
     return 1;
 }
 
@@ -42,10 +43,11 @@ int main(int argc, char **argv)
             { "minlevel",    required_argument, 0, 'l' },
             { "minratio",    required_argument, 0, 'r' },
             { "stopsamples", required_argument, 0, 's' },
+            { "exclude",     required_argument, 0, 'e' },
             { 0, 0, 0, 0 }
         };
 
-        int c = getopt_long(argc, argv, "fn:c:d:l:r:s:",
+        int c = getopt_long(argc, argv, "fn:c:d:l:r:s:e:",
                             long_options, &option_index);
         if(c == -1)
             break;
