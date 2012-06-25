@@ -4,7 +4,7 @@
 #include <getopt.h>
 
 #include "common/commoninit.h"
-#include "paramchooser/defaultparams.h"
+#include "common/defaultparams.h"
 
 static int usage(const char *progname) {
     fprintf(stderr, "%s [options] input.I32 output.spikes\n",

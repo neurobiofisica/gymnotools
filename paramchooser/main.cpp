@@ -7,9 +7,9 @@
 #include <QMessageBox>
 
 #include "common/commoninit.h"
+#include "common/defaultparams.h"
 #include "sigparamselectiondialog.h"
 #include "fileminmaxfinder.h"
-#include "defaultparams.h"
 
 static const char *progname = "paramchooser";
 static int usage();
