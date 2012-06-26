@@ -28,16 +28,18 @@ static void spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwi
 
     sigfile.seek(fileStart);
 
-    ExcludedIntervalList::ConstIterator curExcluded = excluded.constBegin();
-    const ExcludedIntervalList::ConstIterator lastExcluded = excluded.constEnd();
+    const ExcludedIntervalList::ConstIterator exclBeg = excluded.constBegin();
+    const ExcludedIntervalList::ConstIterator exclEnd = excluded.constEnd();
+    ExcludedIntervalList::ConstIterator exclCur = exclBeg;
 
     while(sigfile.pos() <= fileEnd) {
         const qint64 bufStart = sigfile.pos();
         sigfile.readFilteredCh(buffer);
 
-        while(bufStart > (*curExcluded).end && curExcluded != lastExcluded)
-            ++curExcluded;
-        if(bufStart < (*curExcluded).start) {
+        while(bufStart > (*exclCur).end && exclCur != exclEnd)
+            ++exclCur;
+        if(bufStart < (*exclCur).start) {
+
         }
     }
 }

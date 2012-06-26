@@ -55,4 +55,16 @@ void ExcludedIntervalList::parseFile(QFile &file)
     }
     // assert the container is sorted
     qSort(this->begin(), this->end());
+    // check if intervals are disjoint
+    ExcludedIntervalList::ConstIterator it = this->begin();
+    if(it == this->end())
+        return;
+    qint64 lastEnd = (*it).end;
+    for(++it; it != this->end(); ++it) {
+        if((*it).start <= lastEnd) {
+            fprintf(stderr, "ExcludedIntervals: the list of intervals "
+                    "is not disjoint.\n");
+            break;
+        }
+    }
 }
