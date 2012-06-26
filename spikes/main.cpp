@@ -14,6 +14,15 @@
 #include "common/signalfile.h"
 #include "common/excludedintervals.h"
 
+static void spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin,
+                               float detection, float minlevel,
+                               float minratio, int stopsamples,
+                               float saturationLow, float saturationHigh,
+                               ExcludedIntervalList &intervals)
+{
+    SignalBuffer buf(2*EODSamples);
+}
+
 static int usage(const char *progname)
 {
     fprintf(stderr, "%s [options] input.I32 output.spikes\n",
@@ -106,7 +115,8 @@ int main(int argc, char **argv)
             else {
                 QStringList sl = QString(optarg).split(",");
                 if(sl.count() != 2) {
-                    fprintf(stderr, "--saturation argument must be 'def' or a list of two numbers\n");
+                    fprintf(stderr, "--saturation argument must be 'def' or"
+                            " a list of two numbers\n");
                     return 1;
                 }
                 saturationLow = sl.at(0).toFloat();
@@ -130,7 +140,17 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    qDebug() << saturationLow << ", " << saturationHigh;
+    const char *outFilename = argv[optind+1];
+    QFile outfile(outFilename);
+
+    if(!outfile.open(QIODevice::WriteOnly)) {
+        fprintf(stderr, "Can't open output file (%s).\n", outFilename);
+        return 1;
+    }
+
+    spikeDiscriminator(sigfile, outfile, fixedwin, detection,
+                       minlevel, minratio, stopsamples,
+                       saturationLow, saturationHigh, intervals);
 
     return 0;
 }

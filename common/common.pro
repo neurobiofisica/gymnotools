@@ -9,7 +9,8 @@ SOURCES = \
     sigutil.cpp \
     signalbuffer.cpp \
     signalfile.cpp \
-    excludedintervals.cpp
+    excludedintervals.cpp \
+    cutincomplete.cpp
 HEADERS = sigcfg.h \
     sigutil.h \
     resizablebuffer.h \
@@ -17,4 +18,5 @@ HEADERS = sigcfg.h \
     signalfile.h \
     commoninit.h \
     defaultparams.h \
-    excludedintervals.h
+    excludedintervals.h \
+    cutincomplete.h
