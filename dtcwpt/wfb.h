@@ -28,7 +28,24 @@ typedef struct {
     float *h, *g;
 } wavelet_filt;
 
+/**
+ * Analysis Filter Bank
+ * @param filt wavelet filter
+ * @param in input vector
+ * @param n size of the input vector
+ * @param hout low-pass filter output  (size: n/2)
+ * @param gout high-pass filter output (size: n/2)
+ */
 void afb(wavelet_filt *filt, float *in, unsigned int n, float *hout, float *gout);
+
+/**
+ * Synthesis Filter Bank
+ * @param filt wavelet filter
+ * @param hin low-frequency input vector
+ * @param gin high-frequency input vector
+ * @param n size of the output vector
+ * @param out output vector
+ */
 void sfb(wavelet_filt *filt, float *hin, float *gin, unsigned int n, float *out);
 
 #endif
