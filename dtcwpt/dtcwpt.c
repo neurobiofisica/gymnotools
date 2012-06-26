@@ -31,13 +31,6 @@
 #include "wfb.h"
 #include "dtcwpt.h"
 
-/**
- * Computes a full CWPT tree
- * @param filt CWPT filters
- * @param in input vector
- * @param n size of the input vector (n >= 2^2)
- * @param out output vector (size: [log2(n)+1]*n)
- */
 void cwpt_fulltree(cwpt_filt *filt, float *in, unsigned int n, float *out) {
     unsigned int n2 = n >> 1;
     unsigned int m = n2, i, j, off;
@@ -71,13 +64,6 @@ void cwpt_fulltree(cwpt_filt *filt, float *in, unsigned int n, float *out) {
     }
 }
 
-/**
- * Mix two CWPT trees to compute an approximately shift-invariant DT-CWPT
- * @param tree1 CWPT tree
- * @param tree2 CWPT tree
- * @param n size of each CWPT tree
- * @param out output vector (size: n, may be the same as tree1 or tree2)
- */
 void dtcwpt_mix(float *tree1, float *tree2, unsigned int n, float *out) {
     unsigned int i;
     for(i = 0; i < n; i++) {
@@ -87,14 +73,6 @@ void dtcwpt_mix(float *tree1, float *tree2, unsigned int n, float *out) {
     }
 }
 
-/**
- * Inverts the given level of a CWPT
- * @param filt CWPT filters
- * @param in input vector
- * @param n size of the input vector (n >= 2^2)
- * @param level transform level of the input vector (level > 0)
- * @param out output vector (size: n)
- */
 void invcwpt_level(cwpt_filt *filt, float *in, unsigned int n, unsigned int level, float *out) {
     unsigned int n2 = n >> 1;
     unsigned int m, i, j;
@@ -212,13 +190,6 @@ static int _prep_sort(const void *a1, const void *a2) {
     return p1->level - p2->level;
 }
 
-/**
- * Prepare a CWPT
- * @param filt CWPT filters
- * @param n size of the input vector
- * @param ps stop points (last level nodes, may be modified for sorting)
- * @returns a prepared packet transform
- */
 prepared_cwpt *cwpt_prepare(cwpt_filt *filt, unsigned int n, cwpt_stop_point *ps, unsigned int nps) {
     prepared_cwpt *cwpt;
     assert((cwpt = malloc(sizeof(prepared_cwpt))) != NULL);
@@ -236,12 +207,6 @@ prepared_cwpt *cwpt_prepare(cwpt_filt *filt, unsigned int n, cwpt_stop_point *ps
     return cwpt;
 }
 
-/**
- * Computes a prepared CWPT
- * @param cwpt prepared packet transform
- * @param in input/output vector
- * @param tmp temporary vector (same size as in)
- */
 void cwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp) {
     int i;
     for(i = 0; i < cwpt->numstmts; i++) {
@@ -252,12 +217,6 @@ void cwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp) {
     }
 }
 
-/**
- * Computes the inverse of a prepared CWPT
- * @param cwpt prepared packet transform
- * @param in input/output vector
- * @param tmp temporary vector (same size as in)
- */
 void invcwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp) {
     int i;
     for(i = cwpt->numstmts-1; i >= 0; i--) {
@@ -268,23 +227,11 @@ void invcwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp) {
     }
 }
 
-/**
- * Free a prepared CWPT
- * @param cwpt prepared packet transform
- */
 void cwpt_free(prepared_cwpt *cwpt) {
     free(cwpt->stmts);
     free(cwpt);
 }
 
-/**
- * Select elements from a full tree acording to a list of stop points.
- * @param in full tree (size: [1+log(n)]*n)
- * @param out output vector (size: n)
- * @param n size of the output vector
- * @param ps stop point list
- * @param nps number of stop points
- */
 void cwpt_tree_select(float *in, float *out, unsigned int n, cwpt_stop_point *ps, unsigned int nps) {
     unsigned int i, m, maxlevel=0;
     /* Count number of levels */
@@ -301,15 +248,6 @@ void cwpt_tree_select(float *in, float *out, unsigned int n, cwpt_stop_point *ps
     }
 }
 
-/**
- * Finds the best basis in a full tree by calling the callback to get a measure
- * @param cb callback
- * @param arg first argument passed to the callback
- * @param optim chooses whether the measure will be maximized or minimized
- * @param n size of the transform
- * @param nps_ pointer to an integer which will hold the number of stop points
- * @returns pointer to a list of stop points
- */
 cwpt_stop_point *bestbasis_find(bestbasis_cb_t cb, void *arg, bestbasis_optim_t optim, unsigned int n, unsigned int *nps_) {
     unsigned int m, off, off2, nps;
     int level, maxlevel = 0;
