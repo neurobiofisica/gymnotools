@@ -8,11 +8,13 @@ CONFIG -= debug_and_release debug_and_release_target
 SOURCES = \ 
     sigutil.cpp \
     signalbuffer.cpp \
-    signalfile.cpp
+    signalfile.cpp \
+    excludedintervals.cpp
 HEADERS = sigcfg.h \
     sigutil.h \
     resizablebuffer.h \
     signalbuffer.h \
     signalfile.h \
     commoninit.h \
-    defaultparams.h
+    defaultparams.h \
+    excludedintervals.h
