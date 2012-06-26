@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <limits>
 
+#include <QStringList>
 #include <QtDebug>
 
 #include "common/commoninit.h"
@@ -23,7 +26,8 @@ static int usage(const char *progname)
             "  -l|--minlevel=l     Minimum level to stop detection\n"
             "  -r|--minratio=r     Ratio of the maximum level to stop detection\n"
             "  -s|--stopsamples=s  Samples below level to stop detection\n"
-            "  -e|--exclude=file   File containing intervals/channels to exclude\n");
+            "  -e|--exclude=file   File containing intervals/channels to exclude\n"
+            "  -z|--saturation=a,b Low and high saturation levels to filter out\n");
     return 1;
 }
 
@@ -38,6 +42,8 @@ int main(int argc, char **argv)
     float minlevel = defaultMinLevel;
     float minratio = defaultMinRatio;
     int stopsamples = defaultStopSamples;
+    float saturationLow = -std::numeric_limits<float>::infinity();
+    float saturationHigh = std::numeric_limits<float>::infinity();
     ExcludedIntervalList intervals;
 
     while(1) {
@@ -51,10 +57,11 @@ int main(int argc, char **argv)
             { "minratio",    required_argument, 0, 'r' },
             { "stopsamples", required_argument, 0, 's' },
             { "exclude",     required_argument, 0, 'e' },
+            { "saturation",  required_argument, 0, 'z' },
             { 0, 0, 0, 0 }
         };
 
-        int c = getopt_long(argc, argv, "fn:c:d:l:r:s:e:",
+        int c = getopt_long(argc, argv, "fn:c:d:l:r:s:e:z:",
                             long_options, &option_index);
         if(c == -1)
             break;
@@ -91,6 +98,21 @@ int main(int argc, char **argv)
                 intervals.parseFile(file);
             }
             break;
+        case 'z':
+            if(!strcmp(optarg, "def")) {
+                saturationLow = defaultSaturationLow;
+                saturationHigh = defaultSaturationHigh;
+            }
+            else {
+                QStringList sl = QString(optarg).split(",");
+                if(sl.count() != 2) {
+                    fprintf(stderr, "--saturation argument must be 'def' or a list of two numbers\n");
+                    return 1;
+                }
+                saturationLow = sl.at(0).toFloat();
+                saturationHigh = sl.at(1).toFloat();
+            }
+            break;
         default:
             return usage(argv[0]);
         }
@@ -108,6 +130,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    qDebug() << saturationLow << ", " << saturationHigh;
 
     return 0;
 }
