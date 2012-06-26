@@ -13,6 +13,7 @@
 #include "common/sigcfg.h"
 #include "common/signalfile.h"
 #include "common/excludedintervals.h"
+#include "common/cutincomplete.h"
 
 static void spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin,
                                float detection, float minlevel,
@@ -20,7 +21,17 @@ static void spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwi
                                float saturationLow, float saturationHigh,
                                ExcludedIntervalList &intervals)
 {
-    SignalBuffer buf(2*EODSamples);
+    SignalBuffer buffer(2*EODSamples);
+
+    const qint64 fileStart = cutIncompleteSpikes(sigfile, false, minlevel);
+    const qint64 fileEnd   = cutIncompleteSpikes(sigfile, true,  minlevel);
+
+    sigfile.seek(fileStart);
+
+    while(sigfile.pos() <= fileEnd) {
+        sigfile.readFilteredCh(buffer);
+        buffer.diff();
+    }
 }
 
 static int usage(const char *progname)
@@ -154,3 +165,4 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
