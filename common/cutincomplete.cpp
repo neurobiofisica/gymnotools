@@ -1,18 +1,28 @@
 #include "sigcfg.h"
 #include "cutincomplete.h"
 
-qint64 cutIncompleteSpikes(SignalFile &file, bool atEnd, float minlevel) {
-    SignalBuffer buf(EODSamples);
-    qint64 curPos = 0;
-    int first_i = 0;
-    int direction = 1;
-
+qint64 cutIncompleteAtStartOrEnd(SignalFile &file, float minlevel, bool atEnd)
+{
     if(atEnd) {
-        direction = -1;
-        first_i = buf.spc() - 2;
-        curPos = file.size() - buf.bytes();
+        qint64 curPos = file.size() - EODSamples*BytesPerSample;
         // assert the position is aligned to the beginning of a sample
         curPos -= curPos % BytesPerSample;
+        file.seek(curPos);
+    }
+    else {
+        file.seek(0);
+    }
+    return cutIncompleteSpikes(file, minlevel, atEnd ? -1 : 1);
+}
+
+qint64 cutIncompleteSpikes(SignalFile &file, float minlevel, int direction)
+{
+    SignalBuffer buf(EODSamples);
+    qint64 curPos = file.pos();
+    int first_i = 0;
+
+    if(direction == -1) {
+        first_i = buf.spc() - 2;
     }
 
     const int desiredSilentSamples = EODSamples / 2;

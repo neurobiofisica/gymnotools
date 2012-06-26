@@ -19,18 +19,26 @@ static void spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwi
                                float detection, float minlevel,
                                float minratio, int stopsamples,
                                float saturationLow, float saturationHigh,
-                               ExcludedIntervalList &intervals)
+                               ExcludedIntervalList &excluded)
 {
     SignalBuffer buffer(2*EODSamples);
 
-    const qint64 fileStart = cutIncompleteSpikes(sigfile, false, minlevel);
-    const qint64 fileEnd   = cutIncompleteSpikes(sigfile, true,  minlevel);
+    const qint64 fileStart = cutIncompleteAtStartOrEnd(sigfile, minlevel, false);
+    const qint64 fileEnd   = cutIncompleteAtStartOrEnd(sigfile, minlevel, true);
 
     sigfile.seek(fileStart);
 
+    ExcludedIntervalList::ConstIterator curExcluded = excluded.constBegin();
+    const ExcludedIntervalList::ConstIterator lastExcluded = excluded.constEnd();
+
     while(sigfile.pos() <= fileEnd) {
+        const qint64 bufStart = sigfile.pos();
         sigfile.readFilteredCh(buffer);
-        buffer.diff();
+
+        while(bufStart > (*curExcluded).end && curExcluded != lastExcluded)
+            ++curExcluded;
+        if(bufStart < (*curExcluded).start) {
+        }
     }
 }
 
@@ -64,7 +72,7 @@ int main(int argc, char **argv)
     int stopsamples = defaultStopSamples;
     float saturationLow = -std::numeric_limits<float>::infinity();
     float saturationHigh = std::numeric_limits<float>::infinity();
-    ExcludedIntervalList intervals;
+    ExcludedIntervalList excluded;
 
     while(1) {
         int option_index = 0;
@@ -115,7 +123,7 @@ int main(int argc, char **argv)
                     fprintf(stderr, "Can't open exclude file (%s).\n", optarg);
                     return 1;
                 }
-                intervals.parseFile(file);
+                excluded.parseFile(file);
             }
             break;
         case 'z':
@@ -161,7 +169,7 @@ int main(int argc, char **argv)
 
     spikeDiscriminator(sigfile, outfile, fixedwin, detection,
                        minlevel, minratio, stopsamples,
-                       saturationLow, saturationHigh, intervals);
+                       saturationLow, saturationHigh, excluded);
 
     return 0;
 }
