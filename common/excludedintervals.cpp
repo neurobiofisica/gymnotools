@@ -62,8 +62,8 @@ void ExcludedIntervalList::parseFile(QFile &file)
     qint64 lastEnd = (*it).end;
     for(++it; it != this->end(); ++it) {
         if((*it).start <= lastEnd) {
-            fprintf(stderr, "ExcludedIntervals: the list of intervals "
-                    "is not disjoint.\n");
+            fprintf(stderr, "ExcludedIntervals: there are non-disjoint "
+                    "intervals in the list.\n");
             break;
         }
     }

@@ -57,7 +57,7 @@ public:
         }
     }
 
-private:
+protected:
     int samplesPerChannel;
     float **samples;
 };
