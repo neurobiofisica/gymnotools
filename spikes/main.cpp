@@ -50,8 +50,7 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
                                ExcludedIntervalList &excluded)
 {
     ExcludingCapableSignalBuffer buffer(16*EODSamples);
-    float *squareSum = buffer.ch(0);   // we will always overwrite ch(0) with
-                                       // the sum of squares
+    float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
 
     const qint64 fileStart = cutIncompleteAtStartOrEnd(sigfile, minlevel, false);
     const qint64 fileEnd   = cutIncompleteAtStartOrEnd(sigfile, minlevel, true);
@@ -61,16 +60,19 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
     // abort if intervals overlap with fileStart or fileEnd
     if(excluded.count() > 0) {
         if(excluded.at(0).end < fileStart) {
-            fprintf(stderr, "error: first interval overlaps with fileStart=%lld\n", fileStart);
+            fprintf(stderr, "error: first interval overlaps with"
+                    " fileStart=%lld\n", fileStart);
             return 1;
         }
         if(excluded.at(excluded.count() - 1).start >= fileEnd) {
-            fprintf(stderr, "error: last interval overlaps with fileEnd=%lld\n", fileEnd);
+            fprintf(stderr, "error: last interval overlaps with"
+                    " fileEnd=%lld\n", fileEnd);
             return 1;
         }
     }
 
     ExcludedIntervalList::ConstIterator excl;
+
     for(excl = excluded.constBegin(); excl != excluded.constEnd(); ++excl) {
         // process data until the start of the next interval
         qint64 stopAt = (*excl).start;
@@ -103,21 +105,26 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
             numExcluded += (*excl).chExcluded[i];
         }
 
-        while(sigfile.pos() <= stopAt) {
-            const qint64 bufStart = sigfile.pos();
-            sigfile.readFilteredCh(buffer);
-            buffer.diff();
-            buffer.sumSquares(squareSum, (*excl).chExcluded);
-            int numSamples = buffer.spc() - 1; // one less because of diff()
-            // if the current buffer contains part of a interval
-            if(sigfile.pos() > stopAt) {
-                // some samples shouldn't be checked
-                numSamples -= (sigfile.pos() - stopAt)/BytesPerSample;
-            }
-            for(int i = 0; i < numSamples; i++) {
-                if(squareSum[i] >= detection) {
-                    sigfile.seek(bufStart + i*BytesPerSample);
-                    // process the spike at bufStart + i*BytesPerSample
+        if(numExcluded != NumChannels) {
+            const float correctedDetection =
+                    (NumChannels - numExcluded) * detection / (float)NumChannels;
+
+            while(sigfile.pos() <= stopAt) {
+                const qint64 bufStart = sigfile.pos();
+                sigfile.readFilteredCh(buffer);
+                buffer.diff();
+                buffer.sumSquares(squareSum, (*excl).chExcluded);
+                int numSamples = buffer.spc() - 1; // one less because of diff()
+                // if the current buffer contains part of a interval
+                if(sigfile.pos() > stopAt) {
+                    // some samples shouldn't be checked
+                    numSamples -= (sigfile.pos() - stopAt)/BytesPerSample;
+                }
+                for(int i = 0; i < numSamples; i++) {
+                    if(squareSum[i] >= correctedDetection) {
+                        sigfile.seek(bufStart + i*BytesPerSample);
+                        // process the spike at bufStart + i*BytesPerSample
+                    }
                 }
             }
         }
@@ -192,7 +199,7 @@ int main(int argc, char **argv)
             { 0, 0, 0, 0 }
         };
 
-        int c = getopt_long(argc, argv, "fn:c:d:l:r:s:e:z:",
+        int c = getopt_long(argc, argv, "fn:c:d:a:l:r:s:e:z:",
                             long_options, &option_index);
         if(c == -1)
             break;
