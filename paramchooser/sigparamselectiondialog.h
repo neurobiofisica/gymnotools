@@ -127,13 +127,13 @@ private:
     double *ydata, *shadowDataL, *shadowDataH;
 };
 
-class SigParamSVMDialog : public SigParamWithDualThreshold
+class SigParamAmplitudeDialog : public SigParamWithDualThreshold
 {
     Q_OBJECT
 
 public:
-    explicit SigParamSVMDialog(const QString &filename, double threshold, QWidget *parent = 0);
-    ~SigParamSVMDialog();
+    explicit SigParamAmplitudeDialog(const QString &filename, double threshold, QWidget *parent = 0);
+    ~SigParamAmplitudeDialog();
 
     QDoubleSpinBox *sbThreshold;
 

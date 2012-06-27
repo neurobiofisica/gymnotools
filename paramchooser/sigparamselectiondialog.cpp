@@ -408,7 +408,7 @@ void SigParamWithDualThreshold::replotData()
     plot->replot();
 }
 
-SigParamSVMDialog::SigParamSVMDialog(const QString &filename, double threshold, QWidget *parent) :
+SigParamAmplitudeDialog::SigParamAmplitudeDialog(const QString &filename, double threshold, QWidget *parent) :
     SigParamWithDualThreshold(filename, -threshold, threshold, parent)
 {
     setWindowTitle("SVM usage threshold");
@@ -432,11 +432,11 @@ SigParamSVMDialog::SigParamSVMDialog(const QString &filename, double threshold, 
     QObject::connect(sbChannel, SIGNAL(valueChanged(int)), this, SLOT(channelChanged(int)));
 }
 
-SigParamSVMDialog::~SigParamSVMDialog()
+SigParamAmplitudeDialog::~SigParamAmplitudeDialog()
 {
 }
 
-void SigParamSVMDialog::thresholdChanged(double threshold)
+void SigParamAmplitudeDialog::thresholdChanged(double threshold)
 {
     thresholdHChanged( threshold);
     thresholdLChanged(-threshold);

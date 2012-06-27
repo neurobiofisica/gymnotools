@@ -44,14 +44,14 @@ static int threshold_main(int argc, char **argv) {
     return 0;
 }
 
-static int svm_threshold_main(int argc, char **argv) {
+static int amplitude_threshold_main(int argc, char **argv) {
     if(argc != 2)
         return usage();
-    SigParamSVMDialog *dlg = new SigParamSVMDialog(
+    SigParamAmplitudeDialog *dlg = new SigParamAmplitudeDialog(
                 argv[1],
-                defaultSVMThreshold);
+                defaultOnlyAbove);
     if(dlg->exec()) {
-        printf("svm_threshold = %.2f\n", dlg->sbThreshold->value());
+        printf("amplitude_threshold = %.2f\n", dlg->sbThreshold->value());
     }
     delete dlg;
     return 0;
@@ -95,7 +95,7 @@ struct module_t {
 module_t modules[] = {
     {"lowpass", "datafile", lowpass_main},
     {"threshold", "datafile numtaps cutoff", threshold_main},
-    {"svm_threshold", "datafile", svm_threshold_main},
+    {"amplitude_threshold", "datafile", amplitude_threshold_main},
     {"saturation", "datafile [search_ratio]", saturation_main},
     {NULL, NULL, NULL}
 };

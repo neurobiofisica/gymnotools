@@ -16,12 +16,12 @@
 #include "common/cutincomplete.h"
 
 static void spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin,
-                               float detection, float minlevel,
+                               float detection, float onlyabove, float minlevel,
                                float minratio, int stopsamples,
                                float saturationLow, float saturationHigh,
                                ExcludedIntervalList &excluded)
 {
-    SignalBuffer buffer(2*EODSamples);
+    SignalBuffer buffer(16*EODSamples);
 
     const qint64 fileStart = cutIncompleteAtStartOrEnd(sigfile, minlevel, false);
     const qint64 fileEnd   = cutIncompleteAtStartOrEnd(sigfile, minlevel, true);
@@ -32,12 +32,20 @@ static void spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwi
     const ExcludedIntervalList::ConstIterator exclEnd = excluded.constEnd();
     ExcludedIntervalList::ConstIterator exclCur = exclBeg;
 
+    // skip any intervals placed before fileStart
+    while(exclCur != exclEnd && fileStart > (*exclCur).end)
+        ++exclCur;
+
+    while(exclCur != exclEnd) {
+        // process buffer until the start of the next interval
+
+    }
+
     while(sigfile.pos() <= fileEnd) {
         const qint64 bufStart = sigfile.pos();
         sigfile.readFilteredCh(buffer);
 
-        while(bufStart > (*exclCur).end && exclCur != exclEnd)
-            ++exclCur;
+
         if(bufStart < (*exclCur).start) {
 
         }
@@ -53,6 +61,7 @@ static int usage(const char *progname)
             "  -n|--numtaps=n      Number of taps (lowpass filter)\n"
             "  -c|--cutoff=c       Cutoff frequency (lowpass filter)\n"
             "  -d|--detection=d    Threshold for detecting a spike\n"
+            "  -a|--onlyabove=a    Only output spikes above this amplitude\n"
             "  -l|--minlevel=l     Minimum level to stop detection\n"
             "  -r|--minratio=r     Ratio of the maximum level to stop detection\n"
             "  -s|--stopsamples=s  Samples below level to stop detection\n"
@@ -69,6 +78,7 @@ int main(int argc, char **argv)
     int numtaps = defaultLowpassNumTaps;
     float cutoff = defaultLowPassCutoff;
     float detection = defaultDetectionThreshold;
+    float onlyabove = 0.;
     float minlevel = defaultMinLevel;
     float minratio = defaultMinRatio;
     int stopsamples = defaultStopSamples;
@@ -83,6 +93,7 @@ int main(int argc, char **argv)
             { "numtaps",     required_argument, 0, 'n' },
             { "cutoff",      required_argument, 0, 'c' },
             { "detection",   required_argument, 0, 'd' },
+            { "onlyabove",   required_argument, 0, 'a' },
             { "minlevel",    required_argument, 0, 'l' },
             { "minratio",    required_argument, 0, 'r' },
             { "stopsamples", required_argument, 0, 's' },
@@ -108,6 +119,14 @@ int main(int argc, char **argv)
             break;
         case 'd':
             detection = QString(optarg).toFloat();
+            break;
+        case 'a':
+            if(!strcmp(optarg, "def")) {
+                onlyabove = defaultOnlyAbove;
+            }
+            else {
+                onlyabove = QString(optarg).toFloat();
+            }
             break;
         case 'l':
             minlevel = QString(optarg).toFloat();
@@ -170,7 +189,7 @@ int main(int argc, char **argv)
     }
 
     spikeDiscriminator(sigfile, outfile, fixedwin, detection,
-                       minlevel, minratio, stopsamples,
+                       onlyabove, minlevel, minratio, stopsamples,
                        saturationLow, saturationHigh, excluded);
 
     return 0;
