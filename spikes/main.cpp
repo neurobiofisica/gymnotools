@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <assert.h>
 #include <limits>
 
 #include <QStringList>
@@ -15,10 +16,10 @@
 #include "common/excludedintervals.h"
 #include "common/cutincomplete.h"
 
-class ExcludingCapableSignalBuffer : public SignalBuffer
+class ChannelExcludableSignalBuffer : public SignalBuffer
 {
 public:
-    explicit ExcludingCapableSignalBuffer(int samplesPerCh)
+    explicit ChannelExcludableSignalBuffer(int samplesPerCh)
         :SignalBuffer(samplesPerCh)
     {
     }
@@ -43,13 +44,69 @@ public:
     }
 };
 
-static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin,
-                               float detection, float onlyabove, float minlevel,
-                               float minratio, int stopsamples,
-                               float saturationLow, float saturationHigh,
-                               ExcludedIntervalList &excluded)
+static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
+                                 ChannelExcludableSignalBuffer &buffer,
+                                 const bool *chExcluded, bool fixedwin,
+                                 float onlyabove, float minlevel,
+                                 float minratio, int stopsamples,
+                                 float saturationLow, float saturationHigh)
 {
-    ExcludingCapableSignalBuffer buffer(16*EODSamples);
+    float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
+
+    const qint64 detectedAt = sigfile.pos();
+
+    // read buffer after detectedAt
+    sigfile.readFilteredCh(buffer);
+    buffer.diff();
+    if(chExcluded == NULL)
+        buffer.sumSquares(squareSum);
+    else
+        buffer.sumSquares(squareSum, chExcluded);
+
+    // find the spike's maximum level
+    assert(buffer.spc() >= EODSamples);
+    float maxlevel = 0.;
+    for(int i = 0; i < EODSamples; i++) {
+        if(squareSum[i] > maxlevel)
+            maxlevel = squareSum[i];
+    }
+
+    // update minlevel using minratio if needed
+    if(minratio * maxlevel > minlevel)
+        minlevel = minratio * maxlevel;
+
+    // find end of the spike
+    int samplesBelow = 0, endPos = -1;
+    for(int i = 0; i < buffer.spc(); i++) {
+        if(squareSum[i] < minlevel) {
+            if(++samplesBelow >= stopsamples) {
+                endPos = i;
+                break;
+            }
+        }
+    }
+
+    if(endPos == -1) {
+        fprintf(stderr, "pos %lld: spike too long, truncating at end\n", detectedAt);
+        endPos = buffer.spc();
+    }
+
+    // read buffer before detectedAt
+    sigfile.seek(detectedAt - buffer.bytes()); // TODO: detectedAt < buffer.bytes()
+
+    // find start of the spike
+    int startPos = -1;
+    samplesBelow = 0;
+
+}
+
+static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin,
+                              float detection, float onlyabove, float minlevel,
+                              float minratio, int stopsamples,
+                              float saturationLow, float saturationHigh,
+                              ExcludedIntervalList &excluded)
+{
+    ChannelExcludableSignalBuffer buffer(8*EODSamples);
     float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
 
     const qint64 fileStart = cutIncompleteAtStartOrEnd(sigfile, minlevel, false);
@@ -90,12 +147,13 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
             for(int i = 0; i < numSamples; i++) {
                 if(squareSum[i] >= detection) {
                     sigfile.seek(bufStart + i*BytesPerSample);
-                    // process the spike at bufStart + i*BytesPerSample
+                    spikeDetected(sigfile, outfile, buffer, NULL,
+                                  fixedwin, onlyabove, minlevel,
+                                  minratio, stopsamples,
+                                  saturationLow, saturationHigh);
                 }
             }
         }
-
-        // process data until the end of the current interval
 
         sigfile.seek(stopAt);
         stopAt = (*excl).end;
@@ -106,9 +164,12 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
         }
 
         if(numExcluded != NumChannels) {
-            const float correctedDetection =
-                    (NumChannels - numExcluded) * detection / (float)NumChannels;
+            const float correction = (NumChannels-numExcluded)/(float)NumChannels;
+            const float correctedDetection = correction * detection;
+            const float correctedMinLevel = correction * minlevel;
+            const float correctedMinRatio = correction * minratio;
 
+            // process data until the end of the current interval
             while(sigfile.pos() <= stopAt) {
                 const qint64 bufStart = sigfile.pos();
                 sigfile.readFilteredCh(buffer);
@@ -123,7 +184,11 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
                 for(int i = 0; i < numSamples; i++) {
                     if(squareSum[i] >= correctedDetection) {
                         sigfile.seek(bufStart + i*BytesPerSample);
-                        // process the spike at bufStart + i*BytesPerSample
+                        spikeDetected(sigfile, outfile, buffer,
+                                      (*excl).chExcluded, fixedwin,
+                                      onlyabove, correctedMinLevel,
+                                      correctedMinRatio, stopsamples,
+                                      saturationLow, saturationHigh);
                     }
                 }
             }
@@ -141,7 +206,10 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
         for(int i = 0; i < buffer.spc() - 1; i++) {
             if(squareSum[i] >= detection) {
                 sigfile.seek(bufStart + i*BytesPerSample);
-                // process the spike at bufStart + i*BytesPerSample
+                spikeDetected(sigfile, outfile, buffer, NULL,
+                              fixedwin, onlyabove, minlevel,
+                              minratio, stopsamples,
+                              saturationLow, saturationHigh);
             }
         }
     }
