@@ -8,8 +8,8 @@
 #include <math.h>
 #include <limits>
 
+#include <QString>
 #include <QStringList>
-#include <QtDebug>
 
 #include "common/commoninit.h"
 #include "common/defaultparams.h"
@@ -93,7 +93,9 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     }
 
     if(endPos == -1) {
-        fprintf(stderr, "pos %lld: spike too long, truncating at end\n", detectedAt);
+        fputs(QString("warning: pos %1: spike too long, truncating at end\n")
+                .arg(detectedAt)
+                .toUtf8().data(), stderr);
         endPos = buffer.spc() - 1;
     }
 
@@ -131,7 +133,9 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     }
 
     if(startPos == -1) {
-        fprintf(stderr, "pos %lld: spike too long, truncating at start\n", detectedAt);
+        fputs(QString("warning: pos %1: spike too long, truncating at start\n")
+                .arg(detectedAt)
+                .toUtf8().data(), stderr);
         startPos = 0;
     }
 
@@ -206,13 +210,15 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
     // abort if intervals overlap with fileStart or fileEnd
     if(excluded.count() > 0) {
         if(excluded.at(0).end < fileStart) {
-            fprintf(stderr, "error: first interval overlaps with"
-                    " fileStart=%lld\n", fileStart);
+            fputs(QString("error: first interval overlaps with fileStart=%1\n")
+                    .arg(fileStart)
+                    .toUtf8().data(), stderr);
             return 1;
         }
         if(excluded.at(excluded.count() - 1).start >= fileEnd) {
-            fprintf(stderr, "error: last interval overlaps with"
-                    " fileEnd=%lld\n", fileEnd);
+            fputs(QString("error: first interval overlaps with fileEnd=%1\n")
+                    .arg(fileEnd)
+                    .toUtf8().data(), stderr);
             return 1;
         }
     }
