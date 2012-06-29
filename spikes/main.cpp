@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <assert.h>
@@ -136,7 +137,7 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
 
     // locate spike window
     qint64 firstOffset = bufferBefore + startPos*BytesPerSample;
-    int winSamples = (detectedAt/BytesPerSample + endPos) - firstOffset/BytesPerSample;
+    int32_t winSamples = (detectedAt/BytesPerSample + endPos) - firstOffset/BytesPerSample;
 
     // if fixedwin was requested, center inside an EODSamples window
     if(fixedwin) {
@@ -149,9 +150,10 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     sigfile.readCh(buffer);
 
     // check which channels will be saved in outfile
-    int numSavedCh = 0;
+    int32_t numSavedCh = 0;
     bool savedCh[NumChannels];
     for(int ch = 0; ch < NumChannels; ch++) {
+        savedCh[ch] = false;
         if(chExcluded != NULL && chExcluded[ch])
             continue;
         const float *data = buffer.ch(ch);
@@ -172,6 +174,16 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     }
 
     // write spike to outfile
+    outfile.write((const char *)&firstOffset, sizeof(firstOffset));
+    outfile.write((const char *)&winSamples, sizeof(winSamples));
+    outfile.write((const char *)&numSavedCh, sizeof(numSavedCh));
+    for(int32_t ch = 0; ch < NumChannels; ch++) {
+        if(savedCh[ch]) {
+            const float *data = buffer.ch(ch);
+            outfile.write((const char *)&ch, sizeof(ch));
+            outfile.write((const char *)data, winSamples*sizeof(float));
+        }
+    }
 
     // seek to the position after the spike
     sigfile.seek(detectedAt + endPos*BytesPerSample);
