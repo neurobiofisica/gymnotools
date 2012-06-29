@@ -105,7 +105,7 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     }
     else {
         sigfile.seek(0);
-        scanAmount = detectedAt;
+        scanAmount = detectedAt/BytesPerSample - 1;
     }
 
     // read buffer before detectedAt
