@@ -16,11 +16,10 @@ HEADERS += \
     progressthread.h \
     fileminmaxfinder.h
 
+FORMS += \
+    sigparamselectiondialog.ui
+
 CONFIG += qwt console
 INCLUDEPATH += ..
 LIBS += -L../common -lcommon
 LIBS += -L../commongui -lcommongui
-
-FORMS += \
-    sigparamselectiondialog.ui
-
