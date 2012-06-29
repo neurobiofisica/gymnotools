@@ -51,7 +51,8 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
                                  const bool *chExcluded, bool fixedwin,
                                  float onlyabove, float minlevel,
                                  float minratio, int stopsamples,
-                                 float saturationLow, float saturationHigh)
+                                 float saturationLow, float saturationHigh,
+                                 int32_t &lastSpikeDataLen)
 {
     float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
 
@@ -178,14 +179,15 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     }
 
     // write spike to outfile
-    outfile.write((const char *)&firstOffset, sizeof(firstOffset));
-    outfile.write((const char *)&winSamples, sizeof(winSamples));
-    outfile.write((const char *)&numSavedCh, sizeof(numSavedCh));
+    lastSpikeDataLen  = outfile.write((const char *)&lastSpikeDataLen, sizeof(lastSpikeDataLen));
+    lastSpikeDataLen += outfile.write((const char *)&firstOffset, sizeof(firstOffset));
+    lastSpikeDataLen += outfile.write((const char *)&winSamples, sizeof(winSamples));
+    lastSpikeDataLen += outfile.write((const char *)&numSavedCh, sizeof(numSavedCh));
     for(int32_t ch = 0; ch < NumChannels; ch++) {
         if(savedCh[ch]) {
             const float *data = buffer.ch(ch);
-            outfile.write((const char *)&ch, sizeof(ch));
-            outfile.write((const char *)data, winSamples*sizeof(float));
+            lastSpikeDataLen += outfile.write((const char *)&ch, sizeof(ch));
+            lastSpikeDataLen += outfile.write((const char *)data, winSamples*sizeof(float));
         }
     }
 
@@ -201,6 +203,8 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
 {
     ChannelExcludableSignalBuffer buffer(8*EODSamples);
     float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
+
+    int32_t lastSpikeDataLen = 0;
 
     const qint64 fileStart = cutIncompleteAtStartOrEnd(sigfile, minlevel, false);
     const qint64 fileEnd   = cutIncompleteAtStartOrEnd(sigfile, minlevel, true);
@@ -245,7 +249,8 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
                     spikeDetected(sigfile, outfile, buffer, NULL,
                                   fixedwin, onlyabove, minlevel,
                                   minratio, stopsamples,
-                                  saturationLow, saturationHigh);
+                                  saturationLow, saturationHigh,
+                                  lastSpikeDataLen);
                     break;
                 }
             }
@@ -284,7 +289,8 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
                                       (*excl).chExcluded, fixedwin,
                                       onlyabove, correctedMinLevel,
                                       correctedMinRatio, stopsamples,
-                                      saturationLow, saturationHigh);
+                                      saturationLow, saturationHigh,
+                                      lastSpikeDataLen);
                         break;
                     }
                 }
@@ -306,7 +312,8 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
                 spikeDetected(sigfile, outfile, buffer, NULL,
                               fixedwin, onlyabove, minlevel,
                               minratio, stopsamples,
-                              saturationLow, saturationHigh);
+                              saturationLow, saturationHigh,
+                              lastSpikeDataLen);
                 break;
             }
         }
