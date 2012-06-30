@@ -1,7 +1,7 @@
 TEMPLATE = subdirs
-SUBDIRS = common commongui dsfmt dtcwpt paramchooser spikes spkview svm
+SUBDIRS = common commongui dsfmt dtcwpt paramchooser spikes svm winview
 
 commongui.depends = common
 paramchooser.depends = commongui
 spikes.depends = common
-spkview.depends = commongui
+winview.depends = commongui

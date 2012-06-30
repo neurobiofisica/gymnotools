@@ -1,9 +1,10 @@
 QT       += core gui
 
-TARGET = spkview
+TARGET = winview
 TEMPLATE = app
 
-RESOURCES += 
+RESOURCES += \ 
+    resource.qrc
 
 SOURCES += \ 
     main.cpp
