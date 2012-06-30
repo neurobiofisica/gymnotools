@@ -36,7 +36,7 @@ struct ExcludedInterval
 /**
  * QList of ExcludedIntervals
  */
-struct ExcludedIntervalList: QList<ExcludedInterval>
+struct ExcludedIntervalList: public QList<ExcludedInterval>
 {
     /**
      * Parses a QFile to fill up the list. The list is
@@ -44,6 +44,11 @@ struct ExcludedIntervalList: QList<ExcludedInterval>
      * @param file the QFile
      */
     void parseFile(QFile &file);
+    /**
+     * Writes list contents to a file.
+     * @param file on which to write
+     */
+    void writeFile(QFile &file);
 };
 
 #endif // EXCLUDEDINTERVALS_H

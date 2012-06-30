@@ -49,22 +49,37 @@ void ExcludedIntervalList::parseFile(QFile &file)
             interval.chExcluded[ch] = true;
         }
         // append the interval
-        this->append(interval);
+        append(interval);
         // increase line number
         lineno++;
     }
     // assert the container is sorted
-    qSort(this->begin(), this->end());
+    qSort(begin(), end());
     // check if intervals are disjoint
-    ExcludedIntervalList::ConstIterator it = this->begin();
-    if(it != this->end()) {
+    ConstIterator it = begin();
+    if(it != end()) {
         qint64 lastEnd = (*it).end;
-        for(++it; it != this->end(); ++it) {
+        for(++it; it != end(); ++it) {
             if((*it).start <= lastEnd) {
                 fprintf(stderr, "ExcludedIntervals: there are non-disjoint "
                         "intervals in the list.\n");
                 break;
             }
         }
+    }
+}
+
+void ExcludedIntervalList::writeFile(QFile &file)
+{
+    for(ConstIterator it = begin(); it != end(); ++it) {
+        long start = (*it).start / BytesPerSample;
+        long end = (*it).end / BytesPerSample;
+        QStringList channels;
+        for(int ch = 0; ch < NumChannels; ch++) {
+            if((*it).chExcluded[ch]) {
+                channels.append(QString("%1").arg(ch));
+            }
+        }
+        file.write(QString("%1-%2: %3\n").arg(start).arg(end).arg(channels.join(",")).toUtf8());
     }
 }
