@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <assert.h>
@@ -17,6 +16,7 @@
 #include "common/signalfile.h"
 #include "common/excludedintervals.h"
 #include "common/cutincomplete.h"
+#include "common/windowfile.h"
 
 class ChannelExcludableSignalBuffer : public SignalBuffer
 {
@@ -46,13 +46,12 @@ public:
     }
 };
 
-static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
+static inline void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
                                  ChannelExcludableSignalBuffer &buffer,
                                  const bool *chExcluded, bool fixedwin,
                                  float onlyabove, float minlevel,
                                  float minratio, int stopsamples,
-                                 float saturationLow, float saturationHigh,
-                                 int32_t &lastSpikeDataLen)
+                                 float saturationLow, float saturationHigh)
 {
     float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
 
@@ -142,7 +141,7 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
 
     // locate spike window
     qint64 firstOffset = bufferBefore + startPos*BytesPerSample;
-    int32_t winSamples = (detectedAt/BytesPerSample + endPos) - firstOffset/BytesPerSample;
+    qint32 winSamples = (detectedAt/BytesPerSample + endPos) - firstOffset/BytesPerSample;
 
     // if fixedwin was requested, center inside an EODSamples window
     if(fixedwin) {
@@ -155,7 +154,7 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     sigfile.readCh(buffer);
 
     // check which channels will be saved in outfile
-    int32_t numSavedCh = 0;
+    qint32 numSavedCh = 0;
     bool savedCh[NumChannels];
     for(int ch = 0; ch < NumChannels; ch++) {
         savedCh[ch] = false;
@@ -179,15 +178,11 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     }
 
     // write spike to outfile
-    lastSpikeDataLen  = outfile.write((const char *)&lastSpikeDataLen, sizeof(lastSpikeDataLen));
-    lastSpikeDataLen += outfile.write((const char *)&firstOffset, sizeof(firstOffset));
-    lastSpikeDataLen += outfile.write((const char *)&winSamples, sizeof(winSamples));
-    lastSpikeDataLen += outfile.write((const char *)&numSavedCh, sizeof(numSavedCh));
-    for(int32_t ch = 0; ch < NumChannels; ch++) {
+    outfile.writeEvent(firstOffset, winSamples, numSavedCh);
+    for(qint32 ch = 0; ch < NumChannels; ch++) {
         if(savedCh[ch]) {
             const float *data = buffer.ch(ch);
-            lastSpikeDataLen += outfile.write((const char *)&ch, sizeof(ch));
-            lastSpikeDataLen += outfile.write((const char *)data, winSamples*sizeof(float));
+            outfile.writeChannel(ch, data, winSamples);
         }
     }
 
@@ -195,7 +190,7 @@ static inline void spikeDetected(SignalFile &sigfile, QFile &outfile,
     sigfile.seek(detectedAt + endPos*BytesPerSample);
 }
 
-static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin,
+static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, bool fixedwin,
                               float detection, float onlyabove, float minlevel,
                               float minratio, int stopsamples,
                               float saturationLow, float saturationHigh,
@@ -203,8 +198,6 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
 {
     ChannelExcludableSignalBuffer buffer(8*EODSamples);
     float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
-
-    int32_t lastSpikeDataLen = 0;
 
     const qint64 fileStart = cutIncompleteAtStartOrEnd(sigfile, minlevel, false);
     const qint64 fileEnd   = cutIncompleteAtStartOrEnd(sigfile, minlevel, true);
@@ -249,8 +242,7 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
                     spikeDetected(sigfile, outfile, buffer, NULL,
                                   fixedwin, onlyabove, minlevel,
                                   minratio, stopsamples,
-                                  saturationLow, saturationHigh,
-                                  lastSpikeDataLen);
+                                  saturationLow, saturationHigh);
                     break;
                 }
             }
@@ -289,8 +281,7 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
                                       (*excl).chExcluded, fixedwin,
                                       onlyabove, correctedMinLevel,
                                       correctedMinRatio, stopsamples,
-                                      saturationLow, saturationHigh,
-                                      lastSpikeDataLen);
+                                      saturationLow, saturationHigh);
                         break;
                     }
                 }
@@ -312,8 +303,7 @@ static int spikeDiscriminator(SignalFile &sigfile, QFile &outfile, bool fixedwin
                 spikeDetected(sigfile, outfile, buffer, NULL,
                               fixedwin, onlyabove, minlevel,
                               minratio, stopsamples,
-                              saturationLow, saturationHigh,
-                              lastSpikeDataLen);
+                              saturationLow, saturationHigh);
                 break;
             }
         }
@@ -451,7 +441,7 @@ int main(int argc, char **argv)
     }
 
     const char *outFilename = argv[optind+1];
-    QFile outfile(outFilename);
+    WindowFile outfile(outFilename);
 
     if(!outfile.open(QIODevice::WriteOnly)) {
         fprintf(stderr, "Can't open output file (%s).\n", outFilename);

@@ -19,4 +19,5 @@ HEADERS = sigcfg.h \
     commoninit.h \
     defaultparams.h \
     excludedintervals.h \
-    cutincomplete.h
+    cutincomplete.h \
+    windowfile.h
