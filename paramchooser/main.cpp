@@ -107,7 +107,7 @@ static int usage() {
 
 int main(int argc, char **argv)
 {
-    QApplication *app = new QApplication(argc, argv);
+    new QApplication(argc, argv);
     commonInit();
     progname = argv[0];
 
