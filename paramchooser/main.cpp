@@ -25,7 +25,6 @@ static int lowpass_main(int argc, char **argv) {
         printf("numtaps = %d\n", dlg->sbTaps->value() | 1);
         printf("cutoff = %.2f\n", dlg->sbCutoff->value());
     }
-    delete dlg;
     return 0;
 }
 
@@ -40,7 +39,6 @@ static int threshold_main(int argc, char **argv) {
     if(dlg->exec()) {
         printf("threshold = %.4f\n", dlg->sbThreshold->value());
     }
-    delete dlg;
     return 0;
 }
 
@@ -53,7 +51,6 @@ static int amplitude_threshold_main(int argc, char **argv) {
     if(dlg->exec()) {
         printf("amplitude_threshold = %.2f\n", dlg->sbThreshold->value());
     }
-    delete dlg;
     return 0;
 }
 
@@ -82,7 +79,6 @@ static int saturation_main(int argc, char **argv) {
         printf("saturation_low = %.2f\n", dlg->sbThresholdL->value());
         printf("saturation_high = %.2f\n", dlg->sbThresholdH->value());
     }
-    delete dlg;
     return 0;
 }
 
@@ -123,6 +119,5 @@ int main(int argc, char **argv)
         }
     }
 
-    delete app;
     return usage();
 }
