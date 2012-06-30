@@ -7,11 +7,14 @@ RESOURCES += \
     resource.qrc
 
 SOURCES += \ 
-    main.cpp
+    main.cpp \
+    windowviewdialog.cpp
 
-HEADERS += 
+HEADERS += \ 
+    windowviewdialog.h
 
-FORMS += 
+FORMS += \ 
+    windowviewdialog.ui
 
 CONFIG += qwt console
 INCLUDEPATH += ..
