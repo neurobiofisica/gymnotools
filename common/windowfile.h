@@ -30,12 +30,12 @@ protected:
     }
 
 public:
-    WindowFile(const QString &name)
-        :QFile(name),curEventPos(0),curEventLen(0),
-         curEventChannels(0),curChannel(0) { }
-    WindowFile(const QString &name, QObject *parent)
-        :QFile(name,parent),curEventPos(0),curEventLen(0),
-         curEventChannels(0),curChannel(0) { }
+    WindowFile(const QString &name) :
+        QFile(name),curEventPos(0),curEventLen(0),
+        curEventChannels(0),curChannel(0) { }
+    WindowFile(const QString &name, QObject *parent) :
+        QFile(name,parent),curEventPos(0),curEventLen(0),
+        curEventChannels(0),curChannel(0) { }
 
     qint64 getEventOffset() const { return curEventOffset; }
     qint32 getEventSamples() const { return curEventSamples; }

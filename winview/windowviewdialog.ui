@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>719</width>
+    <width>728</width>
     <height>419</height>
    </rect>
   </property>
@@ -145,7 +145,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QListWidget" name="listEODs">
+    <widget class="QListWidget" name="listWins">
      <property name="minimumSize">
       <size>
        <width>150</width>
@@ -176,7 +176,7 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>listEODs</tabstop>
+  <tabstop>listWins</tabstop>
   <tabstop>btnGo</tabstop>
   <tabstop>enableNorm</tabstop>
   <tabstop>btnLeft</tabstop>

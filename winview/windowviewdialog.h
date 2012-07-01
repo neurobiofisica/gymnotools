@@ -9,6 +9,7 @@ class CustomPlotCurve;
 class CustomPlotZoomer;
 class QwtPlotPanner;
 class QwtScaleDiv;
+class WindowFile;
 
 namespace Ui {
     class WindowViewDialog;
@@ -19,27 +20,33 @@ class WindowViewDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit WindowViewDialog(QWidget *parent = 0);
+    explicit WindowViewDialog(WindowFile &infile, const QString &origFilename,
+                              int winatatime, QWidget *parent = 0);
     ~WindowViewDialog();
 
 private slots:
-    void on_listEODs_customContextMenuRequested(const QPoint &pos);
+    void on_listWins_customContextMenuRequested(const QPoint &pos);
     void on_enableNorm_clicked();
     void on_btnLeft_clicked();
     void on_btnRight_clicked();
     void on_btnGo_clicked();
+    void contextMenu_copyTime();
+    void contextMenu_showOriginal();
+    void listRect();
 
 private:
-    void startDrawingEODs();
-    void drawOneEOD(int &firstCurveIndex, qint64 pos);
-    void finishDrawingEODs(int firstCurveIndex);
-    void drawAllNext();
-    void drawAllPrev();
-
     Ui::WindowViewDialog *ui;
 
     CustomPlotZoomer *zoomer;
     QwtPlotPanner *panner;
+
+    CustomPlotCurve **curves;
+    double **ydata;
+    double *xdata;
+
+    WindowFile &file;
+    const QString &origfile;
+    const int winsPerScreen;
 };
 
 #endif // WINDOWVIEWDIALOG_H
