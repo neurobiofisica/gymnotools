@@ -9,7 +9,10 @@
 #include <qwt_plot_zoomer.h>
 #include <qwt_plot_panner.h>
 #include <qwt_clipper.h>
+
+#include "common/windowfile.h"
 #include "common/sigcfg.h"
+#include "common/sigutil.h"
 
 static const int WinMaxSamples = 16*EODSamples;
 
@@ -18,6 +21,7 @@ class CustomPlotCurve : public QwtPlotCurve
 public:
     double time;
     int channel;
+    int samples;
 };
 
 class CustomPlotZoomer : public QwtPlotZoomer
@@ -32,6 +36,7 @@ WindowViewDialog::WindowViewDialog(WindowFile &infile, const QString &origFilena
                                    int winatatime, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::WindowViewDialog),
+    validCurves(0),
     file(infile),
     origfile(origFilename),
     winsPerScreen(winatatime)
@@ -62,20 +67,26 @@ WindowViewDialog::WindowViewDialog(WindowFile &infile, const QString &origFilena
         curves[i]->attach(ui->plot);
     }
 
-    xdata = new double[WinMaxSamples];
+    xdata = new double*[winsPerScreen];
     ydata = new double*[winsPerScreen];
+    xdata[0] = new double[winsPerScreen * WinMaxSamples];
     ydata[0] = new double[winsPerScreen * WinMaxSamples];
-    for(int i = 1; i < winsPerScreen; i++)
+    for(int i = 1; i < winsPerScreen; i++) {
+        xdata[i] = &xdata[i-1][WinMaxSamples];
         ydata[i] = &ydata[i-1][WinMaxSamples];
+    }
+    readbuf = new float[WinMaxSamples];
 }
 
 WindowViewDialog::~WindowViewDialog()
 {
     delete ui;
     delete [] curves;
+    delete [] xdata[0];
     delete [] xdata;
     delete [] ydata[0];
     delete [] ydata;
+    delete [] readbuf;
 }
 
 void WindowViewDialog::on_listWins_customContextMenuRequested(const QPoint &pos)
@@ -83,14 +94,69 @@ void WindowViewDialog::on_listWins_customContextMenuRequested(const QPoint &pos)
     QListWidget *list = ui->listWins;
     if(list->currentItem() != NULL) {
         QMenu menu(this);
-        menu.addAction("Copy &time",
-                       this, SLOT(contextMenu_copyTime()));
         QAction *sOrig = menu.addAction("Show &original",
                                         this, SLOT(contextMenu_showOriginal()));
         if(origfile.isEmpty())
             sOrig->setEnabled(false);
+        menu.addAction("Copy &time",
+                       this, SLOT(contextMenu_copyTime()));
         menu.exec(list->mapToGlobal(pos));
     }
+}
+
+void WindowViewDialog::plotBegin()
+{
+    ui->listWins->clear();
+    ui->plot->setAxisAutoScale(QwtPlot::xBottom);
+    ui->plot->setAxisAutoScale(QwtPlot::yLeft);
+    validCurves = 0;
+}
+
+void WindowViewDialog::plotCurrent()
+{
+    const bool normalize = ui->enableNorm->isChecked();
+
+    int samples = qMin(file.getEventSamples(), WinMaxSamples);
+    file.read((char *)readbuf, samples*sizeof(float));
+
+    float norm = 1.;
+    if(normalize)
+        norm = 1./maxAbsFloat(readbuf, samples);
+
+    double *data = ydata[validCurves];
+    for(int i = 0; i < samples; i++)
+        data[i] = norm*readbuf[i];
+
+    curves[validCurves]->time = ((double)file.getEventOffset())/
+            ((double)BytesPerSample*SamplingRate);
+    curves[validCurves]->channel = file.getChannelId();
+    curves[validCurves]->samples = samples;
+
+    ++validCurves;
+}
+
+void WindowViewDialog::plotEnd()
+{
+    int maxSamples = 0;
+    for(int i = 0; i < validCurves; i++) {
+        if(curves[i]->samples > maxSamples) {
+            maxSamples = curves[i]->samples;
+        }
+    }
+
+    for(int i = 0; i < validCurves; i++) {
+        const int samples = curves[i]->samples;
+        const double xoff = 0.5*(double)(maxSamples - samples);
+        double *ax = xdata[i];
+        for(int j = 0; j < samples; j++) {
+            ax[j] = xoff + j;
+        }
+        curves[i]->setRawSamples(ax, ydata[i], samples);
+    }
+
+    for(int i = 0; i < winsPerScreen; i++)
+        curves[i]->setVisible(i < validCurves);
+    zoomer->setZoomBase();
 }
 
 void WindowViewDialog::on_enableNorm_clicked()
@@ -119,4 +185,20 @@ void WindowViewDialog::contextMenu_showOriginal()
 
 void WindowViewDialog::listRect()
 {
+    const QRectF rect = zoomer->getScaleRect();
+    QListWidget *list = ui->listWins;
+    QString templ("t=%1s, ch=%2");
+    list->clear();
+    for(int i = 0; i < validCurves; i++) {
+        const double *ax = xdata[i];
+        const double *ay = ydata[i];
+        QPolygonF poly;
+        for(int j = 0; j < curves[i]->samples; j++)
+            poly << QPointF(ax[j], ay[j]);
+        if(!QwtClipper::clipPolygonF(rect, poly).empty()) {
+            const double time = curves[i]->time;
+            const int channel = curves[i]->channel;
+            list->addItem(templ.arg(time,0,'f',3).arg(channel));
+        }
+    }
 }

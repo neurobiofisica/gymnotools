@@ -10,6 +10,7 @@ class CustomPlotZoomer;
 class QwtPlotPanner;
 class QwtScaleDiv;
 class WindowFile;
+class ResizableBuffer;
 
 namespace Ui {
     class WindowViewDialog;
@@ -35,14 +36,20 @@ private slots:
     void listRect();
 
 private:
+    void plotBegin();
+    void plotCurrent();
+    void plotEnd();
+
     Ui::WindowViewDialog *ui;
 
     CustomPlotZoomer *zoomer;
     QwtPlotPanner *panner;
 
+    int validCurves;
     CustomPlotCurve **curves;
     double **ydata;
-    double *xdata;
+    double **xdata;
+    float *readbuf;
 
     WindowFile &file;
     const QString &origfile;

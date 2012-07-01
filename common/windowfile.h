@@ -118,6 +118,7 @@ public:
             curChannel*(sizeof(curChannelId) + curEventSamples*sizeof(float)));
         read((char *)&curChannelId, sizeof(curChannelId));
         ++curChannel;
+        return true;
     }
 
     /**
@@ -137,6 +138,7 @@ public:
         seek(curEventPos + EventHdrLen +
             curChannel*(sizeof(curChannelId) + curEventSamples*sizeof(float)));
         read((char *)&curChannelId, sizeof(curChannelId));
+        return true;
     }
 };
 
