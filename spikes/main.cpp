@@ -182,7 +182,7 @@ static inline void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     for(qint32 ch = 0; ch < NumChannels; ch++) {
         if(savedCh[ch]) {
             const float *data = buffer.ch(ch);
-            outfile.writeChannel(ch, data, winSamples);
+            outfile.writeChannel(ch, data);
         }
     }
 
