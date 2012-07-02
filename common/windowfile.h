@@ -89,6 +89,7 @@ public:
         if((newPos >= size()) || !seek(newPos))
             return false;
         readEvent();
+        curChannel = 0;
         return true;
     }
 
@@ -99,9 +100,10 @@ public:
     bool prevEvent()
     {
         const qint64 newPos = curEventPos - lastEventLen;
-        if((newPos <= 0) || !seek(newPos))
+        if((curEventPos <= 0) || !seek(newPos))
             return false;
         readEvent();
+        curChannel = 0;
         return true;
     }
 

@@ -230,6 +230,20 @@ void WindowViewDialog::on_btnRight_clicked()
 
 void WindowViewDialog::on_btnGo_clicked()
 {
+    double t = 0.;
+    if(validCurves > 0)
+        t = qMin(curves[0]->time, curves[validCurves-1]->time);
+
+    bool ok;
+    t = QInputDialog::getDouble(this, "Go to", "Jump to time (in seconds):",
+                                t, 0, 2e9, 3, &ok);
+    if(!ok)
+        return;
+
+    qint64 desiredOffset = t * BytesPerSample * SamplingRate;
+    while((file.getEventOffset() >= desiredOffset) && file.prevEvent());
+    while((file.getEventOffset() < desiredOffset) && file.nextEvent());
+    goForward();
 }
 
 void WindowViewDialog::contextMenu_copyTime()
