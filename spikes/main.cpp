@@ -145,7 +145,7 @@ static inline void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
 
     // if fixedwin was requested, center inside an EODSamples window
     if(fixedwin) {
-        firstOffset += (winSamples - EODSamples) * BytesPerSample / 2;
+        firstOffset += ((winSamples - EODSamples) / 2) * BytesPerSample;
         winSamples = EODSamples;
     }
 

@@ -39,6 +39,11 @@ private:
     void plotBegin();
     void plotCurrent();
     void plotEnd();
+    void rewindFile();
+    void goForward();
+    void goBackward();
+    void replotCurves();
+    bool getListSelection(double &t, int &ch);
 
     Ui::WindowViewDialog *ui;
 
@@ -50,6 +55,7 @@ private:
     double **ydata;
     double **xdata;
     float *readbuf;
+    bool justMovedForward;
 
     WindowFile &file;
     const QString &origfile;

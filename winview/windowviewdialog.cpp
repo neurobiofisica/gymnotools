@@ -5,6 +5,7 @@
 #include <QMenu>
 #include <QRegExp>
 #include <QInputDialog>
+#include <QClipboard>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_zoomer.h>
 #include <qwt_plot_panner.h>
@@ -13,6 +14,7 @@
 #include "common/windowfile.h"
 #include "common/sigcfg.h"
 #include "common/sigutil.h"
+#include "commongui/vieworiginalsignaldialog.h"
 
 static const int WinMaxSamples = 16*EODSamples;
 
@@ -76,6 +78,8 @@ WindowViewDialog::WindowViewDialog(WindowFile &infile, const QString &origFilena
         ydata[i] = &ydata[i-1][WinMaxSamples];
     }
     readbuf = new float[WinMaxSamples];
+
+    goForward();
 }
 
 WindowViewDialog::~WindowViewDialog()
@@ -144,12 +148,13 @@ void WindowViewDialog::plotEnd()
         }
     }
 
+    const double samplingPeriod = 1./SamplingRate;
     for(int i = 0; i < validCurves; i++) {
         const int samples = curves[i]->samples;
         const double xoff = 0.5*(double)(maxSamples - samples);
         double *ax = xdata[i];
         for(int j = 0; j < samples; j++) {
-            ax[j] = xoff + j;
+            ax[j] = samplingPeriod * (xoff + j);
         }
         curves[i]->setRawSamples(ax, ydata[i], samples);
     }
@@ -159,16 +164,68 @@ void WindowViewDialog::plotEnd()
     zoomer->setZoomBase();
 }
 
+void WindowViewDialog::rewindFile()
+{
+    if(justMovedForward) {
+        for(int i = 0; i < validCurves; i++) {
+            file.prevChannel();
+        }
+    }
+    else {
+        for(int i = 0; i < validCurves; i++) {
+            file.nextChannel();
+        }
+    }
+}
+
+void WindowViewDialog::goForward()
+{
+    plotBegin();
+    for(int i = 0; (i < winsPerScreen) && file.nextChannel(); i++) {
+        plotCurrent();
+    }
+    plotEnd();
+    justMovedForward = true;
+}
+
+void WindowViewDialog::goBackward()
+{
+    plotBegin();
+    for(int i = 0; (i < winsPerScreen) && file.prevChannel(); i++) {
+        plotCurrent();
+    }
+    plotEnd();
+    justMovedForward = false;
+}
+
+void WindowViewDialog::replotCurves()
+{
+    rewindFile();
+    if(justMovedForward) {
+        goForward();
+    }
+    else {
+        goBackward();
+    }
+}
+
 void WindowViewDialog::on_enableNorm_clicked()
 {
+    replotCurves();
 }
 
 void WindowViewDialog::on_btnLeft_clicked()
 {
+    if(justMovedForward)
+        rewindFile();
+    goBackward();
 }
 
 void WindowViewDialog::on_btnRight_clicked()
 {
+    if(!justMovedForward)
+        rewindFile();
+    goForward();
 }
 
 void WindowViewDialog::on_btnGo_clicked()
@@ -177,10 +234,46 @@ void WindowViewDialog::on_btnGo_clicked()
 
 void WindowViewDialog::contextMenu_copyTime()
 {
+    double t;
+    int ch;
+    if(!getListSelection(t, ch))
+        return;
+    QApplication::clipboard()->setText(
+                QString("%1").arg(t,0,'f',3));
 }
 
 void WindowViewDialog::contextMenu_showOriginal()
 {
+    if(origfile.isEmpty())
+        return;
+
+    double t;
+    int ch;
+    if(!getListSelection(t, ch))
+        return;
+
+    ViewOriginalSignalDialog dlg(origfile,
+                                 t * BytesPerSample * SamplingRate,
+                                 ch,
+                                 this);
+    dlg.exec();
+}
+
+bool WindowViewDialog::getListSelection(double &t, int &ch)
+{
+    const QListWidget *list = ui->listWins;
+    const QListWidgetItem *item = list->currentItem();
+    if(item == NULL)
+        return false;
+    const QString data = item->data(Qt::DisplayRole).toString();
+
+    QRegExp rx("t=([0-9.]+)s, ch=([0-9]+)");
+    if(!rx.exactMatch(data))
+        return false;
+
+    t = rx.cap(1).toDouble();
+    ch = rx.cap(2).toInt();
+    return true;
 }
 
 void WindowViewDialog::listRect()

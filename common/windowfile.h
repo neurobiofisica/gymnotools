@@ -85,7 +85,8 @@ public:
      */
     bool nextEvent()
     {
-        if(!seek(curEventPos + curEventLen))
+        const qint64 newPos = curEventPos + curEventLen;
+        if((newPos >= size()) || !seek(newPos))
             return false;
         readEvent();
         return true;
@@ -97,7 +98,8 @@ public:
      */
     bool prevEvent()
     {
-        if(!seek(curEventPos - lastEventLen))
+        const qint64 newPos = curEventPos - lastEventLen;
+        if((newPos <= 0) || !seek(newPos))
             return false;
         readEvent();
         return true;
@@ -109,10 +111,13 @@ public:
      */
     bool nextChannel()
     {
-        while(curChannel >= curEventChannels) {
-            if(!nextEvent()) {
-                return false;
-            }
+        if(curChannel >= curEventChannels) {
+            do {
+                if(!nextEvent()) {
+                    return false;
+                }
+            } while(curEventChannels == 0);
+            curChannel = 0;
         }
         seek(curEventPos + EventHdrLen +
             curChannel*(sizeof(curChannelId) + curEventSamples*sizeof(float)));
@@ -127,12 +132,13 @@ public:
      */
     bool prevChannel()
     {
-        if(curChannel == 0) {
+        if(curChannel <= 0) {
             do {
                 if(!prevEvent()) {
                     return false;
                 }
             } while(curEventChannels == 0);
+            curChannel = curEventChannels;
         }
         --curChannel;
         seek(curEventPos + EventHdrLen +
