@@ -240,7 +240,7 @@ void WindowViewDialog::on_btnGo_clicked()
     if(!ok)
         return;
 
-    qint64 desiredOffset = t * BytesPerSample * SamplingRate;
+    qint64 desiredOffset = qint64(t * SamplingRate) * BytesPerSample;
     while((file.getEventOffset() >= desiredOffset) && file.prevEvent());
     while((file.getEventOffset() < desiredOffset) && file.nextEvent());
     goForward();
@@ -267,7 +267,7 @@ void WindowViewDialog::contextMenu_showOriginal()
         return;
 
     ViewOriginalSignalDialog dlg(origfile,
-                                 t * BytesPerSample * SamplingRate,
+                                 qint64(t * SamplingRate) * BytesPerSample,
                                  ch,
                                  this);
     dlg.exec();
