@@ -11,4 +11,4 @@ HEADERS +=
 
 CONFIG += console
 INCLUDEPATH += ..
-LIBS += -L../common -lcommon
+LIBS += -L../common -lcommon -L../dsfmt -ldsfmt

@@ -46,6 +46,59 @@ public:
     }
 };
 
+static inline void linearRegression(float *buf, int off, int len, float &a, float &b)
+{
+    float xsum = 0., ysum = 0., xysum = 0., x2sum = 0.;
+    for(int i = off; i < off + len; i++) {
+        xsum  += i;
+        ysum  += buf[i];
+        xysum += i*buf[i];
+        x2sum += i*i;
+    }
+    a = (xsum*ysum - xysum*len)/(xsum*xsum - x2sum*len);
+    b = (ysum - a*xsum)/len;
+}
+
+static inline void reconstructSaturated(float *buf, int len,
+                                        float saturationLow, float saturationHigh)
+{
+    const int regressionPoints = 4;
+
+    const int lenMargin = len - regressionPoints;
+    float a, b;
+
+    for(int i = regressionPoints; i < lenMargin; ) {
+        // find saturation
+        for(; i < lenMargin && buf[i] > saturationLow && buf[i] < saturationHigh; i++);
+        // fit a line to the valid points before saturation
+        linearRegression(buf, i - regressionPoints, regressionPoints, a, b);
+        // find end of saturation and fill samples with the line
+        int saturationStart = i;
+        for(; i < lenMargin && (buf[i] <= saturationLow || buf[i] >= saturationHigh); i++)
+            buf[i] = a*i + b;
+        // fit a line to the valid points after saturation
+        linearRegression(buf, i, regressionPoints, a, b);
+        // go back filling with the new line until it crosses the old line
+        int saturationEnd = i;
+        for(i--; i >= saturationStart; i--) {
+            const float oldval = buf[i];
+            buf[i] = a*i + b;
+            if(buf[i] > oldval)
+                break;
+        }
+        // continue searching from the last point of the current saturation
+        i = saturationEnd;
+    }
+}
+
+static inline void reconstructSaturated(SignalBuffer &buffer,
+                                        float saturationLow, float saturationHigh)
+{
+    for(int ch = 0; ch < NumChannels; ch++) {
+        reconstructSaturated(buffer.ch(ch), buffer.spc(), saturationLow, saturationHigh);
+    }
+}
+
 static inline void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
                                  ChannelExcludableSignalBuffer &buffer,
                                  const bool *chExcluded, bool fixedwin,
@@ -58,6 +111,10 @@ static inline void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     // read buffer after detectedAt
     const qint64 detectedAt = sigfile.pos();
     sigfile.readFilteredCh(buffer);
+
+    // gross reconstruction of saturated points to improve maxlevel calculation
+    reconstructSaturated(buffer, saturationLow, saturationHigh);
+
     buffer.diff();
     if(chExcluded == NULL)
         buffer.sumSquares(squareSum);
