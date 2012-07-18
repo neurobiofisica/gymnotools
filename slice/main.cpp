@@ -5,7 +5,6 @@
 
 #include <QString>
 #include <QStringList>
-#include <QtDebug>
 
 #include "common/commoninit.h"
 #include "common/sigcfg.h"
@@ -63,9 +62,6 @@ static int out_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &o
             outfile.writeEvent(off, samples, channels);
             for(int ch = 0; ch < channels; ch++) {
                 infile.nextChannel();
-                assert(infile.getEventOffset() == off);
-                assert(infile.getEventChannels() == channels);
-                assert(infile.getEventSamples() == samples);
                 infile.read((char*)buf.buf(), samples*sizeof(float));
                 outfile.writeChannel(infile.getChannelId(), buf.buf());
             }
