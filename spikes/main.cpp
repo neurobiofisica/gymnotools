@@ -505,8 +505,13 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    return spikeDiscriminator(sigfile, outfile, fixedwin, detection,
-                              onlyabove, minlevel, minratio, stopsamples,
-                              saturationLow, saturationHigh, excluded);
+    if(spikeDiscriminator(sigfile, outfile, fixedwin, detection,
+                          onlyabove, minlevel, minratio, stopsamples,
+                          saturationLow, saturationHigh, excluded))
+        return 1;
+
+    outfile.close();
+    sigfile.close();
+    return 0;
 }
 

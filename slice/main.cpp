@@ -14,7 +14,7 @@
 #define DSFMT_MEXP 19937
 #include "dsfmt/dSFMT.h"
 
-static int query_range(WindowFile &infile)
+static void query_range(WindowFile &infile)
 {
     qint64 off;
     unsigned int numEvents = 1;
@@ -44,11 +44,9 @@ static int query_range(WindowFile &infile)
          .arg((off / BytesPerSample)/(double)SamplingRate, 0, 'f', 6)
          .arg(numEvents)
          .toUtf8().data());
-
-    return 0;
 }
 
-static int out_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &outfile)
+static void out_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &outfile)
 {
     ResizableBuffer buf;
     while(infile.nextEvent()) {
@@ -67,7 +65,6 @@ static int out_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &o
             }
         }
     }
-    return 0;
 }
 
 static int usage(const char *progname)
@@ -101,7 +98,6 @@ int main(int argc, char **argv) {
     if(!strcmp(argv[1], "query-range")) {
         if(argc != 3)
             return usage(argv[0]);
-
         query_range(infile);
     }
     else if(!strcmp(argv[1], "range")) {
@@ -153,7 +149,8 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        return out_range(infile, istart, iend, outfile);
+        out_range(infile, istart, iend, outfile);
+        outfile.close();
     }
     else if(!strcmp(argv[1], "random")) {
         if(argc < 3 || (argc % 2 != 1))
@@ -161,5 +158,6 @@ int main(int argc, char **argv) {
     }
     else return usage(argv[0]);
 
+    infile.close();
     return 0;
 }
