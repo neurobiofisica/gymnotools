@@ -14,10 +14,10 @@
 #define DSFMT_MEXP 19937
 #include "dsfmt/dSFMT.h"
 
-static void query_range(WindowFile &infile)
+static void cmd_info(WindowFile &infile)
 {
     qint64 off;
-    unsigned int numEvents = 1;
+    qint64 numEvents = 0, numWins = 0;
 
     infile.nextEvent();
     off = infile.getEventOffset();
@@ -30,23 +30,28 @@ static void query_range(WindowFile &infile)
          .arg((off / BytesPerSample)/(double)SamplingRate, 0, 'f', 6)
          .toUtf8().data());
 
-    while(infile.nextEvent())
-        ++numEvents;
+    do {
+        numEvents++;
+        numWins += infile.getEventChannels();
+    } while(infile.nextEvent());
 
     off = infile.getEventOffset();
     puts(QString("last event:\n"
                  "  bytes:   %1\n"
                  "  samples: %2\n"
                  "  seconds: %3\n\n"
-                 "number of events: %4\n")
+                 "number of:\n"
+                 "  events: %4\n"
+                 "  channel windows: %5\n")
          .arg(off)
          .arg(off / BytesPerSample)
          .arg((off / BytesPerSample)/(double)SamplingRate, 0, 'f', 6)
          .arg(numEvents)
+         .arg(numWins)
          .toUtf8().data());
 }
 
-static void out_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &outfile)
+static void cmd_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &outfile)
 {
     ResizableBuffer buf;
     while(infile.nextEvent()) {
@@ -70,9 +75,8 @@ static void out_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &
 static int usage(const char *progname)
 {
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "%s query-range infile\n"
-            "  Outputs to stdout the range (in samples, bytes and seconds)\n"
-            "  contained in infile.\n", progname);
+    fprintf(stderr, "%s info infile\n"
+            "  Show information about infile.\n", progname);
     fprintf(stderr, "%s range infile start-end samples|bytes|seconds outfile\n"
             "  Slices infile from start to end (samples, bytes or seconds),\n"
             "  producing an outfile containing only that range.\n", progname);
@@ -95,10 +99,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if(!strcmp(argv[1], "query-range")) {
+    if(!strcmp(argv[1], "info")) {
         if(argc != 3)
             return usage(argv[0]);
-        query_range(infile);
+        cmd_info(infile);
     }
     else if(!strcmp(argv[1], "range")) {
         if(argc != 6)
@@ -149,7 +153,7 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        out_range(infile, istart, iend, outfile);
+        cmd_range(infile, istart, iend, outfile);
         outfile.close();
     }
     else if(!strcmp(argv[1], "random")) {
