@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include <QList>
 #include <QString>
 #include <QStringList>
 
@@ -11,8 +12,11 @@
 #include "common/windowfile.h"
 #include "common/resizablebuffer.h"
 
+extern "C" {
 #define DSFMT_MEXP 19937
 #include "dsfmt/dSFMT.h"
+#include "dsfmt/entropy.h"
+}
 
 static void cmd_info(WindowFile &infile)
 {
@@ -70,6 +74,74 @@ static void cmd_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &
             }
         }
     }
+}
+
+static int cmd_random(WindowFile &infile, QList<double> &probabilities,
+                      QList<WindowFile*> &outfiles)
+{
+    ResizableBuffer buf;
+
+    assert(probabilities.length() == outfiles.length());
+    int len = probabilities.length();
+
+    QList<double> accprobs;
+    {
+        double accprob = 0.;
+        foreach(double probability, probabilities) {
+            accprob += probability;
+            accprobs.append(accprob);
+        }
+
+        if(accprob > 1.) {
+            fprintf(stderr, "cmd_random: sum of probabilities must be less than one.\n");
+            return 1;
+        }
+    }
+
+    int *channelsInFile = new int[len];
+    WindowFile *destFileForChannel[NumChannels];
+
+    while(infile.nextEvent()) {
+        const qint64 off = infile.getEventOffset();
+        const qint32 samples = infile.getEventSamples();
+        const qint32 channels = infile.getEventChannels();
+        buf.reserve(samples);
+
+        memset(channelsInFile, 0, len*sizeof(int));
+        memset(destFileForChannel, 0, sizeof(destFileForChannel));
+
+        for(int ch = 0; ch < channels; ch++) {
+            const double rand = dsfmt_gv_genrand_close_open();
+            int fileno = 0;
+            foreach(const double accprob, accprobs) {
+                if(rand < accprob) {
+                    channelsInFile[fileno]++;
+                    destFileForChannel[ch] = outfiles.at(fileno);
+                    break;
+                }
+                ++fileno;
+            }
+        }
+
+        int fileno = 0;
+        foreach(WindowFile * const outfile, outfiles) {
+            outfile->writeEvent(off, samples, channelsInFile[fileno]);
+            ++fileno;
+        }
+
+        for(int ch = 0; ch < channels; ch++) {
+            WindowFile * const outfile = destFileForChannel[ch];
+            infile.nextChannel();
+            if(destFileForChannel[ch] != 0) {
+                infile.read((char*)buf.buf(), samples*sizeof(float));
+                outfile->writeChannel(infile.getChannelId(), buf.buf());
+            }
+        }
+
+    }
+
+    delete [] channelsInFile;
+    return 0;
 }
 
 static int usage(const char *progname)
@@ -159,6 +231,35 @@ int main(int argc, char **argv) {
     else if(!strcmp(argv[1], "random")) {
         if(argc < 3 || (argc % 2 != 1))
             return usage(argv[0]);
+
+        dsfmt_gv_init_with_entropy();
+
+        QList<double> probabilities;
+        QList<WindowFile*> outfiles;
+
+        for(int i = 3; i < argc; i += 2) {
+            bool ok = true;
+            double probability = QString(argv[i]).toDouble(&ok);
+            if(!ok) {
+                fprintf(stderr, "invalid probability '%s'.\n", argv[i]);
+                return 1;
+            }
+            WindowFile *outfile = new WindowFile(argv[i+1]);
+            if(!outfile->open(QIODevice::WriteOnly)) {
+                fprintf(stderr, "can't open file '%s' for writing.\n", argv[i+1]);
+                return 1;
+            }
+            probabilities.append(probability);
+            outfiles.append(outfile);
+        }
+
+        if(cmd_random(infile, probabilities, outfiles))
+            return 1;
+
+        foreach(WindowFile *const outfile, outfiles) {
+            outfile->close();
+            delete outfile;
+        }
     }
     else return usage(argv[0]);
 
