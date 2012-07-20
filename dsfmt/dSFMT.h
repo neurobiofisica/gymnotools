@@ -34,6 +34,11 @@
 #include <stdio.h>
 #include <assert.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #if !defined(DSFMT_MEXP)
 #ifdef __GNUC__
   #warning "DSFMT_MEXP is not defined. I assume DSFMT_MEXP is 19937."
@@ -619,5 +624,9 @@ inline static void fill_array_close1_open2(double array[], int size) {
     dsfmt_gv_fill_array_close1_open2(array, size);
 }
 #endif /* DSFMT_DO_NOT_USE_OLD_NAMES */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* DSFMT_H */

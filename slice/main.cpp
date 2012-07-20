@@ -12,11 +12,9 @@
 #include "common/windowfile.h"
 #include "common/resizablebuffer.h"
 
-extern "C" {
 #define DSFMT_MEXP 19937
 #include "dsfmt/dSFMT.h"
 #include "dsfmt/entropy.h"
-}
 
 static void cmd_info(WindowFile &infile)
 {
