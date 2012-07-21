@@ -5,12 +5,15 @@ TEMPLATE = lib
 CONFIG += staticlib
 CONFIG -= debug_and_release debug_and_release_target
 
+INCLUDEPATH += ..
+
 SOURCES = \ 
     sigutil.cpp \
     signalbuffer.cpp \
     signalfile.cpp \
     excludedintervals.cpp \
-    cutincomplete.cpp
+    cutincomplete.cpp \
+    wfilts.c
 HEADERS = sigcfg.h \
     sigutil.h \
     resizablebuffer.h \
@@ -20,4 +23,6 @@ HEADERS = sigcfg.h \
     defaultparams.h \
     excludedintervals.h \
     cutincomplete.h \
-    windowfile.h
+    windowfile.h \
+    static_log2.h \
+    wfilts.h

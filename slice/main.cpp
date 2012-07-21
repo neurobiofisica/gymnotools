@@ -157,7 +157,8 @@ static int usage(const char *progname)
     return 1;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     commonInit();
 
     if(argc < 3)
