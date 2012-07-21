@@ -11,4 +11,6 @@ HEADERS +=
 
 CONFIG += console
 INCLUDEPATH += ..
-LIBS += -L../common -lcommon -L../dtcwpt -ldtcwpt -lfftw3f
+LIBS += -L../common -lcommon
+LIBS += -L../dtcwpt -ldtcwpt
+LIBS += -lfftw3f

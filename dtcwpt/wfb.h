@@ -23,6 +23,11 @@
 #ifndef WFB_H
 #define WFB_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 typedef struct {
     int n, off;
     float *h, *g;
@@ -97,5 +102,9 @@ static inline void sfb(const wavelet_filt *filt, const float *hin, const float *
         }
     }
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

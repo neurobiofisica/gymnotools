@@ -21,6 +21,11 @@
 
 #include "wfb.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 typedef struct {
     wavelet_filt *first;  /* First stage filters */
     wavelet_filt *cwt;    /* CWT-specific filters (e.g. q-shift filters) */
@@ -128,5 +133,9 @@ typedef enum {
  * @returns pointer to a list of stop points
  */
 cwpt_stop_point *bestbasis_find(bestbasis_cb_t cb, void *arg, bestbasis_optim_t optim, unsigned int n, unsigned int *nps);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
