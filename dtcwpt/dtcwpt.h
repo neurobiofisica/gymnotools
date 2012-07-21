@@ -34,7 +34,7 @@ typedef struct {
  * @param n size of the input vector (n >= 2^2)
  * @param out output vector (size: [log2(n)+1]*n)
  */
-void cwpt_fulltree(cwpt_filt *filt, float *in, unsigned int n, float *out);
+void cwpt_fulltree(const cwpt_filt *filt, const float *in, unsigned int n, float *out);
 
 /**
  * Mix two CWPT trees to compute an approximately shift-invariant DT-CWPT
@@ -43,7 +43,7 @@ void cwpt_fulltree(cwpt_filt *filt, float *in, unsigned int n, float *out);
  * @param n size of each CWPT tree
  * @param out output vector (size: n, may be the same as tree1 or tree2)
  */
-void dtcwpt_mix(float *tree1, float *tree2, unsigned int n, float *out);
+void dtcwpt_mix(const float *tree1, const float *tree2, unsigned int n, float *out);
 
 /**
  * Inverts the given level of a CWPT
@@ -53,7 +53,7 @@ void dtcwpt_mix(float *tree1, float *tree2, unsigned int n, float *out);
  * @param level transform level of the input vector (level > 0)
  * @param out output vector (size: n)
  */
-void invcwpt_level(cwpt_filt *filt, float *in, unsigned int n, unsigned int level, float *out);
+void invcwpt_level(const cwpt_filt *filt, const float *in, unsigned int n, unsigned int level, float *out);
 
 typedef struct {
     wavelet_filt *filt;
@@ -66,7 +66,7 @@ typedef struct {
 
 typedef struct {
     unsigned int n, nps, numstmts, size;
-    cwpt_filt *filt;
+    const cwpt_filt *filt;
     cwpt_stop_point *ps;
     prepared_cwpt_stmt *stmts;
 } prepared_cwpt;
@@ -78,7 +78,7 @@ typedef struct {
  * @param ps stop points (last level nodes, may be modified for sorting)
  * @returns a prepared packet transform
  */
-prepared_cwpt *cwpt_prepare(cwpt_filt *filt, unsigned int n, cwpt_stop_point *ps, unsigned int nps);
+prepared_cwpt *cwpt_prepare(const cwpt_filt *filt, unsigned int n, cwpt_stop_point *ps, unsigned int nps);
 
 /**
  * Computes a prepared CWPT
@@ -86,7 +86,7 @@ prepared_cwpt *cwpt_prepare(cwpt_filt *filt, unsigned int n, cwpt_stop_point *ps
  * @param in input/output vector
  * @param tmp temporary vector (same size as in)
  */
-void cwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp);
+void cwpt_exec(const prepared_cwpt *cwpt, float *in, float *tmp);
 
 /**
  * Computes the inverse of a prepared CWPT
@@ -94,7 +94,7 @@ void cwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp);
  * @param in input/output vector
  * @param tmp temporary vector (same size as in)
  */
-void invcwpt_exec(prepared_cwpt *cwpt, float *in, float *tmp);
+void invcwpt_exec(const prepared_cwpt *cwpt, float *in, float *tmp);
 
 /**
  * Free a prepared CWPT
@@ -110,7 +110,7 @@ void cwpt_free(prepared_cwpt *cwpt);
  * @param ps stop point list
  * @param nps number of stop points
  */
-void cwpt_tree_select(float *in, float *out, unsigned int n, cwpt_stop_point *ps, unsigned int nps);
+void cwpt_tree_select(const float *in, float *out, unsigned int n, const cwpt_stop_point *ps, unsigned int nps);
 
 typedef double(*bestbasis_cb_t)(void *arg, int level, unsigned int off, unsigned int n);
 typedef enum {

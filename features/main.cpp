@@ -3,9 +3,16 @@
 #include <string.h>
 #include <assert.h>
 
+#include <fftw3.h>
+
 #include "common/commoninit.h"
 #include "common/sigcfg.h"
 #include "common/windowfile.h"
+#include "common/static_log2.h"
+#include "common/wfilts.h"
+#include "dtcwpt/dtcwpt.h"
+
+static const int EODSamples_log2 = static_log2<EODSamples>::value;
 
 static int usage(const char *progname)
 {

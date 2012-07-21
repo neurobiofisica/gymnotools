@@ -22,9 +22,10 @@
 
 #include "wfb.h"
 
-void afb(wavelet_filt *filt, float *in, unsigned int n, float *hout, float *gout) {
+void afb(const wavelet_filt *filt, const float *in, unsigned int n, float *hout, float *gout) {
     unsigned int i,ii,j,k,n1,ni,nmod,ncoef;
-    float ai,*h,*g;
+    float ai;
+    const float *h,*g;
     
     ncoef = filt->n;
     h = filt->h;
@@ -48,9 +49,10 @@ void afb(wavelet_filt *filt, float *in, unsigned int n, float *hout, float *gout
     }
 }
 
-void sfb(wavelet_filt *filt, float *hin, float *gin, unsigned int n, float *out) {
+void sfb(const wavelet_filt *filt, const float *hin, const float *gin, unsigned int n, float *out) {
     unsigned int i,ii,j,k,jf,n1,ni,nmod,ncoef;
-    float ai,ai1,*h,*g;
+    float ai,ai1;
+    const float *h,*g;
     
     ncoef = filt->n;
     h = filt->h;

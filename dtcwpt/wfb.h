@@ -36,7 +36,7 @@ typedef struct {
  * @param hout low-pass filter output  (size: n/2)
  * @param gout high-pass filter output (size: n/2)
  */
-void afb(wavelet_filt *filt, float *in, unsigned int n, float *hout, float *gout);
+void afb(const wavelet_filt *filt, const float *in, unsigned int n, float *hout, float *gout);
 
 /**
  * Synthesis Filter Bank
@@ -46,6 +46,6 @@ void afb(wavelet_filt *filt, float *in, unsigned int n, float *hout, float *gout
  * @param n size of the output vector
  * @param out output vector
  */
-void sfb(wavelet_filt *filt, float *hin, float *gin, unsigned int n, float *out);
+void sfb(const wavelet_filt *filt, const float *hin, const float *gin, unsigned int n, float *out);
 
 #endif
