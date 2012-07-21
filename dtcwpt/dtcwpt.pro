@@ -1,4 +1,4 @@
 TEMPLATE = lib
 CONFIG = staticlib
-SOURCES = dtcwpt.c wfb.c
+SOURCES = dtcwpt.c
 HEADERS = dtcwpt.h wfb.h

@@ -20,8 +20,8 @@
  * http://www.nr.com/pubdom/pwt.c.txt
  */
 
-#ifndef WFR_H
-#define WFR_H
+#ifndef WFB_H
+#define WFB_H
 
 typedef struct {
     int n, off;
@@ -36,7 +36,32 @@ typedef struct {
  * @param hout low-pass filter output  (size: n/2)
  * @param gout high-pass filter output (size: n/2)
  */
-void afb(const wavelet_filt *filt, const float *in, unsigned int n, float *hout, float *gout);
+static inline void afb(const wavelet_filt *filt, const float *in, unsigned int n, float *hout, float *gout) {
+    unsigned int i,ii,j,k,n1,ni,nmod,ncoef;
+    float ai;
+    const float *h,*g;
+
+    ncoef = filt->n;
+    h = filt->h;
+    g = filt->g;
+
+    nmod = ncoef * n - filt->off;
+    n1 = n - 1;  /* as n is a power of 2, n1 will always have all bits 1 */
+
+    for(j = 0; j < (n >> 1); j++) {
+        hout[j] = 0.;
+        gout[j] = 0.;
+    }
+
+    for(ii=0,i=0; i<n; i+=2,ii++) {
+        ni = nmod+i;
+        for(k = 0; k < ncoef; k++) {
+            ai = in[(ni + k) & n1];
+            hout[ii] += h[k]*ai;
+            gout[ii] += g[k]*ai;
+        }
+    }
+}
 
 /**
  * Synthesis Filter Bank
@@ -46,6 +71,31 @@ void afb(const wavelet_filt *filt, const float *in, unsigned int n, float *hout,
  * @param n size of the output vector
  * @param out output vector
  */
-void sfb(const wavelet_filt *filt, const float *hin, const float *gin, unsigned int n, float *out);
+static inline void sfb(const wavelet_filt *filt, const float *hin, const float *gin, unsigned int n, float *out) {
+    unsigned int i,ii,j,k,jf,n1,ni,nmod,ncoef;
+    float ai,ai1;
+    const float *h,*g;
+
+    ncoef = filt->n;
+    h = filt->h;
+    g = filt->g;
+
+    nmod = ncoef * n - filt->off;
+    n1 = n - 1;  /* as n is a power of 2, n1 will always have all bits 1 */
+
+    for(j = 0; j < n; j++)
+        out[j] = 0.;
+
+    for(ii=0,i=0; i<n; i+=2,ii++) {
+        ni = nmod+i;
+        ai  = hin[ii];
+        ai1 = gin[ii];
+        for(k = 0; k < ncoef; k++) {
+            jf = (ni + k) & n1;
+            out[jf] += h[k]*ai ;
+            out[jf] += g[k]*ai1;
+        }
+    }
+}
 
 #endif
