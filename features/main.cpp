@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include <complex.h>
 #include <fftw3.h>
 
 #include "common/commoninit.h"
@@ -14,6 +15,65 @@
 #include "dtcwpt/dtcwpt.h"
 
 static const int EODSamples_log2 = static_log2<EODSamples>::value;
+static const int NumFFTFeatures = EODSamples/2;
+static const int NumDTCWPTFeatures = EODSamples*(1 + EODSamples_log2);
+static const int NumFeatures = NumFFTFeatures + NumDTCWPTFeatures;
+
+void cmd_compute(WindowFile &infile, WindowFile &outfile)
+{
+    static float origSignal[EODSamples] ALIGN(16);
+    static fftwf_complex fftSignal[1 + NumFFTFeatures] ALIGN(16);
+    static float dtcwptOut1[NumDTCWPTFeatures] ALIGN(16);
+    static float dtcwptOut2[NumDTCWPTFeatures] ALIGN(16);
+    static float featureData[NumFeatures] ALIGN(16);
+
+    fftwf_plan fftPlan = fftwf_plan_dft_r2c_1d(EODSamples, origSignal, fftSignal, 0);
+
+    while(infile.nextEvent()) {
+        const qint64 off = infile.getEventOffset();
+        const qint32 channels = infile.getEventChannels();
+
+        assert(infile.getEventSamples() == EODSamples);
+        outfile.writeEvent(off, NumFeatures, channels);
+
+        for(int ch = 0; ch < channels; ch++) {
+            infile.nextChannel();
+            infile.read((char*)origSignal, EODSamples*sizeof(float));
+
+            // Compute FFT of the signal
+            fftwf_execute(fftPlan);
+
+            // Take the absolute value of each non-DC FFT component
+            // and find the maximum of those values
+            float maxFFT = 0.;
+            for(int i = 0; i < NumFFTFeatures; i++) {
+                featureData[i] = cabsf(fftSignal[i+1]);
+                if(featureData[i] > maxFFT)
+                    maxFFT = featureData[i];
+            }
+
+            // Compute DT-CWPT of the signal and put after the
+            // FFT components in featureData
+            cwpt_fulltree(&tree1_filt, origSignal, EODSamples, dtcwptOut1);
+            cwpt_fulltree(&tree2_filt, origSignal, EODSamples, dtcwptOut2);
+            dtcwpt_mix(dtcwptOut1, dtcwptOut2, NumDTCWPTFeatures, &featureData[NumFFTFeatures]);
+
+            // Normalize featureData
+            const float normFactor = 1./maxFFT;
+            for(int i = 0; i < NumFeatures; i++) {
+                featureData[i] *= normFactor;
+            }
+
+            outfile.writeChannel(infile.getChannelId(), featureData);
+        }
+    }
+
+    fftwf_destroy_plan(fftPlan);
+}
+
+void cmd_rescale(WindowFile &file)
+{
+}
 
 static int usage(const char *progname)
 {
@@ -26,22 +86,6 @@ static int usage(const char *progname)
     return 1;
 }
 
-void cmd_compute(WindowFile &infile, WindowFile &outfile)
-{
-    float buf[EODSamples];
-    while(infile.nextEvent()) {
-        const qint64 off = infile.getEventOffset();
-        const qint32 channels = infile.getEventChannels();
-        assert(infile.getEventSamples() == EODSamples);
-        outfile.writeEvent(off, EODSamples, channels);
-        for(int ch = 0; ch < channels; ch++) {
-            infile.nextChannel();
-            infile.read((char*)buf, EODSamples*sizeof(float));
-            outfile.writeChannel(infile.getChannelId(), buf);
-        }
-    }
-}
-
 int main(int argc, char **argv)
 {
     commonInit();
@@ -50,7 +94,7 @@ int main(int argc, char **argv)
         return usage(argv[0]);
 
     if(!strcmp(argv[1], "compute")) {
-        if(argc < 4)
+        if(argc != 4)
             return usage(argv[0]);
         WindowFile infile(argv[2]);
         if(!infile.open(QIODevice::ReadOnly)) {
@@ -67,7 +111,15 @@ int main(int argc, char **argv)
         infile.close();
     }
     else if(!strcmp(argv[1], "rescale")) {
-
+        if(argc != 3)
+            return usage(argv[0]);
+        WindowFile file(argv[2]);
+        if(!file.open(QIODevice::ReadWrite)) {
+            fprintf(stderr, "can't open '%s' for reading and writing.\n", argv[2]);
+            return 1;
+        }
+        cmd_rescale(file);
+        file.close();
     }
     else return usage(argv[0]);
 
