@@ -10,6 +10,7 @@
 #include "common/windowfile.h"
 #include "common/static_log2.h"
 #include "common/wfilts.h"
+#include "common/compiler_specific.h"
 #include "dtcwpt/dtcwpt.h"
 
 static const int EODSamples_log2 = static_log2<EODSamples>::value;

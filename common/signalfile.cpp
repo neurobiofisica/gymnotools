@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "compiler_specific.h"
 #include "signalfile.h"
 #include "sigutil.h"
 
@@ -49,7 +50,7 @@ void SignalFile::readFilteredCh(SignalBuffer &buf)
     // adjust padding
     int actualPadding;
     qint64 pos;
-    if(curPos < idealPadding*BytesPerSample) {
+    if(UNLIKELY(curPos < idealPadding*BytesPerSample)) {
         pos = 0;
         actualPadding = curPos/BytesPerSample;
     }
@@ -78,6 +79,6 @@ void SignalFile::readFilteredCh(SignalBuffer &buf)
     }
 
     // rewind the file to just before the padding
-    if(!atEnd())
+    if(LIKELY(!atEnd()))
         seek(this->pos() - idealPadding*BytesPerSample);
 }
