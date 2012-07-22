@@ -25,4 +25,5 @@ HEADERS = sigcfg.h \
     cutincomplete.h \
     windowfile.h \
     static_log2.h \
-    wfilts.h
+    wfilts.h \
+    compiler_specific.h

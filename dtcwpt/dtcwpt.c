@@ -28,15 +28,18 @@
 #include <math.h>
 #include <assert.h>
 
+#include "common/compiler_specific.h"
+
 #include "wfb.h"
 #include "dtcwpt.h"
 
-void cwpt_fulltree(const cwpt_filt *filt, const float *in, unsigned int n, float *out) {
-    unsigned int n2 = n >> 1;
+void cwpt_fulltree(const cwpt_filt *filt, const afloat *in, unsigned int n, afloat *out) {
+    const unsigned int n2 = n >> 1;
     unsigned int m = n2, i, j, off;
 
     /* Copy unmodified signal to the first node of the tree */
-    memcpy(out, in, n*sizeof(float));
+    if(in != out)
+        memcpy(out, in, n*sizeof(float));
 
     /* First stage */
     afb(filt->first, &out[0], n, &out[n], &out[n+m]);
@@ -64,7 +67,7 @@ void cwpt_fulltree(const cwpt_filt *filt, const float *in, unsigned int n, float
     }
 }
 
-void dtcwpt_mix(const float *tree1, const float *tree2, unsigned int n, float *out) {
+void dtcwpt_mix(const afloat *tree1, const afloat *tree2, unsigned int n, afloat *out) {
     unsigned int i;
     for(i = 0; i < n; i++) {
         const float a1 = tree1[i];
@@ -73,14 +76,13 @@ void dtcwpt_mix(const float *tree1, const float *tree2, unsigned int n, float *o
     }
 }
 
-void invcwpt_level(const cwpt_filt *filt, const float *in, unsigned int n, unsigned int level, float *out) {
-    unsigned int n2 = n >> 1;
+void invcwpt_level(const cwpt_filt *filt, const afloat *in, unsigned int n, unsigned int level, afloat *out, afloat *tmp) {
+    const unsigned int vecsize = n*sizeof(float);
+    const unsigned int n2 = n >> 1;
     unsigned int m, i, j;
-    unsigned int vecsize = n*sizeof(float);
-    float *tmp;
 
-    assert((tmp = malloc(vecsize)) != NULL);
-    memcpy(tmp, in, vecsize);
+    if(in != tmp)
+        memcpy(tmp, in, vecsize);
 
     /* Initial m for the level stage */
     for(m = n, i = 0; i < level-1; i++)
@@ -96,8 +98,8 @@ void invcwpt_level(const cwpt_filt *filt, const float *in, unsigned int n, unsig
              * high-pass filtering.
              */
             int m2 = m >> 1;
-            float *hin = (j&1)==0 ? &tmp[i   ] : &tmp[i+m2];
-            float *gin = (j&1)==0 ? &tmp[i+m2] : &tmp[i   ];
+            const float *hin = (j&1)==0 ? &tmp[i   ] : &tmp[i+m2];
+            const float *gin = (j&1)==0 ? &tmp[i+m2] : &tmp[i   ];
             /* Filter and store in the parent node */
             sfb(wf, hin, gin, m, &out[i]);
         }
@@ -107,7 +109,7 @@ void invcwpt_level(const cwpt_filt *filt, const float *in, unsigned int n, unsig
     m = n2;
 
     /* Second stage */
-    if(level == 2) {
+    if(LIKELY(level == 2)) {
         sfb(filt->cwt, &tmp[0       ], &tmp[m>>1], m, &out[0]);
         sfb(filt->cwt, &tmp[m+(m>>1)], &tmp[m   ], m, &out[m]);
         memcpy(tmp, out, vecsize);
@@ -115,11 +117,9 @@ void invcwpt_level(const cwpt_filt *filt, const float *in, unsigned int n, unsig
     }
 
     /* First stage */
-    if(level == 1) {
+    if(LIKELY(level == 1)) {
         sfb(filt->first, &tmp[0], &tmp[m], n, &out[0]);
     }
-
-    free(tmp);
 }
 
 /**
@@ -137,21 +137,21 @@ static void _prep(prepared_cwpt *cwpt, unsigned int n, int level, int node) {
     }
     assert(n > 1);
     /* alloc space if needed */
-    if(cwpt->numstmts >= cwpt->size) {
+    if(UNLIKELY(cwpt->numstmts >= cwpt->size)) {
         cwpt->size <<= 1;
         assert((cwpt->stmts = realloc(cwpt->stmts, cwpt->size*sizeof(prepared_cwpt_stmt))) != NULL);
     }
     stmt = &cwpt->stmts[cwpt->numstmts++];
     stmt->n = n;
     /* First stage */
-    if(level == 0) {
+    if(UNLIKELY(level == 0)) {
         stmt->filt = cwpt->filt->first;
         stmt->in_off = 0;
         stmt->hout_off = 0;
         stmt->gout_off = n>>1;
     }
     /* Second stage */
-    else if(level == 1) {
+    else if(UNLIKELY(level == 1)) {
         stmt->filt = cwpt->filt->cwt;
         if(node == 0) {
             stmt->in_off = 0;
@@ -207,7 +207,7 @@ prepared_cwpt *cwpt_prepare(const cwpt_filt *filt, unsigned int n, cwpt_stop_poi
     return cwpt;
 }
 
-void cwpt_exec(const prepared_cwpt *cwpt, float *in, float *tmp) {
+void cwpt_exec(const prepared_cwpt *cwpt, afloat *RESTRICT in, afloat *RESTRICT tmp) {
     int i;
     for(i = 0; i < cwpt->numstmts; i++) {
         const prepared_cwpt_stmt *stmt = &cwpt->stmts[i];
@@ -217,7 +217,7 @@ void cwpt_exec(const prepared_cwpt *cwpt, float *in, float *tmp) {
     }
 }
 
-void invcwpt_exec(const prepared_cwpt *cwpt, float *in, float *tmp) {
+void invcwpt_exec(const prepared_cwpt *cwpt, afloat *RESTRICT in, afloat *RESTRICT tmp) {
     int i;
     for(i = cwpt->numstmts-1; i >= 0; i--) {
         const prepared_cwpt_stmt *stmt = &cwpt->stmts[i];
@@ -232,7 +232,7 @@ void cwpt_free(prepared_cwpt *cwpt) {
     free(cwpt);
 }
 
-void cwpt_tree_select(const float *in, float *out, unsigned int n, const cwpt_stop_point *ps, unsigned int nps) {
+void cwpt_tree_select(const afloat *RESTRICT in, afloat *RESTRICT out, unsigned int n, const cwpt_stop_point *ps, unsigned int nps) {
     unsigned int i, m, maxlevel=0;
     /* Count number of levels */
     for(m = n; m > 1; m >>= 1)

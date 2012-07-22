@@ -23,6 +23,8 @@
 #ifndef WFB_H
 #define WFB_H
 
+#include "common/compiler_specific.h"
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -30,7 +32,7 @@ extern "C"
 
 typedef struct {
     int n, off;
-    float *h, *g;
+    afloat *h, *g;
 } wavelet_filt;
 
 /**
@@ -41,10 +43,10 @@ typedef struct {
  * @param hout low-pass filter output  (size: n/2)
  * @param gout high-pass filter output (size: n/2)
  */
-static inline void afb(const wavelet_filt *filt, const float *in, unsigned int n, float *hout, float *gout) {
+static AINLINE void afb(const wavelet_filt *filt, const float *RESTRICT in, unsigned int n, float *RESTRICT hout, float *RESTRICT gout) {
     unsigned int i,ii,j,k,n1,ni,nmod,ncoef;
     float ai;
-    const float *h,*g;
+    const afloat *RESTRICT h, *RESTRICT g;
 
     ncoef = filt->n;
     h = filt->h;
@@ -76,10 +78,10 @@ static inline void afb(const wavelet_filt *filt, const float *in, unsigned int n
  * @param n size of the output vector
  * @param out output vector
  */
-static inline void sfb(const wavelet_filt *filt, const float *hin, const float *gin, unsigned int n, float *out) {
+static AINLINE void sfb(const wavelet_filt *filt, const float *RESTRICT hin, const float *RESTRICT gin, unsigned int n, float *RESTRICT out) {
     unsigned int i,ii,j,k,jf,n1,ni,nmod,ncoef;
     float ai,ai1;
-    const float *h,*g;
+    const afloat *RESTRICT h, *RESTRICT g;
 
     ncoef = filt->n;
     h = filt->h;

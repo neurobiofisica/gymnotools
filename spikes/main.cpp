@@ -17,6 +17,7 @@
 #include "common/excludedintervals.h"
 #include "common/cutincomplete.h"
 #include "common/windowfile.h"
+#include "common/compiler_specific.h"
 
 class ChannelExcludableSignalBuffer : public SignalBuffer
 {
@@ -46,7 +47,7 @@ public:
     }
 };
 
-static inline void linearRegression(float *buf, int off, int len, float &a, float &b)
+static AINLINE void linearRegression(float *buf, int off, int len, float &a, float &b)
 {
     float xsum = 0., ysum = 0., xysum = 0., x2sum = 0.;
     for(int i = off; i < off + len; i++) {
@@ -59,8 +60,8 @@ static inline void linearRegression(float *buf, int off, int len, float &a, floa
     b = (ysum - a*xsum)/len;
 }
 
-static inline void reconstructSaturated(float *buf, int len,
-                                        float saturationLow, float saturationHigh)
+static AINLINE void reconstructSaturated(float *buf, int len,
+                                         float saturationLow, float saturationHigh)
 {
     const int regressionPoints = 4;
 
@@ -91,20 +92,20 @@ static inline void reconstructSaturated(float *buf, int len,
     }
 }
 
-static inline void reconstructSaturated(SignalBuffer &buffer,
-                                        float saturationLow, float saturationHigh)
+static AINLINE void reconstructSaturated(SignalBuffer &buffer,
+                                         float saturationLow, float saturationHigh)
 {
     for(int ch = 0; ch < NumChannels; ch++) {
         reconstructSaturated(buffer.ch(ch), buffer.spc(), saturationLow, saturationHigh);
     }
 }
 
-static inline void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
-                                 ChannelExcludableSignalBuffer &buffer,
-                                 const bool *chExcluded, bool fixedwin,
-                                 float onlyabove, float minlevel,
-                                 float minratio, int stopsamples,
-                                 float saturationLow, float saturationHigh)
+static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
+                                  ChannelExcludableSignalBuffer &buffer,
+                                  const bool *chExcluded, bool fixedwin,
+                                  float onlyabove, float minlevel,
+                                  float minratio, int stopsamples,
+                                  float saturationLow, float saturationHigh)
 {
     float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
 
