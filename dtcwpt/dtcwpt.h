@@ -57,6 +57,7 @@ void dtcwpt_mix(const afloat *tree1, const afloat *tree2, unsigned int n, afloat
  * @param n size of the input vector (n >= 2^2)
  * @param level transform level of the input vector (level > 0)
  * @param out output vector (size: n)
+ * @param tmp temporary vector (same size as in)
  */
 void invcwpt_level(const cwpt_filt *filt, const afloat *in, unsigned int n, unsigned int level, afloat *out, afloat *tmp);
 
