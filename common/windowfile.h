@@ -43,6 +43,15 @@ public:
     qint32 getChannelId() const { return curChannelId; }
 
     /**
+     * Rewinds the file so that it can be read like it was just opened.
+     */
+    void rewind()
+    {
+        seek(0);
+        curEventPos = curEventLen = curEventChannels = curChannel = 0;
+    }
+
+    /**
      * Writes the occurrence of an event.
      * @param offset the offset at the original data file in which the event occurs
      * @param samples number of samples contained in payload channels
