@@ -1,6 +1,5 @@
 import struct
 import numpy as np
-import matplotlib.pyplot as plt
 
 def readwins(f, N=np.inf):
     n = 0
