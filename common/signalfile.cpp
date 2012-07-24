@@ -1,5 +1,5 @@
 #include <assert.h>
-#include "compiler_specific.h"
+#include "compilerspecific.h"
 #include "signalfile.h"
 #include "sigutil.h"
 

@@ -1,7 +1,9 @@
 #ifndef GUIUTIL_H
 #define GUIUTIL_H
 
-#include "common/compiler_specific.h"
+#include <QtGlobal>
+
+#include "common/compilerspecific.h"
 #include "guicfg.h"
 
 static AINLINE void fillXData(double *xdata, qint64 curPos) {

@@ -2,7 +2,7 @@
 #define SIGUTIL_H
 
 #include <math.h>
-#include "common/compiler_specific.h"
+#include "common/compilerspecific.h"
 
 /**
  * Constructs a hamming window
@@ -36,6 +36,33 @@ static AINLINE float maxAbsFloat(float *sig, int len) {
             max = sample;
     }
     return max;
+}
+
+/**
+ * Finds the maximum element of an aligned vector
+ * @param sig aligned vector
+ * @param len length of the vector
+ * @returns the maximum value
+ */
+static AINLINE float maxAlignedFloat(afloat *sig, int len) {
+    float max = sig[0];
+    for(int i = 0; i < len; i++) {
+        if(sig[i] > max)
+            max = sig[i];
+    }
+    return max;
+}
+
+/**
+ * Normalizes an aligned vector
+ * @param sig aligned vector
+ * @param len length of the vector
+ */
+static AINLINE void normalizeAlignedFloat(afloat *sig, int len) {
+    const float normFactor = 1./maxAlignedFloat(sig, len);
+    for(int i = 0; i < len; i++) {
+        sig[i] *= normFactor;
+    }
 }
 
 #endif // SIGUTIL_H

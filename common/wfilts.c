@@ -1,4 +1,4 @@
-#include "compiler_specific.h"
+#include "compilerspecific.h"
 #include "wfilts.h"
 
 static float daub7_h[] ALIGN(16) = {

@@ -28,7 +28,7 @@
 #include <math.h>
 #include <assert.h>
 
-#include "common/compiler_specific.h"
+#include "common/compilerspecific.h"
 
 #include "wfb.h"
 #include "dtcwpt.h"

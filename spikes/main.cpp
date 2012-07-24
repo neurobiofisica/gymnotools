@@ -17,7 +17,7 @@
 #include "common/excludedintervals.h"
 #include "common/cutincomplete.h"
 #include "common/windowfile.h"
-#include "common/compiler_specific.h"
+#include "common/compilerspecific.h"
 
 class ChannelExcludableSignalBuffer : public SignalBuffer
 {

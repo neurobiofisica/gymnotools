@@ -26,4 +26,4 @@ HEADERS = sigcfg.h \
     windowfile.h \
     static_log2.h \
     wfilts.h \
-    compiler_specific.h
+    compilerspecific.h

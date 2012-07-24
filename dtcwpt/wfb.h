@@ -23,7 +23,7 @@
 #ifndef WFB_H
 #define WFB_H
 
-#include "common/compiler_specific.h"
+#include "common/compilerspecific.h"
 
 #ifdef __cplusplus
 extern "C"

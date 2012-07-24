@@ -8,10 +8,11 @@
 
 #include "common/commoninit.h"
 #include "common/sigcfg.h"
+#include "common/sigutil.h"
 #include "common/windowfile.h"
 #include "common/static_log2.h"
 #include "common/wfilts.h"
-#include "common/compiler_specific.h"
+#include "common/compilerspecific.h"
 #include "dtcwpt/dtcwpt.h"
 
 static const int EODSamples_log2 = static_log2<EODSamples>::value;
@@ -19,7 +20,7 @@ static const int NumFFTFeatures = EODSamples/2;
 static const int NumDTCWPTFeatures = EODSamples*(1 + EODSamples_log2);
 static const int NumFeatures = NumFFTFeatures + NumDTCWPTFeatures;
 
-void cmd_compute(WindowFile &infile, WindowFile &outfile)
+static void cmd_compute(WindowFile &infile, WindowFile &outfile)
 {
     static float origSignal[EODSamples] ALIGN(16);
     static fftwf_complex fftSignal[1 + NumFFTFeatures] ALIGN(16);
@@ -43,14 +44,10 @@ void cmd_compute(WindowFile &infile, WindowFile &outfile)
             // Compute FFT of the signal
             fftwf_execute(fftPlan);
 
-            // Take the absolute value of each non-DC FFT component
-            // and find the maximum of those values
-            float maxFFT = 0.;
-            for(int i = 0; i < NumFFTFeatures; i++) {
+            // Take the absolute value of each FFT component
+            // (discarding the DC component)
+            for(int i = 0; i < NumFFTFeatures; i++)
                 featureData[i] = cabsf(fftSignal[i+1]);
-                if(featureData[i] > maxFFT)
-                    maxFFT = featureData[i];
-            }
 
             // Compute DT-CWPT of the signal and put after the
             // FFT components in featureData
@@ -59,20 +56,15 @@ void cmd_compute(WindowFile &infile, WindowFile &outfile)
             dtcwpt_mix(dtcwptOut1, dtcwptOut2, NumDTCWPTFeatures, &featureData[NumFFTFeatures]);
 
             // Normalize featureData
-            const float normFactor = 1./maxFFT;
-            for(int i = 0; i < NumFeatures; i++) {
-                featureData[i] *= normFactor;
-            }
+            normalizeAlignedFloat(featureData, NumFFTFeatures);
+            for(int i = NumFFTFeatures; i < NumFeatures; i += EODSamples)
+                normalizeAlignedFloat(&featureData[i], EODSamples);
 
             outfile.writeChannel(infile.getChannelId(), featureData);
         }
     }
 
     fftwf_destroy_plan(fftPlan);
-}
-
-void cmd_rescale(WindowFile &file)
-{
 }
 
 static int usage(const char *progname)
@@ -88,6 +80,7 @@ static int usage(const char *progname)
 
 int main(int argc, char **argv)
 {
+    assert(EODSamples % 4 == 0);   // required for alignment
     commonInit();
 
     if(argc < 3)
@@ -111,15 +104,6 @@ int main(int argc, char **argv)
         infile.close();
     }
     else if(!strcmp(argv[1], "rescale")) {
-        if(argc != 3)
-            return usage(argv[0]);
-        WindowFile file(argv[2]);
-        if(!file.open(QIODevice::ReadWrite)) {
-            fprintf(stderr, "can't open '%s' for reading and writing.\n", argv[2]);
-            return 1;
-        }
-        cmd_rescale(file);
-        file.close();
     }
     else return usage(argv[0]);
 
