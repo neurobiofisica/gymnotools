@@ -108,9 +108,9 @@ static void cmd_rescale_prepare(QFile &scalefile, QList<WindowFile*> &infiles)
         if(maxval[i] > maxallowed)
             maxval[i] = maxallowed;
 
-        if(!isfinite(minval[i]) || (minval[i] < 0.))
+        if(isinf(minval[i]) || (minval[i] < 0.))
             minval[i] = 0.;
-        if(!isfinite(maxval[i]) || (maxval[i] <= minval[i]))
+        if(isinf(maxval[i]) || (maxval[i] <= minval[i]))
             maxval[i] = minval[i] + eps;
     }
 

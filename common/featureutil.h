@@ -2,7 +2,11 @@
 #define FEATUREUTIL_H
 
 #include <QFile>
+
 #include <complex.h>
+#ifndef complex
+#define complex
+#endif
 #include <fftw3.h>
 
 #include "sigcfg.h"
