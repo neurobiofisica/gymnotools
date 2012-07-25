@@ -138,6 +138,32 @@ static void cmd_rescale_apply(QFile &scalefile, QList<WindowFile*> &outfiles)
     }
 }
 
+static void cmd_filter_apply(QFile &filterfile, WindowFile &infile, WindowFile &outfile)
+{
+    static float origFeatures[NumFeatures] ALIGN(16);
+    static float filtFeatures[NumFeatures] ALIGN(16);
+    FeatureFilter worker(filterfile);
+
+    assert(infile.nextEvent());
+    const qint32 samples = infile.getEventSamples();
+    assert(worker.maxIndex() < samples);
+
+    do {
+        const qint64 off = infile.getEventOffset();
+        const qint32 channels = infile.getEventChannels();
+
+        assert(infile.getEventSamples() == samples);
+        outfile.writeEvent(off, worker.length(), channels);
+
+        for(int ch = 0; ch < channels; ch++) {
+            infile.nextChannel();
+            infile.read((char*)origFeatures, samples*sizeof(float));
+            worker.filter(origFeatures, filtFeatures);
+            outfile.writeChannel(infile.getChannelId(), filtFeatures);
+        }
+    } while(infile.nextEvent());
+}
+
 static int usage(const char *progname)
 {
     fprintf(stderr, "Usage:\n");
@@ -149,6 +175,8 @@ static int usage(const char *progname)
             "  in the range [-1,1].\n", progname);
     fprintf(stderr, "%s rescale apply infile.scale outfiles.features\n"
             "  Apply the rescaling factors to the outfiles.\n", progname);
+    fprintf(stderr, "%s filter apply infile.filter infile.features outfile.features\n"
+            "  Apply the feature filter to infile, producing outfile.\n", progname);
     return 1;
 }
 
@@ -220,6 +248,32 @@ int main(int argc, char **argv)
                 }
                 scalefile.close();
             }
+        }
+        else return usage(argv[0]);
+    }
+    else if(!strcmp(argv[1], "filter")) {
+        if(!strcmp(argv[2], "apply")) {
+            if(argc != 6)
+                return usage(argv[0]);
+            QFile filterfile(argv[3]);
+            if(!filterfile.open(QIODevice::ReadOnly)) {
+                fprintf(stderr, "can't open filter file '%s' for reading.\n", argv[3]);
+                return 1;
+            }
+            WindowFile infile(argv[4]);
+            if(!infile.open(QIODevice::ReadOnly)) {
+                fprintf(stderr, "can't open feature file '%s' for reading.\n", argv[4]);
+                return 1;
+            }
+            WindowFile outfile(argv[5]);
+            if(!outfile.open(QIODevice::WriteOnly)) {
+                fprintf(stderr, "can't open feature file '%s' for writing.\n", argv[5]);
+                return 1;
+            }
+            cmd_filter_apply(filterfile, infile, outfile);
+            filterfile.close();
+            infile.close();
+            outfile.close();
         }
         else return usage(argv[0]);
     }

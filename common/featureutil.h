@@ -1,7 +1,10 @@
 #ifndef FEATUREUTIL_H
 #define FEATUREUTIL_H
 
+#include <assert.h>
 #include <QFile>
+#include <QList>
+#include <QTextStream>
 
 #include <complex.h>
 #ifndef complex
@@ -103,5 +106,74 @@ static AINLINE void rescaleFeatureWin(afloat *win, afloat *minval, afloat *maxva
     for(int i = 0; i < samples; i++)
         win[i] = 2.*((win[i] - minval[i])/(maxval[i]-minval[i])) - 1.;
 }
+
+class FeatureFilter
+{
+private:
+    int len;
+    int sel[NumFeatures];
+    int maxidx;
+public:
+    /**
+     * Set selection list from the contents of a QList<int>
+     * @param selected the list
+     */
+    void setSelected(const QList<int> &selected)
+    {
+        assert(selected.length() <= NumFeatures);
+        len = selected.length();
+        int i = 0;
+        maxidx = 0;
+        foreach(const int x, selected) {
+            sel[i++] = x;
+            if(x > maxidx)
+                maxidx = x;
+        }
+    }
+    /**
+     * Set selection list from the contents of a QFile
+     * @param filterFile the file
+     */
+    void readFromFile(QFile &filterFile)
+    {
+        QList<int> selected;
+        QTextStream stream(&filterFile);
+        while(true) {
+            int x; stream >> x;
+            if(stream.status() != QTextStream::Ok)
+                break;
+            selected.append(x);
+        }
+        setSelected(selected);
+    }
+    /**
+     * Filter the in vector, producing the out vector
+     * @param in the in aligned vector
+     * @param out the out aligned vector
+     */
+    void filter(afloat *in, afloat *out)
+    {
+        for(int i = 0; i < len; i++) {
+            out[i] = in[sel[i]];
+        }
+    }
+    /**
+     * Get the length of the loaded selection list
+     */
+    int length() const
+    {
+        return len;
+    }
+    /**
+     * Get the maximum index selected by the loaded selection list
+     */
+    int maxIndex() const
+    {
+        return maxidx;
+    }
+    FeatureFilter() :len(0),maxidx(0) { }
+    explicit FeatureFilter(const QList<int> &selected) { setSelected(selected); }
+    explicit FeatureFilter(QFile &filterFile) { readFromFile(filterFile); }
+};
 
 #endif // FEATUREUTIL_H
