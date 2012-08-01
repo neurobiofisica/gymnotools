@@ -1,11 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <getopt.h>
 #include <assert.h>
 #include <math.h>
 #include <limits>
 
+#include <QPair>
 #include <QList>
+#include <QStringList>
+#include <QTextStream>
 #include <QtAlgorithms>
 
 #include "common/featureutil.h"
@@ -237,6 +242,82 @@ static void cmd_rescale_apply(QFile &scalefile, QList<WindowFile*> &outfiles)
     }
 }
 
+static void filter_prepare_best(bool *featureIncl, int n, double *overlap, int samples)
+{
+    typedef QPair<double,int> DoubleIntPair;
+    QList<DoubleIntPair> overlapList;
+    for(int i = 0; i < samples; i++)
+        overlapList.append(DoubleIntPair(overlap[i], i));
+    qSort(overlapList);
+    foreach(const DoubleIntPair &pair, overlapList) {
+        const int idx = pair.second;
+        if(!featureIncl[idx]) {
+            featureIncl[idx] = true;
+            if(--n == 0)
+                break;
+        }
+    }
+}
+
+enum FiltPrepOpId {
+    FILT_PREP_ADD,
+    FILT_PREP_BESTBASIS,
+    FILT_PREP_BEST
+};
+struct FiltPrepOp {
+    FiltPrepOpId opid;
+    int arg1, arg2;
+};
+
+static void cmd_filter_prepare(QList<FiltPrepOp> &oplist, int histBars, bool histStd,
+                               WindowFile &fileA, WindowFile &fileB, QFile &outfile)
+{
+    QList<WindowFile*> fileList;
+    fileList.append(&fileA);
+    fileList.append(&fileB);
+
+    qint32 samples = computeInfo(fileList);
+    assert(samples <= NumFeatures);
+    if(samples != NumFeatures)
+        fprintf(stderr, "warning: input feature files are already filtered\n");
+
+    fileA.rewind();
+    fileB.rewind();
+
+    Histogram histogramA(fileA, histBars, minval, maxval, samples, histStd ? stdev : NULL);
+    Histogram histogramB(fileB, histBars, minval, maxval, samples, histStd ? stdev : NULL);
+
+    double overlap[NumFeatures];
+    histogramA.overlap(histogramB, overlap);
+
+    bool featureIncl[NumFeatures];
+    for(int i = 0; i < NumFeatures; i++)
+        featureIncl[i] = false;
+
+    foreach(const FiltPrepOp &op, oplist) {
+        switch(op.opid) {
+        case FILT_PREP_ADD:
+            for(int i = op.arg1; i <= op.arg2; i++) {
+                assert(i >= 0); assert(i < NumFeatures);
+                featureIncl[i] = true;
+            }
+            break;
+        case FILT_PREP_BESTBASIS:
+            break;
+        case FILT_PREP_BEST:
+            filter_prepare_best(featureIncl, op.arg1, overlap, samples);
+            break;
+        }
+    }
+
+    QTextStream stream(&outfile);
+    for(int i = 0; i < samples; i++) {
+        if(featureIncl[i]) {
+            stream << i << '\n';
+        }
+    }
+}
+
 static void cmd_filter_apply(QFile &filterfile, WindowFile &infile, WindowFile &outfile)
 {
     static float origFeatures[NumFeatures] ALIGN(16);
@@ -269,11 +350,22 @@ static int usage(const char *progname)
     fprintf(stderr, "%s compute infile.spikes outfile.features\n"
             "  Compute FFT and DT-CWPT features from a spike file.\n", progname);
     fprintf(stderr, "%s rescale prepare outfile.scale infiles.features\n"
-            "  Prepare rescaling factors that when applied to the infiles\n"
-            "  would cause all features (besides outliers) to lie\n"
-            "  in the [-1,1] range [-1,1].\n", progname);
+            "  Prepare rescaling factors that when applied to the infiles would cause\n"
+            "  features (besides outliers outside a %.0f-sigma range) to lie in the\n"
+            "  [-1,1] range.\n", progname, nonOutlierSigma);
     fprintf(stderr, "%s rescale apply infile.scale outfiles.features\n"
             "  Apply the rescaling factors to the outfiles.\n", progname);
+    fprintf(stderr, "%s filter prepare [options] A.features B.features out.filter\n"
+            "  Prepare a feature filter by reading features of distinct experimental\n"
+            "  subjects A and B, producing out.filter.\n"
+            "  Available options:\n"
+            "    --add=a,b      add features in the interval [a,b]\n"
+            "    --fft          add all FFT features (same as --add=0,%d)\n"
+            "    --bestbasis    add DT-CWPT bestbasis features\n"
+            "    --best=n       add n best (less histogram overlap) features\n"
+            "    --hist-bars=n  use n bars for the histogram\n"
+            "    --hist-std=n   use n bars around an one-sigma range for the histogram\n",
+            progname, NumFFTFeatures-1);
     fprintf(stderr, "%s filter apply infile.filter infile.features outfile.features\n"
             "  Apply the feature filter to infile, producing outfile.\n", progname);
     return 1;
@@ -281,15 +373,16 @@ static int usage(const char *progname)
 
 int main(int argc, char **argv)
 {
+    const char *progname = argv[0];
     assert(EODSamples % 4 == 0);   // required for alignment
     commonInit();
 
     if(argc < 3)
-        return usage(argv[0]);
+        return usage(progname);
 
     if(!strcmp(argv[1], "compute")) {
         if(argc != 4)
-            return usage(argv[0]);
+            return usage(progname);
         WindowFile infile(argv[2]);
         if(!infile.open(QIODevice::ReadOnly)) {
             fprintf(stderr, "can't open spike file '%s' for reading.\n", argv[2]);
@@ -306,7 +399,7 @@ int main(int argc, char **argv)
     }
     else if(!strcmp(argv[1], "rescale")) {
         if(argc < 5)
-            return usage(argv[0]);
+            return usage(progname);
         QFile scalefile(argv[3]);
         if(!strcmp(argv[2], "prepare")) {
             if(!scalefile.open(QIODevice::WriteOnly)) {
@@ -348,34 +441,130 @@ int main(int argc, char **argv)
                 scalefile.close();
             }
         }
-        else return usage(argv[0]);
+        else return usage(progname);
     }
     else if(!strcmp(argv[1], "filter")) {
         if(!strcmp(argv[2], "prepare")) {
-            if(argc != 5)
-                return usage(argv[0]);
-            WindowFile fileA(argv[3]), fileB(argv[4]);
-            assert(fileA.open(QIODevice::ReadOnly));
-            assert(fileB.open(QIODevice::ReadOnly));
-            QList<WindowFile*> filelist;
-            filelist.append(&fileA);
-            filelist.append(&fileB);
-            qint32 samples = computeInfo(filelist);
-            fileA.rewind();
-            fileB.rewind();
-            Histogram histogramA(fileA, 20, minval, maxval, samples, stdev);
-            Histogram histogramB(fileB, 20, minval, maxval, samples, stdev);
-            static double overlap[NumFeatures];
-            histogramA.overlap(histogramB, overlap);
-            for(int i = 0; i < samples;i++) {
-                printf("%.10f\n", overlap[i]);
+            QList<FiltPrepOp> oplist;
+            int histBars = 20;
+            bool histStd = true;
+
+            argc -= 2;
+            argv = &argv[2];
+
+            while(1) {
+                int option_index = 0;
+                static struct option long_options[] = {
+                    { "add",       required_argument, 0, 1 },
+                    { "fft",       no_argument,       0, 2 },
+                    { "bestbasis", no_argument,       0, 3 },
+                    { "best",      required_argument, 0, 4 },
+                    { "hist-bars", required_argument, 0, 5 },
+                    { "hist-std",  required_argument, 0, 6 },
+                    { 0, 0, 0, 0 }
+                };
+
+                int c = getopt_long(argc, argv, "", long_options, &option_index);
+                if(c == -1)
+                    break;
+
+                FiltPrepOp op;
+                bool ok1 = false, ok2 = false;
+                QStringList sl;
+
+                switch(c) {
+                case 1:
+                    op.opid = FILT_PREP_ADD;
+                    sl = QString(optarg).split(",");
+                    if(sl.length() != 2) {
+                        fprintf(stderr, "--add argument must be a list of two numbers\n");
+                        return 1;
+                    }
+                    op.arg1 = sl.at(0).toInt(&ok1);
+                    op.arg2 = sl.at(1).toInt(&ok2);
+                    if(!ok1 || !ok2) {
+                        fprintf(stderr, "--add arguments must be numbers\n");
+                        return 1;
+                    }
+                    if(op.arg1 < 0 || op.arg1 >= NumFeatures) {
+                        fprintf(stderr, "--add: %d is outside the range [0,%d)\n", op.arg1, NumFeatures);
+                        return 1;
+                    }
+                    if(op.arg2 < 0 || op.arg2 >= NumFeatures) {
+                        fprintf(stderr, "--add: %d is outside the range [0,%d)\n", op.arg2, NumFeatures);
+                        return 1;
+                    }
+                    if(op.arg2 < op.arg1) {
+                        fprintf(stderr, "--add: invalid interval from %d to %d\n", op.arg1, op.arg2);
+                        return 1;
+                    }
+                    oplist.append(op);
+                    break;
+                case 2:
+                    op.opid = FILT_PREP_ADD;
+                    op.arg1 = 0;
+                    op.arg2 = NumFFTFeatures - 1;
+                    oplist.append(op);
+                    break;
+                case 3:
+                    op.opid = FILT_PREP_BESTBASIS;
+                    oplist.append(op);
+                    break;
+                case 4:
+                    op.opid = FILT_PREP_BEST;
+                    op.arg1 = QString(optarg).toInt(&ok1);
+                    if(!ok1) {
+                        fprintf(stderr, "invalid number '%s' passed as --best argument\n", optarg);
+                        return 1;
+                    }
+                    if(op.arg1 < 0 || op.arg1 > NumFeatures) {
+                        fprintf(stderr, "--best: %d is outside the range [0,%d]\n", op.arg1, NumFeatures);
+                        return 1;
+                    }
+                    oplist.append(op);
+                    break;
+                case 5:
+                case 6:
+                    histStd = (c == 6);
+                    histBars = QString(optarg).toInt(&ok1);
+                    if(!ok1) {
+                        fprintf(stderr, "invalid number '%s'\n", optarg);
+                        return 1;
+                    }
+                    break;
+                default:
+                    return usage(progname);
+                }
             }
+
+            if(argc - optind != 3)
+                return usage(progname);
+
+            WindowFile fileA(argv[optind]), fileB(argv[optind+1]);
+            if(!fileA.open(QIODevice::ReadOnly)) {
+                fprintf(stderr, "can't open feature file '%s' for reading\n", argv[optind]);
+                return 1;
+            }
+            if(!fileB.open(QIODevice::ReadOnly)) {
+                fprintf(stderr, "can't open feature file '%s' for reading\n", argv[optind+1]);
+                return 1;
+            }
+
+            QFile outfile(argv[optind+2]);
+            if(!outfile.open(QIODevice::WriteOnly)) {
+                fprintf(stderr, "can't open filter file '%s' for writing\n", argv[optind+2]);
+                return 1;
+            }
+
+            cmd_filter_prepare(oplist, histBars, histStd, fileA, fileB, outfile);
+
+            outfile.close();
             fileA.close();
             fileB.close();
         }
         else if(!strcmp(argv[2], "apply")) {
             if(argc != 6)
-                return usage(argv[0]);
+                return usage(progname);
             QFile filterfile(argv[3]);
             if(!filterfile.open(QIODevice::ReadOnly)) {
                 fprintf(stderr, "can't open filter file '%s' for reading.\n", argv[3]);
@@ -396,9 +585,9 @@ int main(int argc, char **argv)
             infile.close();
             outfile.close();
         }
-        else return usage(argv[0]);
+        else return usage(progname);
     }
-    else return usage(argv[0]);
+    else return usage(progname);
 
     return 0;
 }
