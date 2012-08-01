@@ -5,11 +5,17 @@
 #include <math.h>
 #include <limits>
 
+#include <QList>
+#include <QtAlgorithms>
+
 #include "common/featureutil.h"
 #include "common/commoninit.h"
 #include "common/sigcfg.h"
 #include "common/windowfile.h"
 #include "common/compilerspecific.h"
+
+// determines the range outside which values are considered outliers
+static const float nonOutlierSigma = 4.;
 
 static float  buf  [NumFeatures] ALIGN(16);
 static double mean [NumFeatures] ALIGN(16);
@@ -19,7 +25,7 @@ static float maxval[NumFeatures] ALIGN(16);
 
 /**
  * Computes mean, stdev, minval and maxval of all features
- * over all infiles.
+ * over all infiles. Store those in global vectors.
  * @returns the number of features
  */
 static qint32 computeInfo(QList<WindowFile*> &infiles)
@@ -68,8 +74,108 @@ static qint32 computeInfo(QList<WindowFile*> &infiles)
             stdev[i] = eps;
     }
 
+    // Sanitize the minimum and maximum values
+    for(int i = 0; i < samples; i++) {
+        if(isinf(minval[i]))
+            minval[i] = maxval[i];
+        if(isinf(maxval[i]) || (maxval[i] <= minval[i]))
+            maxval[i] = minval[i] + eps;
+    }
+
     return samples;
 }
+
+struct Histogram
+{
+    float *intervals;
+    double **hist;
+    double n;
+    int maxBars;
+    int samples;
+
+    /**
+     * Compute a histogram for each of the samples contained in a window file.
+     * The minimum and maximum values for each sample must be precomputed.
+     * @param infile the window file
+     * @param numbars desired number of histogram bars
+     * @param minval minimum values for each sample
+     * @param maxval maximum values for each sample
+     * @param veclen length of the vectors (number of samples)
+     * @param stdev if provided, numbars is applied to a 1-sigma range
+     */
+    Histogram(WindowFile &infile, int numbars,
+              const float *minval, const float *maxval, int veclen,
+              const double *stdev = NULL)
+    {
+        samples = veclen;
+        intervals = new float[veclen];
+        if(stdev == NULL) {
+            for(int i = 0; i < veclen; i++)
+                intervals[i] = (maxval[i] - minval[i]) / numbars;
+        }
+        else {
+            for(int i = 0; i < veclen; i++)
+                intervals[i] = 2.*stdev[i] / numbars;
+        }
+
+        maxBars = 0;
+        for(int i = 0; i < veclen; i++) {
+            const int bars = (int)((maxval[i] - minval[i]) / intervals[i]) + 1;
+            if(bars > maxBars)
+                maxBars = bars;
+        }
+
+        hist = new double*[veclen];
+        hist[0] = new double[veclen * maxBars];
+        for(int i = 1; i < veclen; i++) {
+            hist[i] = &hist[i-1][maxBars];
+        }
+
+        for(int i = 0; i < veclen; i++)
+            for(int j = 0; j < maxBars; j++)
+                hist[i][j] = 0.;
+
+        n = 0.;
+        float *buf = new float[veclen];
+        while(infile.nextChannel()) {
+            assert(infile.getEventSamples() == veclen);
+            infile.read((char*)buf, veclen*sizeof(float));
+            for(int i = 0; i < veclen; i++) {
+                const int bar = (buf[i] - minval[i]) / intervals[i];
+                hist[i][bar] += 1.;
+            }
+            n += 1.;
+        }
+        delete[] buf;
+
+        for(int i = 0; i < veclen; i++)
+            for(int j = 0; j < maxBars; j++)
+                hist[i][j] /= n;
+    }    
+    ~Histogram()
+    {
+        delete[] intervals;
+        delete[] hist[0];
+        delete[] hist;
+    }
+
+    /**
+     * Computes the overlapping area below two histograms
+     * @param other another histogram, which must have the same 'samples' and 'maxBars'
+     * @param out output vector, which must have length equal to 'samples'
+     */
+    void overlap(const Histogram &other, double *out)
+    {
+        assert(other.samples == samples);
+        assert(other.maxBars == maxBars);
+        for(int i = 0; i < samples; i++) {
+            out[i] = 0.;
+            for(int j = 0; j < maxBars; j++) {
+                out[i] += qMin(hist[i][j], other.hist[i][j]);
+            }
+        }
+    }
+};
 
 static void cmd_compute(WindowFile &infile, WindowFile &outfile)
 {
@@ -97,21 +203,14 @@ static void cmd_rescale_prepare(QFile &scalefile, QList<WindowFile*> &infiles)
 {
     qint32 samples = computeInfo(infiles);
 
-    // Restrict minval and maxval to remove outliers (values
-    // outside a 4-sigma range) and sanitize the values
-    const float eps = std::numeric_limits<float>::epsilon();
+    // Restrict minval and maxval to remove outliers
     for(int i = 0; i < samples; i++) {
-        const float minallowed = mean[i] - 4.*stdev[i];
-        const float maxallowed = mean[i] + 4.*stdev[i];
+        const float minallowed = mean[i] - nonOutlierSigma*stdev[i];
+        const float maxallowed = mean[i] + nonOutlierSigma*stdev[i];
         if(minval[i] < minallowed)
             minval[i] = minallowed;
         if(maxval[i] > maxallowed)
             maxval[i] = maxallowed;
-
-        if(isinf(minval[i]) || (minval[i] < 0.))
-            minval[i] = 0.;
-        if(isinf(maxval[i]) || (maxval[i] <= minval[i]))
-            maxval[i] = minval[i] + eps;
     }
 
     scalefile.write((char*)minval, samples*sizeof(float));
@@ -171,8 +270,8 @@ static int usage(const char *progname)
             "  Compute FFT and DT-CWPT features from a spike file.\n", progname);
     fprintf(stderr, "%s rescale prepare outfile.scale infiles.features\n"
             "  Prepare rescaling factors that when applied to the infiles\n"
-            "  would cause all features (besides 4-sigma outliers) to lie\n"
-            "  in the range [-1,1].\n", progname);
+            "  would cause all features (besides outliers) to lie\n"
+            "  in the [-1,1] range [-1,1].\n", progname);
     fprintf(stderr, "%s rescale apply infile.scale outfiles.features\n"
             "  Apply the rescaling factors to the outfiles.\n", progname);
     fprintf(stderr, "%s filter apply infile.filter infile.features outfile.features\n"
@@ -252,7 +351,29 @@ int main(int argc, char **argv)
         else return usage(argv[0]);
     }
     else if(!strcmp(argv[1], "filter")) {
-        if(!strcmp(argv[2], "apply")) {
+        if(!strcmp(argv[2], "prepare")) {
+            if(argc != 5)
+                return usage(argv[0]);
+            WindowFile fileA(argv[3]), fileB(argv[4]);
+            assert(fileA.open(QIODevice::ReadOnly));
+            assert(fileB.open(QIODevice::ReadOnly));
+            QList<WindowFile*> filelist;
+            filelist.append(&fileA);
+            filelist.append(&fileB);
+            qint32 samples = computeInfo(filelist);
+            fileA.rewind();
+            fileB.rewind();
+            Histogram histogramA(fileA, 20, minval, maxval, samples, stdev);
+            Histogram histogramB(fileB, 20, minval, maxval, samples, stdev);
+            static double overlap[NumFeatures];
+            histogramA.overlap(histogramB, overlap);
+            for(int i = 0; i < samples;i++) {
+                printf("%.10f\n", overlap[i]);
+            }
+            fileA.close();
+            fileB.close();
+        }
+        else if(!strcmp(argv[2], "apply")) {
             if(argc != 6)
                 return usage(argv[0]);
             QFile filterfile(argv[3]);
