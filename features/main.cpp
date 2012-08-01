@@ -259,6 +259,35 @@ static void filter_prepare_best(bool *featureIncl, int n, double *overlap, int s
     }
 }
 
+static double bestbasis_cb(void *arg, int level, unsigned int off, unsigned int n)
+{
+    double *dtcwptOverlap = (double *)arg;
+    int totalOffset = level * EODSamples + off;
+    double metric = 0.;
+    for(unsigned int i = 0; i < n; i++) {
+        const double x = dtcwptOverlap[totalOffset + i];
+        metric -= x * log2(x);
+    }
+    return metric;
+}
+
+static void filter_prepare_bestbasis(bool *featureIncl, double *overlap)
+{
+    unsigned int nps;
+    cwpt_stop_point *ps = bestbasis_find(bestbasis_cb, &overlap[NumFFTFeatures],
+                                         BESTBASIS_MIN, EODSamples, &nps);
+    for(unsigned int i = 0; i < nps; i++) {
+        const cwpt_stop_point *p = &ps[i];
+        const unsigned int lev = EODSamples_log2 - p->level;
+        const unsigned int off = (p->node << lev) + (p->level * EODSamples);
+        const unsigned int len = 1 << lev;
+        for(unsigned int i = 0; i < len; i++) {
+            featureIncl[NumFFTFeatures + off + i] = true;
+        }
+    }
+    free(ps);
+}
+
 enum FiltPrepOpId {
     FILT_PREP_ADD,
     FILT_PREP_BESTBASIS,
@@ -303,6 +332,8 @@ static void cmd_filter_prepare(QList<FiltPrepOp> &oplist, int histBars, bool his
             }
             break;
         case FILT_PREP_BESTBASIS:
+            assert(samples == NumFeatures);
+            filter_prepare_bestbasis(featureIncl, overlap);
             break;
         case FILT_PREP_BEST:
             filter_prepare_best(featureIncl, op.arg1, overlap, samples);
