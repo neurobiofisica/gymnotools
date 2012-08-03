@@ -27,4 +27,5 @@ HEADERS = sigcfg.h \
     static_log2.h \
     wfilts.h \
     compilerspecific.h \
-    featureutil.h
+    featureutil.h \
+    svmutil.h

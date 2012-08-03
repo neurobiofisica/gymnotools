@@ -2,14 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 #include <assert.h>
 
 #include <QString>
 #include <QStringList>
 #include <QtAlgorithms>
 
+#include "common/compilerspecific.h"
 #include "common/commoninit.h"
 #include "common/windowfile.h"
+#include "common/svmutil.h"
 #include "svm/svm.h"
 
 static qint64 countWins(WindowFile &file)
@@ -21,18 +24,135 @@ static qint64 countWins(WindowFile &file)
     return numWins;
 }
 
+static AINLINE qint32 getNumSamples(WindowFile &file)
+{
+    bool hasEvents = file.nextEvent();
+    assert(hasEvents);
+    qint32 samples = file.getEventSamples();
+    return samples;
+}
+
+static AINLINE void fillNodes(svm_node *nodes, const float *buf, int samples)
+{
+    for(int i = 0; i < samples; i++) {
+        nodes[i].index = i + 1;
+        nodes[i].value = buf[i];
+    }
+    nodes[samples].index = -1;
+}
+
 struct SVMProblem : svm_problem
 {
     SVMProblem(WindowFile &trainA, WindowFile &trainB)
     {
+        l = countWins(trainA) + countWins(trainB);
+
+        const qint32 samples = getNumSamples(trainA);
+        assert(getNumSamples(trainB) == samples);
+
+        y = new double[l];
+        x = new svm_node*[l];
+        x[0] = new svm_node[l*(samples+1)];
+        for(int i = 1; i < l; i++) {
+            x[i] = &x[i-1][samples+1];
+        }
+
+        float *buf = new float[samples];
+        int cur = 0;
+
+        while(trainA.nextChannel()) {
+            assert(trainA.getEventSamples() == samples);
+            trainA.read((char*)buf, samples*sizeof(float));
+            fillNodes(x[cur], buf, samples);
+            y[cur++] = 1.;
+        }
+
+        while(trainB.nextChannel()) {
+            assert(trainB.getEventSamples() == samples);
+            trainB.read((char*)buf, samples*sizeof(float));
+            fillNodes(x[cur], buf, samples);
+            y[cur++] = -1.;
+        }
+
+        delete[] buf;
+        assert(cur == l);
+    }
+    ~SVMProblem()
+    {
+        delete[] x[0];
+        delete[] x;
+        delete[] y;
     }
 };
+
+struct SVMParam : svm_parameter
+{
+    SVMParam() { init(); }
+    SVMParam(double cParam, double gParam, bool probab = false)
+    {
+        init();
+        C     = pow(2., cParam);
+        gamma = pow(2., gParam);
+        probability = probab ? 1 : 0;
+    }
+private:
+    void init()
+    {
+        svm_type = C_SVC;
+        kernel_type = RBF;
+        degree = 3;
+        coef0 = 0;
+        nu = 0.5;
+        cache_size = 100;
+        eps = 1e-3;
+        p = 0.1;
+        shrinking = 1;
+        probability = 0;
+        nr_weight = 0;
+        weight_label = NULL;
+        weight = NULL;
+    }
+};
+
+static void predictAndCount(svm_model *model, WindowFile &file, int &nA, int &nB)
+{
+    const qint32 samples = getNumSamples(file);
+    float *buf = new float[samples];
+    SVMNodeList nodelist(samples);
+
+    nA = nB = 0;
+
+    while(file.nextChannel()) {
+        assert(file.getEventSamples() == samples);
+        file.read((char*)buf, samples*sizeof(float));
+        nodelist.fill(buf);
+        if(svm_predict(model, nodelist) > 0)
+            ++nA;
+        else
+            ++nB;
+    }
+
+    delete[] buf;
+    file.rewind();
+}
+
+static int countErrors(svm_model *model, WindowFile &crossA, WindowFile &crossB)
+{
+    int errors = 0;
+    int nA, nB;
+    predictAndCount(model, crossA, nA, nB);
+    errors += nB;
+    predictAndCount(model, crossB, nA, nB);
+    errors += nA;
+    return errors;
+}
 
 static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
                       WindowFile &crossA, WindowFile &crossB,
                       double cStart, double cStop, double cStep,
                       double gStart, double gStop, double gStep)
 {
+    SVMProblem problem(trainA, trainB);
 
 }
 
