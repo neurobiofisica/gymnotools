@@ -408,7 +408,7 @@ int main(int argc, char **argv)
     assert(EODSamples % 4 == 0);   // required for alignment
     commonInit();
 
-    if(argc < 3)
+    if(argc < 2)
         return usage(progname);
 
     if(!strcmp(argv[1], "compute")) {
@@ -475,6 +475,8 @@ int main(int argc, char **argv)
         else return usage(progname);
     }
     else if(!strcmp(argv[1], "filter")) {
+        if(argc < 3)
+            return usage(progname);
         if(!strcmp(argv[2], "prepare")) {
             QList<FiltPrepOp> oplist;
             int histBars = 20;
@@ -507,7 +509,7 @@ int main(int argc, char **argv)
                 case 1:
                     op.opid = FILT_PREP_ADD;
                     sl = QString(optarg).split(",");
-                    if(sl.length() != 2) {
+                    if(sl.count() != 2) {
                         fprintf(stderr, "--add argument must be a list of two numbers\n");
                         return 1;
                     }
