@@ -139,7 +139,8 @@ static void _prep(prepared_cwpt *cwpt, unsigned int n, int level, int node) {
     /* alloc space if needed */
     if(UNLIKELY(cwpt->numstmts >= cwpt->size)) {
         cwpt->size <<= 1;
-        assert((cwpt->stmts = realloc(cwpt->stmts, cwpt->size*sizeof(prepared_cwpt_stmt))) != NULL);
+        cwpt->stmts = realloc(cwpt->stmts, cwpt->size*sizeof(prepared_cwpt_stmt));
+        assert(cwpt->stmts != NULL);
     }
     stmt = &cwpt->stmts[cwpt->numstmts++];
     stmt->n = n;
@@ -192,18 +193,21 @@ static int _prep_sort(const void *a1, const void *a2) {
 
 prepared_cwpt *cwpt_prepare(const cwpt_filt *filt, unsigned int n, cwpt_stop_point *ps, unsigned int nps) {
     prepared_cwpt *cwpt;
-    assert((cwpt = malloc(sizeof(prepared_cwpt))) != NULL);
+    cwpt = malloc(sizeof(prepared_cwpt));
+    assert(cwpt != NULL);
     cwpt->size = n;  /* initial number of allocated entries */
     cwpt->n = n;
     cwpt->numstmts = 0;
     cwpt->filt = filt;
-    assert((cwpt->stmts = malloc(cwpt->size*sizeof(prepared_cwpt_stmt))) != NULL);
+    cwpt->stmts = malloc(cwpt->size*sizeof(prepared_cwpt_stmt));
+    assert(cwpt->stmts != NULL);
     qsort(ps, nps, sizeof(cwpt_stop_point), _prep_sort);
     cwpt->ps = ps;
     cwpt->nps = nps;
     _prep(cwpt, n, 0, 0);
     cwpt->size = cwpt->n;
-    assert((cwpt->stmts = realloc(cwpt->stmts, cwpt->size*sizeof(prepared_cwpt_stmt))) != NULL);
+    cwpt->stmts = realloc(cwpt->stmts, cwpt->size*sizeof(prepared_cwpt_stmt));
+    assert(cwpt->stmts != NULL);
     return cwpt;
 }
 
@@ -255,9 +259,12 @@ cwpt_stop_point *bestbasis_find(bestbasis_cb_t cb, void *arg, bestbasis_optim_t 
     double *ametric;
     int *alen, *alev;
     /* Alloc temp stuff */
-    assert((ametric = malloc(n*sizeof(double)))!=NULL);
-    assert((alen = malloc(n*sizeof(int)))!=NULL);
-    assert((alev = malloc(n*sizeof(int)))!=NULL);
+    ametric = malloc(n*sizeof(double));
+    alen = malloc(n*sizeof(int));
+    alev = malloc(n*sizeof(int));
+    assert(ametric != NULL);
+    assert(alen != NULL);
+    assert(alev != NULL);
     /* Count number of levels */
     for(m = n; m > 1; m >>= 1)
         maxlevel++;
@@ -284,7 +291,8 @@ cwpt_stop_point *bestbasis_find(bestbasis_cb_t cb, void *arg, bestbasis_optim_t 
     }
     /* Count number of stop points and alloc */
     for(nps=0,off=0; off<n; off+=alen[off],nps++);
-    assert((ps = malloc(nps*sizeof(cwpt_stop_point)))!=NULL);
+    ps = malloc(nps*sizeof(cwpt_stop_point));
+    assert(ps != NULL);
     *nps_ = nps;
     /* Convert into a stop point list */
     for(nps=0,off=0; off<n; off+=alen[off],nps++) {

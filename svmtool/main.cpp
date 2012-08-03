@@ -126,6 +126,10 @@ int main(int argc, char **argv)
             fprintf(stderr, "can't open feature file '%s' for reading\n", argv[optind+3]);
             return 1;
         }
+
+        cmd_optim(trainA, trainB, crossA, crossB,
+                  cStart, cStop, cStep,
+                  gStart, gStop, gStep);
     }
     else if(!strcmp(argv[1], "train")) {
 

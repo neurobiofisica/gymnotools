@@ -38,7 +38,8 @@ static qint32 computeInfo(QList<WindowFile*> &infiles)
     assert(infiles.length() > 0);
     WindowFile * const firstFile = infiles.first();
 
-    assert(firstFile->nextEvent());
+    bool hasEvents = firstFile->nextEvent();
+    assert(hasEvents);
     const qint32 samples = firstFile->getEventSamples();
     assert(samples <= NumFeatures);
 
@@ -355,7 +356,8 @@ static void cmd_filter_apply(QFile &filterfile, WindowFile &infile, WindowFile &
     static float filtFeatures[NumFeatures] ALIGN(16);
     FeatureFilter worker(filterfile);
 
-    assert(infile.nextEvent());
+    bool hasEvents = infile.nextEvent();
+    assert(hasEvents);
     const qint32 samples = infile.getEventSamples();
     assert(worker.maxIndex() < samples);
 
