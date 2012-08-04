@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <assert.h>
+#include <limits>
 
 #include <QString>
 #include <QStringList>
@@ -91,9 +92,13 @@ struct SVMParam : svm_parameter
     SVMParam(double cParam, double gParam, bool probab = false)
     {
         init();
+        setcg(cParam, gParam);
+        probability = probab ? 1 : 0;
+    }
+    void setcg(double cParam, double gParam)
+    {
         C     = pow(2., cParam);
         gamma = pow(2., gParam);
-        probability = probab ? 1 : 0;
     }
 private:
     void init()
@@ -106,7 +111,7 @@ private:
         cache_size = 100;
         eps = 1e-3;
         p = 0.1;
-        shrinking = 1;
+        shrinking = 0;
         probability = 0;
         nr_weight = 0;
         weight_label = NULL;
@@ -139,7 +144,7 @@ static void predictAndCount(svm_model *model, WindowFile &file, int &nA, int &nB
 static int countErrors(svm_model *model, WindowFile &crossA, WindowFile &crossB)
 {
     int errors = 0;
-    int nA, nB;
+    int nA = 0, nB = 0;
     predictAndCount(model, crossA, nA, nB);
     errors += nB;
     predictAndCount(model, crossB, nA, nB);
@@ -153,7 +158,54 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
                       double gStart, double gStop, double gStep)
 {
     SVMProblem problem(trainA, trainB);
+    SVMParam param;
 
+    int bestErrors = problem.l;
+    double bestg = 0., bestc = 0.;
+
+    const double eps = std::numeric_limits<float>::epsilon();
+
+    for(double g = gStart; g <= gStop; g += gStep) {
+        for(double c = cStart; c <= cStop; c += cStep) {
+            printf("=> Trying c=%.1f, g=%.1f\n", c, g);
+            param.setcg(c, g);
+
+            svm_model *model = svm_train(&problem, &param);
+            const int errors = countErrors(model, crossA, crossB);
+            svm_free_and_destroy_model(&model);
+
+            printf("=> Errors: %d\n", errors);
+            if((errors  < bestErrors) || (errors == bestErrors && fabs(g-bestg)<=eps && c<bestc)) {
+                bestErrors = errors;
+                bestc = c;
+                bestg = g;
+            }
+        }
+    }
+
+    printf("\n\n=> Best: c=%.1f, g=%.1f\n", bestc, bestg);
+    printf("=> Errors: %d (%.2f%%)\n", bestErrors, (100.*bestErrors)/problem.l);
+}
+
+static void cmd_train(char *modelfile, double cParam, double gParam,
+                      WindowFile &trainA, WindowFile &trainB)
+{
+    SVMProblem problem(trainA, trainB);
+    SVMParam param(cParam, gParam, true);
+    svm_model *model = svm_train(&problem, &param);
+    svm_save_model(modelfile, model);
+    svm_free_and_destroy_model(&model);
+}
+
+static void cmd_test(char *modelfile, WindowFile &testFile)
+{
+    svm_model *model = svm_load_model(modelfile);
+    int nA = 0, nB = 0;
+    predictAndCount(model, testFile, nA, nB);
+    svm_free_and_destroy_model(&model);
+    double total = nA + nB;
+    printf("A: %d (%.2f%%)\n", nA, (100.*nA)/total);
+    printf("B: %d (%.2f%%)\n", nB, (100.*nB)/total);
 }
 
 static int usage(const char *progname)
@@ -183,8 +235,8 @@ int main(int argc, char **argv)
         return usage(progname);
 
     if(!strcmp(argv[1], "optim")) {
-        double cStart = -5., cStop =  15., cStep =  2.;
-        double gStart =  3., gStop = -15., gStep = -2.;
+        double cStart =  -5., cStop = 15., cStep = 2.;
+        double gStart = -15., gStop =  3., gStep = 2.;
 
         argc -= 1;
         argv = &argv[1];
@@ -250,12 +302,48 @@ int main(int argc, char **argv)
         cmd_optim(trainA, trainB, crossA, crossB,
                   cStart, cStop, cStep,
                   gStart, gStop, gStep);
+
+        trainA.close();
+        trainB.close();
+        crossA.close();
+        crossB.close();
     }
     else if(!strcmp(argv[1], "train")) {
-
+        if(argc != 7)
+            return usage(progname);
+        char *modelfile = argv[2];
+        bool ok1 = false, ok2 = false;
+        double cParam = QString(argv[3]).toDouble(&ok1);
+        double gParam = QString(argv[4]).toDouble(&ok2);
+        if(!ok1 || !ok2) {
+            fprintf(stderr, "invalid number passed as 'c' or 'g' parameter\n");
+            return 1;
+        }
+        WindowFile trainA(argv[5]);
+        if(!trainA.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[5]);
+            return 1;
+        }
+        WindowFile trainB(argv[6]);
+        if(!trainB.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[6]);
+            return 1;
+        }
+        cmd_train(modelfile, cParam, gParam, trainA, trainB);
+        trainA.close();
+        trainB.close();
     }
     else if(!strcmp(argv[1], "test")) {
-
+        if(argc != 4)
+            return usage(progname);
+        char *modelfile = argv[2];
+        WindowFile testFile(argv[3]);
+        if(!testFile.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[3]);
+            return 1;
+        }
+        cmd_test(modelfile, testFile);
+        testFile.close();
     }
     else return usage(progname);
 

@@ -13,3 +13,6 @@ CONFIG += console
 INCLUDEPATH += ..
 LIBS += -L../common -lcommon
 LIBS += -L../svm -lsvm
+
+QMAKE_CXXFLAGS += -fopenmp
+QMAKE_LFLAGS += -fopenmp
