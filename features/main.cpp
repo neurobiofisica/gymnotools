@@ -300,7 +300,7 @@ struct FiltPrepOp {
 };
 
 static void cmd_filter_prepare(QList<FiltPrepOp> &oplist, int histBars, bool histStd,
-                               WindowFile &fileA, WindowFile &fileB, QFile &outfile)
+                               QFile &outfile, WindowFile &fileA, WindowFile &fileB)
 {
     QList<WindowFile*> fileList;
     fileList.append(&fileA);
@@ -388,7 +388,7 @@ static int usage(const char *progname)
             "  [-1,1] range.\n", progname, nonOutlierSigma);
     fprintf(stderr, "%s rescale apply infile.scale outfiles.features\n"
             "  Apply the rescaling factors to the outfiles.\n", progname);
-    fprintf(stderr, "%s filter prepare [options] A.features B.features out.filter\n"
+    fprintf(stderr, "%s filter prepare [options] out.filter A.features B.features\n"
             "  Prepare a feature filter by reading features of distinct experimental\n"
             "  subjects A and B, producing out.filter.\n"
             "  Available options:\n"
@@ -575,7 +575,14 @@ int main(int argc, char **argv)
             if(argc - optind != 3)
                 return usage(progname);
 
-            WindowFile fileA(argv[optind]), fileB(argv[optind+1]);
+
+            QFile outfile(argv[optind]);
+            if(!outfile.open(QIODevice::WriteOnly)) {
+                fprintf(stderr, "can't open filter file '%s' for writing\n", argv[optind+2]);
+                return 1;
+            }
+
+            WindowFile fileA(argv[optind+1]), fileB(argv[optind+2]);
             if(!fileA.open(QIODevice::ReadOnly)) {
                 fprintf(stderr, "can't open feature file '%s' for reading\n", argv[optind]);
                 return 1;
@@ -585,13 +592,7 @@ int main(int argc, char **argv)
                 return 1;
             }
 
-            QFile outfile(argv[optind+2]);
-            if(!outfile.open(QIODevice::WriteOnly)) {
-                fprintf(stderr, "can't open filter file '%s' for writing\n", argv[optind+2]);
-                return 1;
-            }
-
-            cmd_filter_prepare(oplist, histBars, histStd, fileA, fileB, outfile);
+            cmd_filter_prepare(oplist, histBars, histStd, outfile, fileA, fileB);
 
             outfile.close();
             fileA.close();
