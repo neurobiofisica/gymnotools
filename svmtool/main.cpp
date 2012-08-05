@@ -14,6 +14,7 @@
 #include "common/commoninit.h"
 #include "common/windowfile.h"
 #include "common/svmutil.h"
+#include "common/sigcfg.h"
 #include "svm/svm.h"
 
 static qint64 countWins(WindowFile &file)
@@ -197,15 +198,45 @@ static void cmd_train(char *modelfile, double cParam, double gParam,
     svm_free_and_destroy_model(&model);
 }
 
-static void cmd_test(char *modelfile, WindowFile &testFile)
+static void cmd_test_count(svm_model *model, WindowFile &testFile)
 {
-    svm_model *model = svm_load_model(modelfile);
     int nA = 0, nB = 0;
     predictAndCount(model, testFile, nA, nB);
-    svm_free_and_destroy_model(&model);
     double total = nA + nB;
     printf("A: %d (%.2f%%)\n", nA, (100.*nA)/total);
     printf("B: %d (%.2f%%)\n", nB, (100.*nB)/total);
+}
+
+static void cmd_test_list(svm_model *model, WindowFile &testFile)
+{
+    const QString fmt("%1: prob { %2 , %3 } @ %4 ch %5\n");
+
+    const qint32 samples = getNumSamples(testFile);
+    float *buf = new float[samples];
+    SVMNodeList nodelist(samples);
+    double probEstim[2];
+
+    while(testFile.nextChannel()) {
+        assert(testFile.getEventSamples() == samples);
+        testFile.read((char*)buf, samples*sizeof(float));
+        nodelist.fill(buf);
+
+        const char subj =
+                (svm_predict_probability(model, nodelist, probEstim) > 0)
+                ? 'A' : 'B';
+
+        const double t = (testFile.getEventOffset() / BytesPerSample)/
+                (double)SamplingRate;
+
+        fputs(fmt.arg(subj)
+                .arg(probEstim[0], 0, 'f', 4)
+                .arg(probEstim[1], 0, 'f', 4)
+                .arg(t, 0, 'f', 6)
+                .arg(testFile.getChannelId())
+                .toAscii(), stdout);
+    }
+
+    delete[] buf;
 }
 
 static int usage(const char *progname)
@@ -220,8 +251,10 @@ static int usage(const char *progname)
             "    -g start,stop,step   specify 'g' values to be tried\n", progname);
     fprintf(stderr, "%s train svm.model c-param g-param A.features B.features\n"
             "  Train a SVM using the given test set and 'c' and 'g' parameters.\n", progname);
-    fprintf(stderr, "%s test svm.model file.features\n"
-            "  Classify the features contained in the file in order to test a SVM model.\n",
+    fprintf(stderr, "%s test [count|list] svm.model file.features\n"
+            "  Classify the features contained in the file in order to test a SVM model.\n"
+            "  If 'count' is asked, only counts the number of A and B results.\n"
+            "  If 'list' is asked, outputs a list of results with probability estimators.\n",
             progname);
     return 1;
 }
@@ -334,15 +367,24 @@ int main(int argc, char **argv)
         trainB.close();
     }
     else if(!strcmp(argv[1], "test")) {
-        if(argc != 4)
+        if(argc != 5)
             return usage(progname);
-        char *modelfile = argv[2];
-        WindowFile testFile(argv[3]);
-        if(!testFile.open(QIODevice::ReadOnly)) {
-            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[3]);
+        svm_model *model = svm_load_model(argv[3]);
+        if(model == NULL) {
+            fprintf(stderr, "can't open model file '%s' for reading\n", argv[3]);
             return 1;
         }
-        cmd_test(modelfile, testFile);
+        WindowFile testFile(argv[4]);
+        if(!testFile.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[4]);
+            return 1;
+        }
+        if(!strcmp(argv[2], "count"))
+            cmd_test_count(model, testFile);
+        else if(!strcmp(argv[2], "list"))
+            cmd_test_list(model, testFile);
+        else return usage(progname);
+        svm_free_and_destroy_model(&model);
         testFile.close();
     }
     else return usage(progname);
