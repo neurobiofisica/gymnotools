@@ -153,7 +153,7 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     if(endPos == -1) {
         fputs(QString("warning: pos %1: spike too long, truncating at end\n")
                 .arg(detectedAt)
-                .toUtf8().data(), stderr);
+                .toUtf8(), stderr);
         endPos = buffer.spc() - 1;
     }
 
@@ -193,7 +193,7 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     if(startPos == -1) {
         fputs(QString("warning: pos %1: spike too long, truncating at start\n")
                 .arg(detectedAt)
-                .toUtf8().data(), stderr);
+                .toUtf8(), stderr);
         startPos = 0;
     }
 
@@ -267,13 +267,13 @@ static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, bool fix
         if(excluded.at(0).end < fileStart) {
             fputs(QString("error: first interval overlaps with fileStart=%1\n")
                     .arg(fileStart)
-                    .toUtf8().data(), stderr);
+                    .toUtf8(), stderr);
             return 1;
         }
         if(excluded.at(excluded.count() - 1).start >= fileEnd) {
             fputs(QString("error: first interval overlaps with fileEnd=%1\n")
                     .arg(fileEnd)
-                    .toUtf8().data(), stderr);
+                    .toUtf8(), stderr);
             return 1;
         }
     }

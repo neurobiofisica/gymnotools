@@ -20,17 +20,19 @@ static void cmd_info(WindowFile &infile)
 {
     qint64 off;
     qint64 numEvents = 0, numWins = 0;
+    double t;
 
     infile.nextEvent();
     off = infile.getEventOffset();
+    t = (off / BytesPerSample)/(double)SamplingRate;
     puts(QString("first event:\n"
                  "  bytes:   %1\n"
                  "  samples: %2\n"
                  "  seconds: %3\n")
          .arg(off)
          .arg(off / BytesPerSample)
-         .arg((off / BytesPerSample)/(double)SamplingRate, 0, 'f', 6)
-         .toUtf8().data());
+         .arg(t, 0, 'f', 6)
+         .toUtf8());
 
     do {
         numEvents++;
@@ -38,6 +40,7 @@ static void cmd_info(WindowFile &infile)
     } while(infile.nextEvent());
 
     off = infile.getEventOffset();
+    t = (off / BytesPerSample)/(double)SamplingRate;
     puts(QString("last event:\n"
                  "  bytes:   %1\n"
                  "  samples: %2\n"
@@ -47,10 +50,10 @@ static void cmd_info(WindowFile &infile)
                  "  channel windows: %5\n")
          .arg(off)
          .arg(off / BytesPerSample)
-         .arg((off / BytesPerSample)/(double)SamplingRate, 0, 'f', 6)
+         .arg(t, 0, 'f', 6)
          .arg(numEvents)
          .arg(numWins)
-         .toUtf8().data());
+         .toUtf8());
 }
 
 static void cmd_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &outfile)
