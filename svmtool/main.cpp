@@ -8,6 +8,8 @@
 
 #include <QString>
 #include <QStringList>
+#include <QList>
+#include <QPair>
 #include <QtAlgorithms>
 
 #include "common/compilerspecific.h"
@@ -239,6 +241,52 @@ static void cmd_test_list(svm_model *model, WindowFile &testFile)
     delete[] buf;
 }
 
+typedef QPair<double,int> DecisionLabel;
+
+static void populateDecisionLabelPairs(svm_model *model, QList<DecisionLabel> &list,
+                                       WindowFile &file, int label)
+{
+    const qint32 samples = getNumSamples(file);
+    float *buf = new float[samples];
+    SVMNodeList nodelist(samples);
+    double decision = 0.;
+
+    while(file.nextChannel()) {
+        assert(file.getEventSamples() == samples);
+        file.read((char*)buf, samples*sizeof(float));
+        nodelist.fill(buf);
+        svm_predict_values(model, nodelist, &decision);
+        list.append(DecisionLabel(-decision, label));
+    }
+
+    delete[] buf;
+    file.rewind();
+}
+
+static void cmd_roc(svm_model *model, WindowFile &testA, WindowFile &testB)
+{
+    QList<DecisionLabel> list;
+    populateDecisionLabelPairs(model, list, testA, +1);
+    populateDecisionLabelPairs(model, list, testB, -1);
+    qSort(list);
+
+    double positiveLabels = countWins(testA);
+    double negativeLabels = countWins(testB);
+
+    double truePositives = 0., falsePositives = 0.;
+
+    foreach(const DecisionLabel &pair, list) {
+        if(pair.second > 0)
+            truePositives  += 1.;
+        else
+            falsePositives += 1.;
+
+        printf("%.12f %.12f\n",
+               falsePositives/negativeLabels,
+               truePositives/positiveLabels);
+    }
+}
+
 static int usage(const char *progname)
 {
     fprintf(stderr, "Usage:\n");
@@ -256,6 +304,9 @@ static int usage(const char *progname)
             "  If 'count' is asked, only counts the number of A and B results.\n"
             "  If 'list' is asked, outputs a list of results with probability estimators.\n",
             progname);
+    fprintf(stderr, "%s roc svm.model testA.features testB.features\n"
+            "  Outputs a list of FPR (false positive rate) and TPR (true positive rate)\n"
+            "  values, which can be used to plot a ROC curve.\n", progname);
     return 1;
 }
 
@@ -386,6 +437,28 @@ int main(int argc, char **argv)
         else return usage(progname);
         svm_free_and_destroy_model(&model);
         testFile.close();
+    }
+    else if(!strcmp(argv[1], "roc")) {
+        if(argc != 5)
+            return usage(progname);
+        svm_model *model = svm_load_model(argv[2]);
+        if(model == NULL) {
+            fprintf(stderr, "can't open model file '%s' for reading\n", argv[3]);
+            return 1;
+        }
+        WindowFile testA(argv[3]);
+        if(!testA.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[4]);
+            return 1;
+        }
+        WindowFile testB(argv[4]);
+        if(!testB.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[5]);
+            return 1;
+        }
+        cmd_roc(model, testA, testB);
+        testA.close();
+        testB.close();
     }
     else return usage(progname);
 
