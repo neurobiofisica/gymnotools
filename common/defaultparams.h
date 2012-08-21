@@ -10,5 +10,7 @@ static const int   defaultStopSamples = 16;
 static const float defaultOnlyAbove = 0.85;
 static const float defaultSaturationLow = -8.44;
 static const float defaultSaturationHigh = 8.05;
+static const int   defaultStormGlue = 31;
+static const int   defaultStormSize = 256;
 
 #endif // DEFAULTPARAMS_H
