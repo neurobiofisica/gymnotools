@@ -13,6 +13,7 @@
 #include "common/sigcfg.h"
 #include "common/signalfile.h"
 #include "common/excludedintervals.h"
+#include "common/compilerspecific.h"
 
 struct ExcludeAllChannels : ExcludedInterval
 {
@@ -24,33 +25,97 @@ struct ExcludeAllChannels : ExcludedInterval
     }
 };
 
-static void stormDetector(SignalFile &sigfile, QFile &outfile,
-                          float minlevel, int glue, int stormsize)
+static void stormDetected(SignalFile &sigfile, float minlevel, int afterglue,
+                          qint64 &regionStart, qint64 &regionEnd)
 {
     SignalBuffer buffer(8*EODSamples);
-    float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
+    float *squareSum = buffer.ch(0);
+    qint64 curPos = regionStart - buffer.bytes();
+    int glueAvailable = afterglue;
+
+    while(true) {
+        if(UNLIKELY(curPos <= 0))
+            curPos = 0;
+        sigfile.seek(curPos);
+
+        sigfile.readFilteredCh(buffer);
+        buffer.diff();
+        buffer.sumSquares(squareSum);
+
+        for(int i = buffer.spc() - 1; i >= 0; i--) {
+            if(squareSum[i] >= minlevel) {
+                glueAvailable = afterglue;
+                regionStart = curPos + i*BytesPerSample;
+            }
+            else if(--glueAvailable < 0) {
+                curPos = -1;
+                break;
+            }
+        }
+
+        if(UNLIKELY(curPos <= 0))
+            break;
+        curPos -= buffer.bytes();
+    }
+
+    curPos = regionEnd;
+    glueAvailable = afterglue;
+
+    while(LIKELY(!sigfile.atEnd())) {
+        sigfile.seek(curPos);
+
+        sigfile.readFilteredCh(buffer);
+        buffer.diff();
+        buffer.sumSquares(squareSum);
+
+        for(int i = 0; i < buffer.spc(); i++) {
+            if(squareSum[i] >= minlevel) {
+                glueAvailable = afterglue;
+                regionEnd = curPos + i*BytesPerSample;
+            }
+            else if(--glueAvailable < 0) {
+                curPos = -1;
+                break;
+            }
+        }
+
+        if(UNLIKELY(curPos <= 0))
+            break;
+        curPos += buffer.bytes();
+    }
+
+    sigfile.seek(regionEnd + BytesPerSample);
+}
+
+static void stormDetector(SignalFile &sigfile, QFile &outfile,
+                          float minlevel, int glue, int stormsize, int afterglue)
+{
+    ExcludedIntervalList list;
+    SignalBuffer buffer(8*EODSamples);
+    float *squareSum = buffer.ch(0);
 
     int regionSize = 0;
-    qint64 regionStart = 0, regionEnd = 0;
+    qint64 regionStart = 0;
     int glueAvailable = glue;
 
-    ExcludedIntervalList list;
-
-    while(!sigfile.atEnd()) {
+    while(LIKELY(!sigfile.atEnd())) {
         const qint64 bufStart = sigfile.pos();
         sigfile.readFilteredCh(buffer);
         buffer.diff();
         buffer.sumSquares(squareSum);
         for(int i = 0; i < buffer.spc(); i++) {
             if(squareSum[i] >= minlevel) {
-                regionEnd = bufStart + i*BytesPerSample;
                 if(regionSize++ == 0)
-                    regionStart = regionEnd;
+                    regionStart =  bufStart + i*BytesPerSample;
                 glueAvailable = glue;
+                if(regionSize >= stormsize) {
+                    qint64 regionEnd = regionStart;
+                    stormDetected(sigfile, minlevel, afterglue, regionStart, regionEnd);
+                    list.append(ExcludeAllChannels(regionStart, regionEnd));
+                    break;
+                }
             }
             else if(regionSize && (--glueAvailable < 0)) {
-                if(regionSize >= stormsize)
-                    list.append(ExcludeAllChannels(regionStart, regionEnd));
                 regionSize = 0;
             }
         }
@@ -68,7 +133,8 @@ static int usage(const char *progname)
             "  -c|--cutoff=c      Cutoff frequency (lowpass filter)\n"
             "  -l|--minlevel=l    Minimum level to consider as valid signal\n"
             "  -g|--glue=g        Maximum number of samples between regions to glue\n"
-            "  -s|--stormsize=s   Number of contiguous signal samples to consider as storm\n");
+            "  -s|--stormsize=s   Number of contiguous signal samples to consider as storm\n"
+            "  -a|--afterglue=a   After-detection number of samples between regions to glue\n");
     return 1;
 }
 
@@ -81,6 +147,7 @@ int main(int argc, char **argv)
     float minlevel = defaultMinLevel;
     int glue = defaultStormGlue;
     int stormsize = defaultStormSize;
+    int afterglue = defaultStormAfterGlue;
 
     while(1) {
         int option_index = 0;
@@ -90,10 +157,11 @@ int main(int argc, char **argv)
             { "minlevel",    required_argument, 0, 'l' },
             { "glue",        required_argument, 0, 'g' },
             { "stormsize",   required_argument, 0, 's' },
+            { "afterglue",   required_argument, 0, 'a' },
             { 0, 0, 0, 0 }
         };
 
-        int c = getopt_long(argc, argv, "n:c:l:g:s:",
+        int c = getopt_long(argc, argv, "n:c:l:g:s:a:",
                             long_options, &option_index);
         if(c == -1)
             break;
@@ -113,6 +181,9 @@ int main(int argc, char **argv)
             break;
         case 's':
             stormsize = QString(optarg).toInt();
+            break;
+        case 'a':
+            afterglue = QString(optarg).toInt();
             break;
         default:
             return usage(argv[0]);
@@ -139,7 +210,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    stormDetector(sigfile, outfile, minlevel, glue, stormsize);
+    stormDetector(sigfile, outfile, minlevel, glue, stormsize, afterglue);
 
     sigfile.close();
     outfile.close();
