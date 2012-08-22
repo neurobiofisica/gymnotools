@@ -5,6 +5,12 @@ import matplotlib.pyplot as plt
 NumChannels = 7
 BytesPerSample = NumChannels*4
 
+import scipy.signal    
+lp_filt = scipy.signal.firwin(10, .1)
+
+def deriv(sig):
+    return np.diff(scipy.signal.lfilter(lp_filt,[1],sig)[len(lp_filt)//2:])
+
 def parsefile(f):
     expr = re.compile(r'(\d+)\s*-\s*(\d+)\s*:\s*([0-9, ]+)')
     for line in f.xreadlines():
@@ -18,18 +24,32 @@ def showdata(f, storminfo):
     print(repr(storminfo))
     start, end, chs = storminfo
     stormlen = end - start
+    
     f.seek(start * BytesPerSample)
     data = f.read(stormlen * BytesPerSample)
     arr = np.frombuffer(data, dtype=np.float32)
+    
     plt.clf()
+    derivec = []    
+    nplots = len(chs) + 1
     i, ax = 1, None
+    
     for ch in chs:
+        charr = arr[ch::NumChannels]
+        derivec.append(deriv(charr))
         if i == 1:
-            ax = plt.subplot(len(chs), 1, 1)
+            ax = plt.subplot(nplots, 1, 1)
         else:
-            plt.subplot(len(chs), 1, i, sharex=ax)
+            plt.subplot(nplots, 1, i, sharex=ax)
         i += 1
-        plt.plot(arr[ch::NumChannels], 'g')
+        plt.plot(charr, 'g')
+        plt.ylabel('ch%d'%ch)
+        
+    plt.subplot(nplots, 1, nplots, sharex=ax)
+    derivec = np.vstack(derivec)
+    plt.plot((derivec**2).sum(axis=0),'r')
+    plt.ylabel('Esum')
+    
     plt.show()
         
 def showfile(datafile, stormfile):
