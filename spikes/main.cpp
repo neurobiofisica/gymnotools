@@ -101,6 +101,7 @@ static AINLINE void reconstructSaturated(SignalBuffer &buffer,
 }
 
 static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
+                                  QFile *winlenfile,
                                   ChannelExcludableSignalBuffer &buffer,
                                   const bool *chExcluded, bool fixedwin,
                                   float onlyabove, float minlevel,
@@ -201,11 +202,12 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     qint64 firstOffset = bufferBefore + startPos*BytesPerSample;
     qint32 winSamples = (detectedAt/BytesPerSample + endPos) - firstOffset/BytesPerSample;
 
+    // output original winSamples
+    if(winlenfile != NULL)
+        winlenfile->write(QString("%1\n").arg(winSamples).toAscii());
+
     // if fixedwin was requested, center inside an EODSamples window
     if(fixedwin) {
-        // output original winSamples
-        printf("%d\n", winSamples);
-        // center
         firstOffset += ((winSamples - EODSamples) / 2) * BytesPerSample;
         winSamples = EODSamples;
     }
@@ -251,9 +253,9 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     sigfile.seek(detectedAt + endPos*BytesPerSample);
 }
 
-static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, bool fixedwin,
-                              float detection, float onlyabove, float minlevel,
-                              float minratio, int stopsamples,
+static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, QFile *winlenfile,
+                              bool fixedwin, float detection, float onlyabove,
+                              float minlevel, float minratio, int stopsamples,
                               float saturationLow, float saturationHigh,
                               ExcludedIntervalList &excluded)
 {
@@ -300,7 +302,7 @@ static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, bool fix
             for(int i = 0; i < numSamples; i++) {
                 if(squareSum[i] >= detection) {
                     sigfile.seek(bufStart + i*BytesPerSample);
-                    spikeDetected(sigfile, outfile, buffer, NULL,
+                    spikeDetected(sigfile, outfile, winlenfile, buffer, NULL,
                                   fixedwin, onlyabove, minlevel,
                                   minratio, stopsamples,
                                   saturationLow, saturationHigh);
@@ -338,7 +340,7 @@ static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, bool fix
                 for(int i = 0; i < numSamples; i++) {
                     if(squareSum[i] >= correctedDetection) {
                         sigfile.seek(bufStart + i*BytesPerSample);
-                        spikeDetected(sigfile, outfile, buffer,
+                        spikeDetected(sigfile, outfile, winlenfile, buffer,
                                       (*excl).chExcluded, fixedwin,
                                       onlyabove, correctedMinLevel,
                                       correctedMinRatio, stopsamples,
@@ -361,7 +363,7 @@ static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, bool fix
         for(int i = 0; i < buffer.spc() - 1; i++) {
             if(squareSum[i] >= detection) {
                 sigfile.seek(bufStart + i*BytesPerSample);
-                spikeDetected(sigfile, outfile, buffer, NULL,
+                spikeDetected(sigfile, outfile, winlenfile, buffer, NULL,
                               fixedwin, onlyabove, minlevel,
                               minratio, stopsamples,
                               saturationLow, saturationHigh);
@@ -387,7 +389,8 @@ static int usage(const char *progname)
             "  -r|--minratio=r     Ratio of the maximum level to stop detection\n"
             "  -s|--stopsamples=s  Samples below level to stop detection\n"
             "  -e|--exclude=file   File containing intervals/channels to exclude\n"
-            "  -z|--saturation=a,b Low and high saturation levels to filter out\n");
+            "  -z|--saturation=a,b Low and high saturation levels to filter out\n"
+            "  -w|--winlen=w       Output original window lengths to a text file\n");
     return 1;
 }
 
@@ -406,6 +409,7 @@ int main(int argc, char **argv)
     float saturationLow = -std::numeric_limits<float>::infinity();
     float saturationHigh = std::numeric_limits<float>::infinity();
     ExcludedIntervalList excluded;
+    QFile *winlenfile = NULL;
 
     while(1) {
         int option_index = 0;
@@ -420,10 +424,11 @@ int main(int argc, char **argv)
             { "stopsamples", required_argument, 0, 's' },
             { "exclude",     required_argument, 0, 'e' },
             { "saturation",  required_argument, 0, 'z' },
+            { "winlen",      required_argument, 0, 'w' },
             { 0, 0, 0, 0 }
         };
 
-        int c = getopt_long(argc, argv, "fn:c:d:a:l:r:s:e:z:",
+        int c = getopt_long(argc, argv, "fn:c:d:a:l:r:s:e:z:w:",
                             long_options, &option_index);
         if(c == -1)
             break;
@@ -484,6 +489,14 @@ int main(int argc, char **argv)
                 saturationHigh = sl.at(1).toFloat();
             }
             break;
+        case 'w':
+            winlenfile = new QFile(optarg);
+            if(!winlenfile->open(QIODevice::WriteOnly)) {
+                fprintf(stderr, "can't open winlen file '%s' for writing\n",
+                        optarg);
+                return 1;
+            }
+            break;
         default:
             return usage(argv[0]);
         }
@@ -509,13 +522,17 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if(spikeDiscriminator(sigfile, outfile, fixedwin, detection,
+    if(spikeDiscriminator(sigfile, outfile, winlenfile, fixedwin, detection,
                           onlyabove, minlevel, minratio, stopsamples,
                           saturationLow, saturationHigh, excluded))
         return 1;
 
     outfile.close();
     sigfile.close();
+    if(winlenfile != NULL) {
+        winlenfile->close();
+        delete winlenfile;
+    }
     return 0;
 }
 
