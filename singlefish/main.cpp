@@ -18,20 +18,32 @@
 #include "common/signalfile.h"
 #include "common/compilerspecific.h"
 #include "common/resizablebuffer.h"
+#include "common/featureutil.h"
+#include "common/svmutil.h"
+#include "svm/svm.h"
 
-static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile, QFile &outfile,
+static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
+                                   afloat *minval, afloat *maxval,
+                                   FeatureFilter &feafilter, svm_model *model, QFile &outfile,
                                    float onlyabove, float saturationLow, float saturationHigh,
                                    int minwins, float minprob, int maxdist, int maxsize)
 {
-    ResizableBuffer buf(maxsize);
+    ResizableBuffer winbuf(maxsize);
+    SignalBuffer sigbuf(EODSamples);
     qint64 prevOff = std::numeric_limits<qint64>::min();
+
+    static float origSignal[EODSamples] ALIGN(16);
+    static float featureData[NumFeatures] ALIGN(16);
+    static float featureFilt[NumFeatures] ALIGN(16);
+    static FeatureProcessor worker(origSignal, featureData);
+    static SVMNodeList nodelist(feafilter.length());
 
     while(winfile.nextEvent()) {
         const qint64 curOff = winfile.getEventOffset();
-        const int eventSamples = winfile.getEventSamples();
+        const int winSamples = winfile.getEventSamples();
 
         // Check if event is below maxsize
-        if(eventSamples > maxsize)
+        if(winSamples > maxsize)
             continue;
 
         // Calculate and check distance to next and previous events
@@ -48,24 +60,27 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile, QFi
         if(distPrev > maxdist && distNext > maxdist)
             continue;
 
+        // Verify which channels can be used to feed the SVM
+
         assert(winfile.getEventChannels() <= NumChannels);
         int numWinOk = 0;
         bool winOk[NumChannels];
 
-        // Verify which channels can be used to feed the SVM
-
-        for(int i = 0; i < winfile.getEventChannels(); i++) {
-            winfile.nextChannel();
-            const int ch = winfile.getChannelId();
-            assert(ch < NumChannels);
+        for(int ch = 0; ch < NumChannels; ch++)
             winOk[ch] = false;
 
-            buf.reserve(eventSamples);
-            winfile.read((char*)buf.buf(), eventSamples*sizeof(float));
+        for(int i = 0; i < winfile.getEventChannels(); i++) {
+            bool errorless = winfile.nextChannel();
+            assert(errorless);
+            const int ch = winfile.getChannelId();
+            assert(ch < NumChannels);
+
+            winbuf.reserve(winSamples);
+            winfile.read((char*)winbuf.buf(), winSamples*sizeof(float));
 
             bool chOk = false;
-            for(int i = 0; i < eventSamples; i++) {
-                const float sample = buf.buf()[i];
+            for(int j = 0; j < winSamples; j++) {
+                const float sample = winbuf.buf()[j];
                 if(!chOk && fabsf(sample) >= onlyabove)
                     chOk = true;
                 if(sample <= saturationLow || sample >= saturationHigh) {
@@ -79,13 +94,59 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile, QFi
             }
         }
 
+        // Check if there are sufficient windows to trust SVM
+        if(numWinOk < minwins)
+            continue;
 
+        // Read centered EODSamples from the signal file
+        sigfile.seek(curOff + ((winSamples - EODSamples) / 2) * BytesPerSample);
+        sigfile.readCh(sigbuf);
+
+        // Feed SVM and calculate probability mean
+
+        double probA = 0., probB = 0.;
+
+        for(int ch = 0; ch < NumChannels; ch++) {
+            if(!winOk[ch])
+                continue;
+
+            // Compute features
+            float *chbuf = sigbuf.ch(ch);
+            memcpy(origSignal, chbuf, sizeof(origSignal));
+            worker.process();
+
+            // Rescale features
+            rescaleFeatureWin(featureData, minval, maxval, NumFeatures);
+
+            // Filter features
+            feafilter.filter(featureData, featureFilt);
+
+            // Apply SVM
+            double probEstim[2];
+            nodelist.fill(featureFilt);
+            svm_predict_probability(model, nodelist, probEstim);
+            probA += probEstim[0];
+            probB += probEstim[1];
+        }
+
+        probA /= numWinOk;
+        probB /= numWinOk;
+
+        // Check if probability mean is above minimum
+        if(probA < minprob && probB < minprob)
+            continue;
+
+        // Everything OK, write event offset to outfile
+        outfile.write(QString("%1 %2\n")
+                      .arg((probA > probB) ? 'A' : 'B')
+                      .arg(curOff)
+                      .toAscii());
     }
 }
 
 static int usage(const char *progname)
 {
-    fprintf(stderr, "%s [options] in.I32 in.spikes out.singlefish\n",
+    fprintf(stderr, "%s [options] in.I32 in.spikes in.scale in.filter in.svm out.singlefish\n",
             progname);
     fprintf(stderr, "options:\n"
             "  -a|--onlyabove=a    Only analyze with SVM if above this amplitude\n"
@@ -108,6 +169,9 @@ int main(int argc, char **argv)
     float minprob = defaultSingleMinProb;
     int maxdist = defaultSingleMaxDist;
     int maxsize = EODSamples;
+
+    static float minval[NumFeatures] ALIGN(16);
+    static float maxval[NumFeatures] ALIGN(16);
 
     while(1) {
         int option_index = 0;
@@ -157,7 +221,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if(argc - optind != 3)
+    if(argc - optind != 6)
         return usage(argv[0]);
 
     SignalFile sigfile(argv[optind]);
@@ -172,18 +236,43 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    QFile outfile(argv[optind+2]);
-    if(!outfile.open(QIODevice::WriteOnly)) {
-        fprintf(stderr, "Can't open output file (%s).\n", argv[optind+2]);
+    QFile scalefile(argv[optind+2]);
+    if(!scalefile.open(QIODevice::ReadOnly)) {
+        fprintf(stderr, "Can't open feature scale file (%s).\n", argv[optind+2]);
+        return 1;
+    }
+    readScaleFile(scalefile, minval, maxval);
+    scalefile.close();
+
+    QFile filterfile(argv[optind+3]);
+    if(!filterfile.open(QIODevice::ReadOnly)) {
+        fprintf(stderr, "Can't open feature filter file (%s).\n", argv[optind+3]);
+        return 1;
+    }
+    FeatureFilter feafilter(filterfile);
+    filterfile.close();
+
+    svm_model *model = svm_load_model(argv[optind+4]);
+    if(model == NULL) {
+        fprintf(stderr, "Can't open SVM model file (%s).\n", argv[optind+4]);
         return 1;
     }
 
-    findSingleFish(sigfile, winfile, outfile, onlyabove, saturationLow, saturationHigh,
+    QFile outfile(argv[optind+5]);
+    if(!outfile.open(QIODevice::WriteOnly)) {
+        fprintf(stderr, "Can't open output file (%s).\n", argv[optind+5]);
+        return 1;
+    }
+
+    findSingleFish(sigfile, winfile, minval, maxval,
+                   feafilter, model, outfile, onlyabove,
+                   saturationLow, saturationHigh,
                    minwins, minprob, maxdist, maxsize);
 
     sigfile.close();
     winfile.close();
     outfile.close();
+    svm_free_and_destroy_model(&model);
 
     return 0;
 }
