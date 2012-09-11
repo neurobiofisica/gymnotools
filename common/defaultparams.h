@@ -10,8 +10,13 @@ static const int   defaultStopSamples = 16;
 static const float defaultOnlyAbove = 0.85;
 static const float defaultSaturationLow = -8.44;
 static const float defaultSaturationHigh = 8.05;
+
 static const int   defaultStormGlue = 32;
 static const int   defaultStormSize = 256;
 static const int   defaultStormAfterGlue = 500;
+
+static const int   defaultSingleMinWins = 3;
+static const float defaultSingleMinProb = 0.95;
+static const int   defaultSingleMaxDist = 10000000;
 
 #endif // DEFAULTPARAMS_H
