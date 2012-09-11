@@ -32,6 +32,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
     SignalBuffer sigbuf(EODSamples);
     qint64 prevOff = std::numeric_limits<qint64>::min();
 
+    bool prevWasSingle = false, prevWasA = false;
+    qint64 prevOffBck;
+
     static float origSignal[EODSamples] ALIGN(16);
     static float featureData[NumFeatures] ALIGN(16);
     static float featureFilt[NumFeatures] ALIGN(16);
@@ -43,8 +46,10 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         const int winSamples = winfile.getEventSamples();
 
         // Check if event is below maxsize
-        if(winSamples > maxsize)
+        if(winSamples > maxsize) {
+            prevWasSingle = false;
             continue;
+        }
 
         // Calculate and check distance to next and previous events
 
@@ -55,10 +60,13 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         }
         const int distPrev = (curOff - prevOff) / BytesPerSample;
         const int distNext = (nextOff - curOff) / BytesPerSample;
+        prevOffBck = prevOff;
         prevOff = curOff;
 
-        if(distPrev > maxdist && distNext > maxdist)
+        if(distPrev > maxdist && distNext > maxdist) {
+            prevWasSingle = false;
             continue;
+        }
 
         // Verify which channels can be used to feed the SVM
 
@@ -95,8 +103,10 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         }
 
         // Check if there are sufficient windows to trust SVM
-        if(numWinOk < minwins)
+        if(numWinOk < minwins) {
+            prevWasSingle = false;
             continue;
+        }
 
         // Read centered EODSamples from the signal file
         sigfile.seek(curOff + ((winSamples - EODSamples) / 2) * BytesPerSample);
@@ -133,14 +143,32 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         probB /= numWinOk;
 
         // Check if probability mean is above minimum
-        if(probA < minprob && probB < minprob)
+        if(probA < minprob && probB < minprob) {
+            prevWasSingle = false;
             continue;
+        }
 
-        // Everything OK, write event offset to outfile
-        outfile.write(QString("%1 %2\n")
-                      .arg((probA > probB) ? 'A' : 'B')
-                      .arg(curOff)
-                      .toAscii());
+        // Everything OK, write event pair offsets to outfile
+        if(prevWasSingle) {
+            if(prevWasA && (probB > probA)) {
+                outfile.write(QString("%1 %2\n")
+                              .arg(prevOffBck)
+                              .arg(curOff)
+                              .toAscii());
+                prevWasSingle = false;
+            }
+            else if(!prevWasA && (probA > probB)) {
+                outfile.write(QString("%1 %2\n")
+                              .arg(curOff)
+                              .arg(prevOffBck)
+                              .toAscii());
+                prevWasSingle = false;
+            }
+        }
+        else {
+            prevWasA = (probA > probB);
+            prevWasSingle = true;
+        }
     }
 }
 

@@ -7,19 +7,28 @@ BytesPerSample = NumChannels*4
 EODSamples = 128
 
 def parsefile(f):
-    expr = re.compile(r'([ABab])\s*(\d+)')
+    expr = re.compile(r'(\d+)\s+(\d+)')
     for line in f.xreadlines():
         m = expr.match(line)
-        fish = m.group(1).upper()
-        off = int(m.group(2))
-        yield (fish, off)
+        offA = int(m.group(1))
+        offB = int(m.group(2))
+        yield (offA, offB)
         
 def showdata(f, info):
     print(repr(info))
-    fish, off = info
+    offA, offB = info
+    offMin, offMax = min(info), max(info)
     
-    f.seek(off)
-    data = f.read(EODSamples * BytesPerSample)
+    offMax += 11*EODSamples*BytesPerSample
+    offMin -= 10*EODSamples*BytesPerSample
+    offMin = max(0, offMin)
+    rlen = offMax - offMin
+    
+    posA = (offA-offMin) / BytesPerSample
+    posB = (offB-offMin) / BytesPerSample    
+    
+    f.seek(offMin)
+    data = f.read(rlen)
     arr = np.frombuffer(data, dtype=np.float32)
     
     plt.clf()
@@ -30,7 +39,9 @@ def showdata(f, info):
             ax = plt.subplot(NumChannels, 1, 1)
         else:
             plt.subplot(NumChannels, 1, ch+1, sharex=ax)
-        plt.plot(charr, 'r' if fish=='A' else 'g')
+        plt.plot(charr,'k')
+        plt.axvspan(posA, posA + EODSamples, fc='r', ec='r', alpha=.5)
+        plt.axvspan(posB, posB + EODSamples, fc='g', ec='g', alpha=.5)
         plt.ylabel('ch%d'%ch)
         
     plt.show()
