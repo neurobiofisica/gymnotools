@@ -194,6 +194,12 @@ QList<SFishPair> parseSFish(QFile &sfishfile)
     return list;
 }
 
+static qint32 fishAlen, fishBlen;
+static float fishA[NumChannels][EODSamples] ALIGN(16);
+static float fishB[NumChannels][EODSamples] ALIGN(16);
+
+static const float inf = std::numeric_limits<float>::infinity();
+
 class WinWorker
 {
 private:
@@ -201,23 +207,55 @@ private:
     WindowFile &winfile;
     float saturationLow, saturationHigh;
     static int instances;
+    float **fishAvec, **fishBvec;
 public:
     WinWorker(RecogDB &db, WindowFile &winfile,
-                float saturationLow, float saturationHigh)
+              float saturationLow, float saturationHigh)
         : db(db),
           winfile(winfile),
           saturationLow(saturationLow),
           saturationHigh(saturationHigh)
     {
         assert("singleton" && (instances++) == 0);
+
+        fishAvec = new float*[NumChannels];
+        fishBvec = new float*[NumChannels];
+        for(int ch = 0; ch < NumChannels; ch++) {
+            fishAvec[ch] = &fishA[ch][0];
+            fishBvec[ch] = &fishB[ch][0];
+        }
     }
+    ~WinWorker()
+    {
+        delete[] fishAvec;
+        delete[] fishBvec;
+    }
+
     void emitSingleA()
     {
-        printf("A at %lld\n", winfile.getEventOffset());
+        // copy spike
+        fishAlen = winfile.getEventSamples();
+        for(int ch = 0; ch < NumChannels; ch++) {
+            winfile.nextChannel();
+            winfile.read((char*)fishAvec[ch], fishAlen*sizeof(float));
+        }
+        // emit to db
+        db.insert(winfile.getEventOffset(), 0., inf, inf,
+                  0, fishAlen, fishAvec,
+                  0, 0, NULL);
     }
     void emitSingleB()
     {
-        printf("B at %lld\n", winfile.getEventOffset());
+        // copy spike
+        fishAlen = winfile.getEventSamples();
+        for(int ch = 0; ch < NumChannels; ch++) {
+            winfile.nextChannel();
+            winfile.read((char*)fishBvec[ch], fishAlen*sizeof(float));
+        }
+        // emit to db
+        db.insert(winfile.getEventOffset(), 0., inf, inf,
+                  0, 0, NULL,
+                  0, fishBlen, fishBvec);
     }
     void recog()
     {
@@ -247,6 +285,7 @@ void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
         // scan backwards over window file
         do {
             const qint64 off = winfile.getEventOffset();
+            assert(winfile.getEventChannels() == NumChannels);
             if(off == lookFor) {
                 foundFirst = true;
                 if(off == curpair.first) {
@@ -284,6 +323,7 @@ void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
         // scan forward over window file
         while(winfile.nextEvent()) {
             const qint64 off = winfile.getEventOffset();
+            assert(winfile.getEventChannels() == NumChannels);
             if(off == lookFor) {
                 foundFirst = true;
                 if(off == curpair.first) {
