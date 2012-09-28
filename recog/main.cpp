@@ -32,24 +32,51 @@ static int recogdb_compare(DB *dbp, const DBT *a, const DBT *b)
 }
 
 // XXX Not very portable, doesn't deal correctly with alignment issues
+// Record layout:
+// { presentFish, distA, distB, distAB,
+//   [{offA, sizeA, {Ach0, Ach1, ...}}],
+//   [{offB, sizeB, {Bch0, Bch1, ...}}] }
 class RecogDB {
 private:
     DB *dbp;
     DBC *curp;
     DBT key, data;
+    float *recbuf;
+
+    void copybuf(float *&recbuff, qint32 *&recbufi,
+                 qint32 off, qint32 size, const float *const* data)
+    {
+        recbufi[0] = off;
+        recbufi[1] = size;
+        recbuff = &recbuff[2];
+        recbufi = &recbufi[2];
+        for(int ch = 0; ch < NumChannels; ch++) {
+            memcpy(recbuff, data[ch], size*sizeof(float));
+            recbuff = &recbuff[size];
+            recbufi = &recbufi[size];
+        }
+    }
+
 public:
     explicit RecogDB(const char *filename)
         :dbp(NULL), curp(NULL)
     {
+        assert(sizeof(float) == sizeof(qint32));
+        recbuf = new float[8 + 2*NumChannels*EODSamples];
+
         db_create(&dbp, NULL, 0);
         dbp->set_bt_compare(dbp, recogdb_compare);
         dbp->open(dbp, NULL, filename, NULL, DB_BTREE, DB_CREATE, 0);
         dbp->cursor(dbp, NULL, &curp, 0);
+
         memset(&key, 0, sizeof(key));
         memset(&data, 0, sizeof(data));
     }
+
     ~RecogDB()
     {
+        delete[] recbuf;
+
         if(curp != NULL)
             curp->close(curp);
         if(dbp != NULL)
@@ -64,15 +91,12 @@ public:
     int search(qint64 k)
     {
         key.data = (void *)&k;
+        key.size = sizeof(k);
         return curp->get(curp, &key, &data, DB_SET);
     }
 
     qint64 k() const { return *(const qint64 *)key.data; }
 
-    // Record layout:
-    // { presentFish, distA, distB, distAB,
-    //   [{offA, sizeA, {Ach0, Ach1, ...}}],
-    //   [{offB, sizeB, {Bch0, Bch1, ...}}] }
     qint32 presentFish() const {
         const qint32 *p = (const qint32 *)data.data;
         return p[0];
@@ -102,7 +126,6 @@ public:
         off = p[0];
         qint32 size = p[1];
         assert(buf.spc() >= size);
-        assert(sizeof(float) == sizeof(qint32));
         p = &p[2];
         for(int ch = 0; ch < NumChannels; ch++) {
             memcpy(buf.ch(ch), p, size*sizeof(float));
@@ -111,7 +134,42 @@ public:
         return size;
     }
 
+    void insert(qint64 k, float distA, float distB, float distAB,
+                qint32 offA, qint32 sizeA, const float *const* dataA,
+                qint32 offB, qint32 sizeB, const float *const *dataB)
+    {
+        qint32 presentFish = 0;
+        if(dataA != NULL)
+            presentFish |= 1;
+        if(dataB != NULL)
+            presentFish |= 2;
 
+        float  *recbuff = (float *)recbuf;
+        qint32 *recbufi = (qint32 *)recbuf;
+
+        recbufi[0] = presentFish;
+        recbuff[1] = distA;
+        recbuff[2] = distB;
+        recbuff[3] = distAB;
+
+        recbuff = &recbuff[4];
+        recbufi = &recbufi[4];
+
+        if(dataA != NULL)
+            copybuf(recbuff, recbufi, offA, sizeA, dataA);
+        if(dataB != NULL)
+            copybuf(recbuff, recbufi, offB, sizeB, dataB);
+
+        DBT recdata;
+        memset(&recdata, 0, sizeof(recdata));
+        recdata.data = (void *)recbuf;
+        recdata.size = (recbuff-recbuf)*sizeof(recbuf[0]);
+
+        key.data = (void *)&k;
+        key.size = sizeof(k);
+
+        dbp->put(dbp, NULL, &key, &recdata, DB_OVERWRITE_DUP);
+    }
 };
 
 static int usage(const char *progname)

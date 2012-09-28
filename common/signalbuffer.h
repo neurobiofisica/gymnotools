@@ -28,6 +28,12 @@ public:
     float *ch(int c) const { return samples[c]; }
 
     /**
+     * Converts the SignalBuffer to a read-only float matrix
+     * @returns the float matrix
+     */
+    operator const float *const*() const { return samples; }
+
+    /**
      * Differentiate the signal of all channels
      */
     void diff()
