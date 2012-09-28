@@ -8,15 +8,20 @@
 #include <db.h>
 #include <limits>
 
+#include <QtAlgorithms>
 #include <QString>
 #include <QStringList>
+#include <QTextStream>
+#include <QList>
 #include <QFile>
+#include <QPair>
 
 #include "common/commoninit.h"
 #include "common/defaultparams.h"
 #include "common/sigcfg.h"
 #include "common/signalbuffer.h"
 #include "common/windowfile.h"
+#include "common/compilerspecific.h"
 
 static int recogdb_compare(DB *dbp, const DBT *a, const DBT *b)
 {
@@ -36,7 +41,8 @@ static int recogdb_compare(DB *dbp, const DBT *a, const DBT *b)
 // { presentFish, distA, distB, distAB,
 //   [{offA, sizeA, {Ach0, Ach1, ...}}],
 //   [{offB, sizeB, {Bch0, Bch1, ...}}] }
-class RecogDB {
+class RecogDB
+{
 private:
     DB *dbp;
     DBC *curp;
@@ -139,9 +145,9 @@ public:
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
         qint32 presentFish = 0;
-        if(dataA != NULL)
+        if(dataA != NULL && sizeA)
             presentFish |= 1;
-        if(dataB != NULL)
+        if(dataB != NULL && sizeB)
             presentFish |= 2;
 
         float  *recbuff = (float *)recbuf;
@@ -155,9 +161,9 @@ public:
         recbuff = &recbuff[4];
         recbufi = &recbufi[4];
 
-        if(dataA != NULL)
+        if(dataA != NULL && sizeA)
             copybuf(recbuff, recbufi, offA, sizeA, dataA);
-        if(dataB != NULL)
+        if(dataB != NULL && sizeB)
             copybuf(recbuff, recbufi, offB, sizeB, dataB);
 
         DBT recdata;
@@ -171,6 +177,132 @@ public:
         dbp->put(dbp, NULL, &key, &recdata, DB_OVERWRITE_DUP);
     }
 };
+
+typedef QPair<qint64,qint64> SFishPair;
+
+QList<SFishPair> parseSFish(QFile &sfishfile)
+{
+    QTextStream s(&sfishfile);
+    QList<SFishPair> list;
+    while(true) {
+        qint64 fishAoff, fishBoff;
+        s >> fishAoff >> fishBoff;
+        if(!s.atEnd())
+            list.append(SFishPair(fishAoff, fishBoff));
+        else break;
+    }
+    return list;
+}
+
+class WinWorker
+{
+private:
+    RecogDB &db;
+    WindowFile &winfile;
+    float saturationLow, saturationHigh;
+public:
+    WinWorker(RecogDB &db, WindowFile &winfile,
+                float saturationLow, float saturationHigh)
+        : db(db),
+          winfile(winfile),
+          saturationLow(saturationLow),
+          saturationHigh(saturationHigh)
+    {
+    }
+    void emitSingleA()
+    {
+    }
+    void emitSingleB()
+    {
+    }
+    void recog()
+    {
+    }
+};
+
+void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
+             float saturationLow, float saturationHigh, int direction)
+{
+    WinWorker worker(db, winfile, saturationLow, saturationHigh);
+
+    if(direction < 0) {
+        // go to the end of the window file
+        while(winfile.nextEvent());
+
+        // set up list iterators
+        QListIterator<SFishPair> it(sfishlist);
+        it.toBack();
+        assert(it.hasPrevious());
+        SFishPair curpair = it.previous();
+        qint64 lookFor = qMax(curpair.first, curpair.second);
+
+        // scan backwards over window file
+        do {
+            const qint64 off = winfile.getEventOffset();
+            if(off == lookFor) {
+                if(off == curpair.first) {
+                    worker.emitSingleA();
+                    bool hasPrevious = winfile.prevEvent();
+                    assert(hasPrevious);
+                    assert(winfile.getEventOffset() == curpair.second);
+                    worker.emitSingleB();
+                }
+                else {
+                    worker.emitSingleB();
+                    bool hasPrevious = winfile.prevEvent();
+                    assert(hasPrevious);
+                    assert(winfile.getEventOffset() == curpair.first);
+                    worker.emitSingleA();
+                }
+                if(it.hasPrevious())
+                    curpair = it.previous();
+                else
+                    curpair = SFishPair(-1, -1);
+                lookFor = qMax(curpair.first, curpair.second);
+            }
+            else {
+                worker.recog();
+            }
+        } while(winfile.prevEvent());
+    }
+    else {
+        // set up list iterators
+        QListIterator<SFishPair> it(sfishlist);
+        it.toFront();
+        assert(it.hasNext());
+        SFishPair curpair = it.next();
+        qint64 lookFor = qMin(curpair.first, curpair.second);
+
+        // scan forward over window file
+        while(winfile.nextEvent()) {
+            const qint64 off = winfile.getEventOffset();
+            if(off == lookFor) {
+                if(off == curpair.first) {
+                    worker.emitSingleA();
+                    bool hasNext = winfile.nextEvent();
+                    assert(hasNext);
+                    assert(winfile.getEventOffset() == curpair.second);
+                    worker.emitSingleB();
+                }
+                else {
+                    worker.emitSingleB();
+                    bool hasNext = winfile.nextEvent();
+                    assert(hasNext);
+                    assert(winfile.getEventOffset() == curpair.first);
+                    worker.emitSingleA();
+                }
+                if(it.hasNext())
+                    curpair = it.next();
+                else
+                    curpair = SFishPair(-1, -1);
+                lookFor = qMin(curpair.first, curpair.second);
+            }
+            else {
+                worker.recog();
+            }
+        }
+    }
+}
 
 static int usage(const char *progname)
 {
@@ -195,14 +327,68 @@ static int usage(const char *progname)
 
 int main(int argc, char **argv)
 {
+    const char *progname = argv[0];
     commonInit();
-    if(argc < 3)
-        return usage(argv[0]);
-
-    RecogDB db(argv[2]);
+    if(argc < 2)
+        return usage(progname);
 
     if(!strcmp(argv[1], "iterate")) {
+        argc--;
+        argv = &argv[1];
 
+        float saturationLow = defaultSaturationLow;
+        float saturationHigh = defaultSaturationHigh;
+        int direction = 1;
+
+        while(1) {
+            int option_index = 0;
+            static struct option long_options[] = {
+                { "saturation", required_argument, 0, 'z' },
+                { "direction",  required_argument, 0, 'd' },
+                { 0, 0, 0, 0 }
+            };
+
+            int c = getopt_long(argc, argv, "z:d:", long_options, &option_index);
+            if(c == -1)
+                break;
+
+            switch(c) {
+            case 'z':
+            {
+                QStringList sl = QString(optarg).split(",");
+                assert(sl.count() == 2);
+                saturationLow = sl.at(0).toFloat();
+                saturationHigh = sl.at(1).toFloat();
+                break;
+            }
+            case 'd':
+                direction = QString(optarg).toInt() >= 0 ? 1 : -1;
+                break;
+            default:
+                return usage(progname);
+            }
+        }
+
+        if(argc - optind != 3)
+            return usage(progname);
+
+        RecogDB db(argv[optind]);
+        WindowFile winfile(argv[optind+1]);
+        if(!winfile.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "Can't open window file (%s).\n", argv[optind+1]);
+            return 1;
+        }
+
+        QFile sfishfile(argv[optind+2]);
+        if(!sfishfile.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "Can't open single fish file (%s).\n", argv[optind+2]);
+            return 1;
+        }
+        QList<SFishPair> sfishlist = parseSFish(sfishfile);
+        sfishfile.close();
+
+        iterate(db, winfile, sfishlist, saturationLow, saturationHigh, direction);
+        winfile.close();
     }
     else if(!strcmp(argv[1], "waveform")) {
 
@@ -210,7 +396,7 @@ int main(int argc, char **argv)
     else if(!strcmp(argv[1], "export")) {
 
     }
-    else return usage(argv[0]);
+    else return usage(progname);
 
     return 0;
 }
