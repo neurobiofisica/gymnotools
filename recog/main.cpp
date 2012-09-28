@@ -211,26 +211,30 @@ public:
     }
     void emitSingleA()
     {
+        printf("A at %lld\n", winfile.getEventOffset());
     }
     void emitSingleB()
     {
+        printf("B at %lld\n", winfile.getEventOffset());
     }
     void recog()
     {
+        printf("need recog %lld\n", winfile.getEventOffset());
     }
 };
 
 void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
              float saturationLow, float saturationHigh, int direction)
 {
+    QListIterator<SFishPair> it(sfishlist);
     WinWorker worker(db, winfile, saturationLow, saturationHigh);
+    bool foundFirst = false;
 
     if(direction < 0) {
         // go to the end of the window file
         while(winfile.nextEvent());
 
         // set up list iterators
-        QListIterator<SFishPair> it(sfishlist);
         it.toBack();
         assert(it.hasPrevious());
         SFishPair curpair = it.previous();
@@ -240,6 +244,7 @@ void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
         do {
             const qint64 off = winfile.getEventOffset();
             if(off == lookFor) {
+                foundFirst = true;
                 if(off == curpair.first) {
                     worker.emitSingleA();
                     bool hasPrevious = winfile.prevEvent();
@@ -260,14 +265,13 @@ void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
                     curpair = SFishPair(-1, -1);
                 lookFor = qMax(curpair.first, curpair.second);
             }
-            else {
+            else if(foundFirst) {
                 worker.recog();
             }
         } while(winfile.prevEvent());
     }
     else {
         // set up list iterators
-        QListIterator<SFishPair> it(sfishlist);
         it.toFront();
         assert(it.hasNext());
         SFishPair curpair = it.next();
@@ -277,6 +281,7 @@ void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
         while(winfile.nextEvent()) {
             const qint64 off = winfile.getEventOffset();
             if(off == lookFor) {
+                foundFirst = true;
                 if(off == curpair.first) {
                     worker.emitSingleA();
                     bool hasNext = winfile.nextEvent();
@@ -297,7 +302,7 @@ void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
                     curpair = SFishPair(-1, -1);
                 lookFor = qMin(curpair.first, curpair.second);
             }
-            else {
+            else if(foundFirst) {
                 worker.recog();
             }
         }
