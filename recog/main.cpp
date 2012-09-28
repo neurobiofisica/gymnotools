@@ -200,6 +200,7 @@ private:
     RecogDB &db;
     WindowFile &winfile;
     float saturationLow, saturationHigh;
+    static int instances;
 public:
     WinWorker(RecogDB &db, WindowFile &winfile,
                 float saturationLow, float saturationHigh)
@@ -208,6 +209,7 @@ public:
           saturationLow(saturationLow),
           saturationHigh(saturationHigh)
     {
+        assert("singleton" && (instances++) == 0);
     }
     void emitSingleA()
     {
@@ -222,6 +224,8 @@ public:
         printf("need recog %lld\n", winfile.getEventOffset());
     }
 };
+
+int WinWorker::instances = 0;
 
 void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
              float saturationLow, float saturationHigh, int direction)
