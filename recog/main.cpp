@@ -194,7 +194,29 @@ static QList<SFishPair> parseSFish(QFile &sfishfile)
     return list;
 }
 
+static AINLINE bool saturate(afloat *signal, int len,
+                             float saturationLow, float saturationHigh)
+{
+    bool saturated = false;
+    for(int i = 0; i < len; i++) {
+        if(signal[i] > saturationHigh) {
+            signal[i] = saturationHigh;
+            saturated = true;
+        }
+        if(signal[i] < saturationLow) {
+            signal[i] = saturationLow;
+            saturated = true;
+        }
+    }
+    return saturated;
+}
+
+static AINLINE float sqr(float x) {
+    return x*x;
+}
+
 static const float inf = std::numeric_limits<float>::infinity();
+static const int WinWorkerBufLen = 512*EODSamples;
 
 class WinWorker
 {
@@ -202,13 +224,15 @@ private:
     RecogDB &db;
     WindowFile &winfile;
     float saturationLow, saturationHigh;
-    float **fishAvec, **fishBvec;
+    afloat **fishvecA, **fishvecB;
 
     static int instances;
 
-    static qint32 fishAlen, fishBlen;
+    static qint32 fishlenA, fishlenB;
     static float fishA[NumChannels][EODSamples] ALIGN(16);
     static float fishB[NumChannels][EODSamples] ALIGN(16);
+    static float buf[NumChannels][WinWorkerBufLen] ALIGN(16);
+
 public:
     WinWorker(RecogDB &db, WindowFile &winfile,
               float saturationLow, float saturationHigh)
@@ -219,55 +243,103 @@ public:
     {
         assert("singleton" && (instances++) == 0);
 
-        fishAvec = new float*[NumChannels];
-        fishBvec = new float*[NumChannels];
+        fishvecA = new afloat*[NumChannels];
+        fishvecB = new afloat*[NumChannels];
         for(int ch = 0; ch < NumChannels; ch++) {
-            fishAvec[ch] = &fishA[ch][0];
-            fishBvec[ch] = &fishB[ch][0];
+            fishvecA[ch] = &fishA[ch][0];
+            fishvecB[ch] = &fishB[ch][0];
         }
     }
     ~WinWorker()
     {
-        delete[] fishAvec;
-        delete[] fishBvec;
+        delete[] fishvecA;
+        delete[] fishvecB;
     }
 
     void emitSingleA()
     {
         // copy spike
-        fishAlen = winfile.getEventSamples();
+        fishlenA = winfile.getEventSamples();
         for(int ch = 0; ch < NumChannels; ch++) {
             winfile.nextChannel();
-            winfile.read((char*)fishAvec[ch], fishAlen*sizeof(float));
+            winfile.read((char*)fishvecA[ch], fishlenA*sizeof(float));
+            saturate(fishvecA[ch], fishlenA, saturationLow, saturationHigh);
         }
         // emit to db
         db.insert(winfile.getEventOffset(), 0., inf, inf,
-                  0, fishAlen, fishAvec,
+                  0, fishlenA, fishvecA,
                   0, 0, NULL);
     }
     void emitSingleB()
     {
         // copy spike
-        fishBlen = winfile.getEventSamples();
+        fishlenB = winfile.getEventSamples();
         for(int ch = 0; ch < NumChannels; ch++) {
             winfile.nextChannel();
-            winfile.read((char*)fishBvec[ch], fishBlen*sizeof(float));
+            winfile.read((char*)fishvecB[ch], fishlenB*sizeof(float));
+            saturate(fishvecB[ch], fishlenB, saturationLow, saturationHigh);
         }
         // emit to db
         db.insert(winfile.getEventOffset(), 0., inf, inf,
                   0, 0, NULL,
-                  0, fishBlen, fishBvec);
+                  0, fishlenB, fishvecB);
     }
+
     void recog()
     {
-        printf("need recog %lld\n", winfile.getEventOffset());
+        const int len = winfile.getEventSamples();
+        const int zfilling = qMax(fishlenA, fishlenB);
+        assert(len + zfilling <= WinWorkerBufLen);
+        const int firstpos = zfilling/2;
+
+        // read window channels
+        bool saturated = false;
+        for(int ch = 0; ch < NumChannels; ch++) {
+            afloat *data = &buf[ch][0];
+            // insert zero filling
+            memset(&data[0], 0, firstpos*sizeof(float));
+            memset(&data[firstpos + len], 0, (zfilling - firstpos)*sizeof(float));
+            // read channel
+            winfile.nextChannel();
+            winfile.read((char*)&data[firstpos], len*sizeof(float));
+            // check if saturated and sanitize saturation
+            saturated = saturate(data, len, saturationLow, saturationHigh) || saturated;
+        }
+
+        // look the minimum distance for placing a single A fish
+        float distA = inf;
+        const int firstposA = firstpos - fishlenA/2;
+        const int lastposA  = firstposA + len;
+        for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
+            float newdist = 0.;
+            for(int ch = 0; ch < NumChannels; ch++) {
+                const afloat *data = &buf[ch][0];
+                const afloat *fishdata = &fishA[ch][0];
+                for(int i = 0; i < fishposA; i++)
+                    newdist += sqr(data[i]);
+                for(int i = fishposA, j = 0; j < fishlenA; i++, j++)
+                    newdist += sqr(data[i] - fishdata[j]);
+                for(int i = fishposA + fishlenA; i < firstpos + len; i++)
+                    newdist += sqr(data[i]);
+            }
+            distA = qMin(distA, newdist);
+        }
+
+        // manually "optimized" for each case - saturated or non-saturated
+        if(saturated) {
+
+        }
+        else {
+
+        }
     }
 };
 
 int WinWorker::instances = 0;
-qint32 WinWorker::fishAlen, WinWorker::fishBlen;
+qint32 WinWorker::fishlenA, WinWorker::fishlenB;
 float WinWorker::fishA[NumChannels][EODSamples] ALIGN(16);
 float WinWorker::fishB[NumChannels][EODSamples] ALIGN(16);
+float WinWorker::buf[NumChannels][WinWorkerBufLen] ALIGN(16);
 
 static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
                     float saturationLow, float saturationHigh, int direction)
@@ -276,6 +348,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
     WinWorker worker(db, winfile, saturationLow, saturationHigh);
     bool foundFirst = false;
 
+    // manually "optimized" scan for each direction
     if(direction < 0) {
         // go to the end of the window file
         while(winfile.nextEvent());
