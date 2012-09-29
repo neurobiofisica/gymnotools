@@ -445,6 +445,15 @@ static void waveform(RecogDB &db, WindowFile &fishAfile, WindowFile &fishBfile,
     } while(db.next() == 0);
 }
 
+static void txtexport(RecogDB &db, QFile &outfile, float isiwindow, float distfactor)
+{
+    // XXX stub
+    (void) db;
+    (void) outfile;
+    (void) isiwindow;
+    (void) distfactor;
+}
+
 static int usage(const char *progname)
 {
     fprintf(stderr, "%s iterate [options] recog.db in.spikes in.singlefish\n", progname);
@@ -596,7 +605,49 @@ int main(int argc, char **argv)
         fishBfile.close();
     }
     else if(!strcmp(argv[1], "export")) {
+        argc--;
+        argv = &argv[1];
 
+        float isiwindow = defaultRecogISIWindow;
+        float distfactor = defaultRecogDistFactor;
+
+        while(1) {
+            int option_index = 0;
+            static struct option long_options[] = {
+                { "isiwindow",  required_argument, 0, 'i' },
+                { "distfactor", required_argument, 0, 'd' },
+                { 0, 0, 0, 0 }
+            };
+
+            int c = getopt_long(argc, argv, "i:d:", long_options, &option_index);
+            if(c == -1)
+                break;
+
+            switch(c) {
+            case 'i':
+                isiwindow = QString(optarg).toFloat();
+                break;
+            case 'd':
+                distfactor = QString(optarg).toFloat();
+                break;
+            default:
+                return usage(progname);
+            }
+        }
+
+        if(argc - optind != 2)
+            return usage(progname);
+
+        RecogDB db(argv[optind]);
+        QFile outfile(argv[optind+1]);
+        if(!outfile.open(QIODevice::WriteOnly)) {
+            fprintf(stderr, "Can't open output file (%s).\n", argv[optind+1]);
+            return 1;
+        }
+
+        txtexport(db, outfile, isiwindow, distfactor);
+
+        outfile.close();
     }
     else return usage(progname);
 
