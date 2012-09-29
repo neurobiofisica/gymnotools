@@ -231,7 +231,6 @@ private:
     static qint32 fishlenA, fishlenB;
     static float fishA[NumChannels][EODSamples] ALIGN(16);
     static float fishB[NumChannels][EODSamples] ALIGN(16);
-    static float buf[NumChannels][WinWorkerBufLen] ALIGN(16);
 
 public:
     WinWorker(RecogDB &db, WindowFile &winfile,
@@ -287,6 +286,8 @@ public:
 
     void recog()
     {
+        static float buf[NumChannels][WinWorkerBufLen] ALIGN(16);
+
         const int len = winfile.getEventSamples();
         const int zfilling = qMax(fishlenA, fishlenB);
         assert(len + zfilling <= WinWorkerBufLen);
@@ -306,54 +307,140 @@ public:
             saturated = saturate(data, len, saturationLow, saturationHigh) || saturated;
         }
 
+        const int firstposA = firstpos - fishlenA/2;
+        const int lastposA  = firstposA + len;
+        const int firstposB = firstpos - fishlenB/2;
+        const int lastposB  = firstposB + len;
 
         float distA = inf, distB = inf;
-#pragma omp parallel sections
+#pragma omp parallel
         {
-#pragma omp section
+#pragma omp sections nowait
             {
-                // look the minimum distance for placing a single A fish
-                const int firstposA = firstpos - fishlenA/2;
-                const int lastposA  = firstposA + len;
-                for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
-                    float newdist = 0.;
-                    for(int ch = 0; ch < NumChannels; ch++) {
-                        const afloat *data = &buf[ch][0];
-                        const afloat *fishdata = &fishA[ch][0];
-                        for(int i = 0; i < fishposA; i++)
-                            newdist += sqr(data[i]);
-                        for(int i = fishposA, j = 0; j < fishlenA; i++, j++)
-                            newdist += sqr(data[i] - fishdata[j]);
-                        for(int i = fishposA + fishlenA; i < firstpos + len; i++)
-                            newdist += sqr(data[i]);
+#pragma omp section
+                {
+                    // look for the minimum distance for placing a single A fish
+                    for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
+                        float newdist = 0.;
+                        for(int ch = 0; ch < NumChannels; ch++) {
+                            const afloat *data = &buf[ch][0];
+                            const afloat *fishdata = &fishA[ch][0];
+                            int i = 0;
+                            for(; i < fishposA; i++)
+                                newdist += sqr(data[i]);
+                            for(int j = 0; j < fishlenA; i++, j++)
+                                newdist += sqr(data[i] - fishdata[j]);
+                            for(; i < firstpos + len; i++)
+                                newdist += sqr(data[i]);
+                        }
+                        distA = qMin(distA, newdist);
                     }
-                    distA = qMin(distA, newdist);
+                }
+#pragma omp section
+                {
+                    // just like the above, but for a single B fish (manually unrolled)
+                    for(int fishposB = firstposB; fishposB < lastposB; fishposB++) {
+                        float newdist = 0.;
+                        for(int ch = 0; ch < NumChannels; ch++) {
+                            const afloat *data = &buf[ch][0];
+                            const afloat *fishdata = &fishB[ch][0];
+                            int i = 0;
+                            for(; i < fishposB; i++)
+                                newdist += sqr(data[i]);
+                            for(int j = 0; j < fishlenB; i++, j++)
+                                newdist += sqr(data[i] - fishdata[j]);
+                            for(; i < firstpos + len; i++)
+                                newdist += sqr(data[i]);
+                        }
+                        distB = qMin(distB, newdist);
+                    }
                 }
             }
 
-#pragma omp section
-            {
-                // just like the above, but for a single B fish (manually unrolled)
-                const int firstposB = firstpos - fishlenB/2;
-                const int lastposB  = firstposB + len;
+        }
+
+        // look for the minimum distance and positions for placing A and B fishes
+        QPair<int,int> posAB;
+        float distAB = inf;
+        {
+            static QPair<int,float> BgivenA[WinWorkerBufLen]; // to be reduced to posAB
+
+#pragma omp parallel for
+            for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
+                int bestposB = -1;
+                float bestdistB = inf;
+
                 for(int fishposB = firstposB; fishposB < lastposB; fishposB++) {
+                    const afloat *const* fishvec1, *const* fishvec2;
+                    int fishpos1, fishlen1, fishpos2, fishlen2;
+
+                    if(fishposA <= fishposB) {
+                        fishvec1 = fishvecA; fishvec2 = fishvecB;
+                        fishpos1 = fishposA; fishpos2 = fishposB;
+                        fishlen1 = fishlenA; fishlen2 = fishlenB;
+                    }
+                    else {
+                        fishvec1 = fishvecB; fishvec2 = fishvecA;
+                        fishpos1 = fishposB; fishpos2 = fishposA;
+                        fishlen1 = fishlenB; fishlen2 = fishlenA;
+                    }
+
                     float newdist = 0.;
+
                     for(int ch = 0; ch < NumChannels; ch++) {
                         const afloat *data = &buf[ch][0];
-                        const afloat *fishdata = &fishB[ch][0];
-                        for(int i = 0; i < fishposB; i++)
+                        const afloat *fishdata1 = fishvec1[ch];
+                        const afloat *fishdata2 = fishvec2[ch];
+
+                        int i = 0;
+                        // no sliding windows
+                        for(; i < fishpos1; i++)
                             newdist += sqr(data[i]);
-                        for(int i = fishposB, j = 0; j < fishlenB; i++, j++)
-                            newdist += sqr(data[i] - fishdata[j]);
-                        for(int i = fishposB + fishlenB; i < firstpos + len; i++)
+                        // first fish sliding window
+                        int ind1 = 0;
+                        for(; i < fishpos2 && ind1 < fishlen1; i++, ind1++)
+                            newdist += sqr(data[i] - fishdata1[ind1]);
+                        // both fish sliding windows
+                        int ind2 = 0;
+                        if(saturated) {
+                            for(; ind1 < fishlen1 && ind2 < fishlen2; i++, ind1++, ind2++) {
+                                float fishsum = fishdata1[ind1] + fishdata2[ind2];
+                                fishsum = qMax(fishsum, saturationHigh);
+                                fishsum = qMin(fishsum, saturationLow);
+                                newdist += sqr(data[i] - fishsum);
+                            }
+                        }
+                        else {
+                            for(; ind1 < fishlen1 && ind2 < fishlen2; i++, ind1++, ind2++)
+                                newdist += sqr(data[i] - fishdata1[ind1] - fishdata2[ind2]);
+                        }
+                        // second fish sliding window
+                        for(; ind2 < fishlen2; i++, ind2++)
+                            newdist += sqr(data[i] - fishdata2[ind2]);
+                        // no sliding windows
+                        for(; i < firstpos + len; i++)
                             newdist += sqr(data[i]);
                     }
-                    distB = qMin(distB, newdist);
+
+                    if(newdist < bestdistB) {
+                        bestdistB = newdist;
+                        bestposB = fishposB;
+                    }
+                }
+
+                BgivenA[fishposA] = QPair<int,float>(bestposB, bestdistB);
+            }
+
+            // reduce and find the minimum
+            for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
+                if(BgivenA[fishposA].second < distAB) {
+                    distAB = BgivenA[fishposA].second;
+                    posAB = QPair<int,int>(fishposA, BgivenA[fishposA].first);
                 }
             }
         }
 
-        printf("recog: %30.5f %30.5f\n", distA, distB);
+        printf("recog: %30.5f %30.5f %30.5f (%5d, %5d)\n", distA, distB, distAB, posAB.first, posAB.second);
     }
 };
 
@@ -361,7 +448,6 @@ int WinWorker::instances = 0;
 qint32 WinWorker::fishlenA, WinWorker::fishlenB;
 float WinWorker::fishA[NumChannels][EODSamples] ALIGN(16);
 float WinWorker::fishB[NumChannels][EODSamples] ALIGN(16);
-float WinWorker::buf[NumChannels][WinWorkerBufLen] ALIGN(16);
 
 static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
                     float saturationLow, float saturationHigh, int direction)
