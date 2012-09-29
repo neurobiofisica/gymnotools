@@ -306,32 +306,54 @@ public:
             saturated = saturate(data, len, saturationLow, saturationHigh) || saturated;
         }
 
-        // look the minimum distance for placing a single A fish
-        float distA = inf;
-        const int firstposA = firstpos - fishlenA/2;
-        const int lastposA  = firstposA + len;
-        for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
-            float newdist = 0.;
-            for(int ch = 0; ch < NumChannels; ch++) {
-                const afloat *data = &buf[ch][0];
-                const afloat *fishdata = &fishA[ch][0];
-                for(int i = 0; i < fishposA; i++)
-                    newdist += sqr(data[i]);
-                for(int i = fishposA, j = 0; j < fishlenA; i++, j++)
-                    newdist += sqr(data[i] - fishdata[j]);
-                for(int i = fishposA + fishlenA; i < firstpos + len; i++)
-                    newdist += sqr(data[i]);
+
+        float distA = inf, distB = inf;
+#pragma omp parallel sections
+        {
+#pragma omp section
+            {
+                // look the minimum distance for placing a single A fish
+                const int firstposA = firstpos - fishlenA/2;
+                const int lastposA  = firstposA + len;
+                for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
+                    float newdist = 0.;
+                    for(int ch = 0; ch < NumChannels; ch++) {
+                        const afloat *data = &buf[ch][0];
+                        const afloat *fishdata = &fishA[ch][0];
+                        for(int i = 0; i < fishposA; i++)
+                            newdist += sqr(data[i]);
+                        for(int i = fishposA, j = 0; j < fishlenA; i++, j++)
+                            newdist += sqr(data[i] - fishdata[j]);
+                        for(int i = fishposA + fishlenA; i < firstpos + len; i++)
+                            newdist += sqr(data[i]);
+                    }
+                    distA = qMin(distA, newdist);
+                }
             }
-            distA = qMin(distA, newdist);
+
+#pragma omp section
+            {
+                // just like the above, but for a single B fish (manually unrolled)
+                const int firstposB = firstpos - fishlenB/2;
+                const int lastposB  = firstposB + len;
+                for(int fishposB = firstposB; fishposB < lastposB; fishposB++) {
+                    float newdist = 0.;
+                    for(int ch = 0; ch < NumChannels; ch++) {
+                        const afloat *data = &buf[ch][0];
+                        const afloat *fishdata = &fishB[ch][0];
+                        for(int i = 0; i < fishposB; i++)
+                            newdist += sqr(data[i]);
+                        for(int i = fishposB, j = 0; j < fishlenB; i++, j++)
+                            newdist += sqr(data[i] - fishdata[j]);
+                        for(int i = fishposB + fishlenB; i < firstpos + len; i++)
+                            newdist += sqr(data[i]);
+                    }
+                    distB = qMin(distB, newdist);
+                }
+            }
         }
 
-        // manually "optimized" for each case - saturated or non-saturated
-        if(saturated) {
-
-        }
-        else {
-
-        }
+        printf("recog: %30.5f %30.5f\n", distA, distB);
     }
 };
 
