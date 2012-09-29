@@ -180,7 +180,7 @@ public:
 
 typedef QPair<qint64,qint64> SFishPair;
 
-QList<SFishPair> parseSFish(QFile &sfishfile)
+static QList<SFishPair> parseSFish(QFile &sfishfile)
 {
     QTextStream s(&sfishfile);
     QList<SFishPair> list;
@@ -194,10 +194,6 @@ QList<SFishPair> parseSFish(QFile &sfishfile)
     return list;
 }
 
-static qint32 fishAlen, fishBlen;
-static float fishA[NumChannels][EODSamples] ALIGN(16);
-static float fishB[NumChannels][EODSamples] ALIGN(16);
-
 static const float inf = std::numeric_limits<float>::infinity();
 
 class WinWorker
@@ -206,8 +202,13 @@ private:
     RecogDB &db;
     WindowFile &winfile;
     float saturationLow, saturationHigh;
-    static int instances;
     float **fishAvec, **fishBvec;
+
+    static int instances;
+
+    static qint32 fishAlen, fishBlen;
+    static float fishA[NumChannels][EODSamples] ALIGN(16);
+    static float fishB[NumChannels][EODSamples] ALIGN(16);
 public:
     WinWorker(RecogDB &db, WindowFile &winfile,
               float saturationLow, float saturationHigh)
@@ -247,10 +248,10 @@ public:
     void emitSingleB()
     {
         // copy spike
-        fishAlen = winfile.getEventSamples();
+        fishBlen = winfile.getEventSamples();
         for(int ch = 0; ch < NumChannels; ch++) {
             winfile.nextChannel();
-            winfile.read((char*)fishBvec[ch], fishAlen*sizeof(float));
+            winfile.read((char*)fishBvec[ch], fishBlen*sizeof(float));
         }
         // emit to db
         db.insert(winfile.getEventOffset(), 0., inf, inf,
@@ -264,9 +265,12 @@ public:
 };
 
 int WinWorker::instances = 0;
+qint32 WinWorker::fishAlen, WinWorker::fishBlen;
+float WinWorker::fishA[NumChannels][EODSamples] ALIGN(16);
+float WinWorker::fishB[NumChannels][EODSamples] ALIGN(16);
 
-void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
-             float saturationLow, float saturationHigh, int direction)
+static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
+                    float saturationLow, float saturationHigh, int direction)
 {
     QListIterator<SFishPair> it(sfishlist);
     WinWorker worker(db, winfile, saturationLow, saturationHigh);
@@ -351,6 +355,94 @@ void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
             }
         }
     }
+}
+
+static void waveformAdjust(SignalBuffer &buf, WindowFile &outfile,
+                           qint64 off, qint32 len,
+                           float saturationLow, float saturationHigh,
+                           float onlyabove, int fillsamples)
+{
+    static float adjbuf[NumChannels][EODSamples] ALIGN(16);
+
+    // adjust spike in adjbuf
+    const int firstpos = (EODSamples - len)/2;
+    const int lastpos  = EODSamples - firstpos - 1;
+    for(int ch = 0; ch < NumChannels; ch++) {
+        const float *data = buf.ch(ch);
+        float beginMean = 0., endMean = 0.;
+        for(int i = 0; i < fillsamples && i < len; i++)
+            beginMean += data[i];
+        for(int i = len - 1; i >= len - fillsamples && i >= 0; i--)
+            endMean += data[i];
+        beginMean /= fillsamples;
+        endMean /= fillsamples;
+        for(int i = 0; i < firstpos; i++)
+            adjbuf[ch][i] = beginMean;
+        for(int i = lastpos; i < EODSamples; i++)
+            adjbuf[ch][i] = endMean;
+        memcpy(&adjbuf[ch][firstpos], data, len*sizeof(float));
+    }
+
+    // check which channels will be saved in outfile
+    qint32 numSavedCh = 0;
+    bool savedCh[NumChannels];
+    for(int ch = 0; ch < NumChannels; ch++) {
+        savedCh[ch] = false;
+        const float *data = buf.ch(ch);
+        bool chOk = false;
+        for(int i = 0; i < EODSamples; i++) {
+            const float sample = data[i];
+            if(!chOk && fabsf(sample) >= onlyabove)
+                chOk = true;
+            if(sample <= saturationLow || sample >= saturationHigh) {
+                chOk = false;
+                break;
+            }
+        }
+        if(chOk) {
+            savedCh[ch] = true;
+            numSavedCh++;
+        }
+    }
+
+    // save
+    outfile.writeEvent(off, EODSamples, numSavedCh);
+    for(int ch = 0; ch < NumChannels; ch++) {
+        if(savedCh[ch])
+            outfile.writeChannel(ch, &adjbuf[ch][0]);
+    }
+}
+
+static void waveform(RecogDB &db, WindowFile &fishAfile, WindowFile &fishBfile,
+                     float saturationLow, float saturationHigh,
+                     float onlyabove, int fillsamples)
+{
+    SignalBuffer buf(EODSamples);
+    assert(db.first() == 0);
+    do {
+        const qint64 off = db.k();
+        const qint32 fish = db.presentFish();
+        qint32 displacement;
+        if(fish == 1 || fish == 2) {
+            const qint32 len = db.spikeData(1, displacement, buf);
+            waveformAdjust(buf, fish == 1 ? fishAfile : fishBfile,
+                           off + displacement*BytesPerSample, len,
+                           saturationLow, saturationHigh,
+                           onlyabove, fillsamples);
+        }
+        else {
+            qint32 len = db.spikeData(1, displacement, buf);
+            waveformAdjust(buf, fishAfile,
+                           off + displacement*BytesPerSample, len,
+                           saturationLow, saturationHigh,
+                           onlyabove, fillsamples);
+            len = db.spikeData(2, displacement, buf);
+            waveformAdjust(buf, fishBfile,
+                           off + displacement*BytesPerSample, len,
+                           saturationLow, saturationHigh,
+                           onlyabove, fillsamples);
+        }
+    } while(db.next() == 0);
 }
 
 static int usage(const char *progname)
@@ -440,7 +532,68 @@ int main(int argc, char **argv)
         winfile.close();
     }
     else if(!strcmp(argv[1], "waveform")) {
+        argc--;
+        argv = &argv[1];
 
+        float saturationLow = defaultSaturationLow;
+        float saturationHigh = defaultSaturationHigh;
+        float onlyabove = defaultOnlyAbove;
+        int fillsamples = defaultRecogFillSamples;
+
+        while(1) {
+            int option_index = 0;
+            static struct option long_options[] = {
+                { "saturation",  required_argument, 0, 'z' },
+                { "onlyabove",   required_argument, 0, 'a' },
+                { "fillsamples", required_argument, 0, 'f' },
+                { 0, 0, 0, 0 }
+            };
+
+            int c = getopt_long(argc, argv, "z:a:f:", long_options, &option_index);
+            if(c == -1)
+                break;
+
+            switch(c) {
+            case 'z':
+            {
+                QStringList sl = QString(optarg).split(",");
+                assert(sl.count() == 2);
+                saturationLow = sl.at(0).toFloat();
+                saturationHigh = sl.at(1).toFloat();
+                break;
+            }
+            case 'a':
+                onlyabove = QString(optarg).toFloat();
+                break;
+            case 'f':
+                fillsamples = QString(optarg).toInt();
+                break;
+            default:
+                return usage(progname);
+            }
+        }
+
+        if(argc - optind != 3)
+            return usage(progname);
+
+        RecogDB db(argv[optind]);
+        WindowFile fishAfile(argv[optind+1]);
+        if(!fishAfile.open(QIODevice::WriteOnly)) {
+            fprintf(stderr, "Can't open fish A window file (%s).\n", argv[optind+1]);
+            return 1;
+        }
+        WindowFile fishBfile(argv[optind+2]);
+        if(!fishBfile.open(QIODevice::WriteOnly)) {
+            fprintf(stderr, "Can't open fish B window file (%s).\n", argv[optind+2]);
+            return 1;
+        }
+
+        waveform(db, fishAfile, fishBfile,
+                 saturationLow, saturationHigh,
+                 onlyabove, fillsamples);
+
+        fishAfile.close();
+        fishBfile.close();
     }
     else if(!strcmp(argv[1], "export")) {
 

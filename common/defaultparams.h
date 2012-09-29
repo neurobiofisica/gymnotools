@@ -19,4 +19,6 @@ static const int   defaultSingleMinWins = 3;
 static const float defaultSingleMinProb = 0.95;
 static const int   defaultSingleMaxDist = 10000000;
 
+static const int   defaultRecogFillSamples = 8;
+
 #endif // DEFAULTPARAMS_H
