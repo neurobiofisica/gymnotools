@@ -290,6 +290,7 @@ public:
 
         const int len = winfile.getEventSamples();
         const int zfilling = qMax(fishlenA, fishlenB);
+        assert(zfilling <= EODSamples);
         assert(len + zfilling <= WinWorkerBufLen);
         const int firstpos = zfilling/2;
 
@@ -312,51 +313,48 @@ public:
         const int firstposB = firstpos - fishlenB/2;
         const int lastposB  = firstposB + len;
 
-        float distA = inf, distB = inf;
-#pragma omp parallel
-        {
-#pragma omp sections nowait
-            {
-#pragma omp section
-                {
-                    // look for the minimum distance for placing a single A fish
-                    for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
-                        float newdist = 0.;
-                        for(int ch = 0; ch < NumChannels; ch++) {
-                            const afloat *data = &buf[ch][0];
-                            const afloat *fishdata = &fishA[ch][0];
-                            int i = 0;
-                            for(; i < fishposA; i++)
-                                newdist += sqr(data[i]);
-                            for(int j = 0; j < fishlenA; i++, j++)
-                                newdist += sqr(data[i] - fishdata[j]);
-                            for(; i < firstpos + len; i++)
-                                newdist += sqr(data[i]);
-                        }
-                        distA = qMin(distA, newdist);
-                    }
-                }
-#pragma omp section
-                {
-                    // just like the above, but for a single B fish (manually unrolled)
-                    for(int fishposB = firstposB; fishposB < lastposB; fishposB++) {
-                        float newdist = 0.;
-                        for(int ch = 0; ch < NumChannels; ch++) {
-                            const afloat *data = &buf[ch][0];
-                            const afloat *fishdata = &fishB[ch][0];
-                            int i = 0;
-                            for(; i < fishposB; i++)
-                                newdist += sqr(data[i]);
-                            for(int j = 0; j < fishlenB; i++, j++)
-                                newdist += sqr(data[i] - fishdata[j]);
-                            for(; i < firstpos + len; i++)
-                                newdist += sqr(data[i]);
-                        }
-                        distB = qMin(distB, newdist);
-                    }
-                }
+        // look for the minimum distance for placing a single A fish
+        float distA = inf;
+        int singleposA = -1;
+        for(int fishposA = firstposA; fishposA < lastposA; fishposA++) {
+            float newdist = 0.;
+            for(int ch = 0; ch < NumChannels; ch++) {
+                const afloat *data = &buf[ch][0];
+                const afloat *fishdata = &fishA[ch][0];
+                int i = 0;
+                for(; i < fishposA; i++)
+                    newdist += sqr(data[i]);
+                for(int j = 0; j < fishlenA; i++, j++)
+                    newdist += sqr(data[i] - fishdata[j]);
+                for(; i < firstpos + len; i++)
+                    newdist += sqr(data[i]);
             }
+            if(newdist < distA) {
+                distA = newdist;
+                singleposA = fishposA;
+            }
+        }
 
+        // just like the above, but for a single B fish (manually unrolled)
+        float distB = inf;
+        int singleposB = -1;
+        for(int fishposB = firstposB; fishposB < lastposB; fishposB++) {
+            float newdist = 0.;
+            for(int ch = 0; ch < NumChannels; ch++) {
+                const afloat *data = &buf[ch][0];
+                const afloat *fishdata = &fishB[ch][0];
+                int i = 0;
+                for(; i < fishposB; i++)
+                    newdist += sqr(data[i]);
+                for(int j = 0; j < fishlenB; i++, j++)
+                    newdist += sqr(data[i] - fishdata[j]);
+                for(; i < firstpos + len; i++)
+                    newdist += sqr(data[i]);
+            }
+            if(newdist < distB) {
+                distB = newdist;
+                singleposB = fishposB;
+            }
         }
 
         // look for the minimum distance and positions for placing A and B fishes
@@ -440,7 +438,49 @@ public:
             }
         }
 
-        printf("recog: %30.5f %30.5f %30.5f (%5d, %5d)\n", distA, distB, distAB, posAB.first, posAB.second);
+        const qint64 off = winfile.getEventOffset();
+
+        if(distA < distB && distA < distAB) {
+            // single A fish
+            int copystart = firstpos, copylen = len;
+            if(UNLIKELY(len > EODSamples)) {
+                copylen = fishlenA;
+                copystart = singleposA;
+            }
+            // copy spike
+            fishlenA = copylen;
+            for(int ch = 0; ch < NumChannels; ch++) {
+                memcpy(fishvecA[ch], &buf[ch][copystart], copylen*sizeof(float));
+                saturate(fishvecA[ch], copylen, saturationLow, saturationHigh);
+            }
+            // emit to db
+            db.insert(off, distA, distB, distAB,
+                      copystart - firstpos, fishlenA, fishvecA,
+                      0, 0, NULL);
+        }
+        else if(distB < distA && distB < distAB) {
+            // single B fish
+            int copystart = firstpos, copylen = len;
+            if(UNLIKELY(len > EODSamples)) {
+                copylen = fishlenB;
+                copystart = singleposB;
+            }
+            // copy spike
+            fishlenB = copylen;
+            for(int ch = 0; ch < NumChannels; ch++) {
+                memcpy(fishvecB[ch], &buf[ch][copystart], copylen*sizeof(float));
+                saturate(fishvecB[ch], copylen, saturationLow, saturationHigh);
+            }
+            // emit to db
+            db.insert(off, distA, distB, distAB,
+                      0, 0, NULL,
+                      copystart - firstpos, fishlenB, fishvecB);
+        }
+        else {
+            // A and B fishes in the same event window
+        }
+
+        printf("recog: %30lld %30.5f %30.5f %30.5f (%5d, %5d)\n", off, distA, distB, distAB, posAB.first, posAB.second);
     }
 };
 
