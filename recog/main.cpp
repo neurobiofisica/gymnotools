@@ -591,12 +591,14 @@ static void waveformAdjust(SignalBuffer &buf, WindowFile &outfile,
     for(int ch = 0; ch < NumChannels; ch++) {
         const float *data = buf.ch(ch);
         float beginMean = 0., endMean = 0.;
-        for(int i = 0; i < fillsamples && i < len; i++)
-            beginMean += data[i];
-        for(int i = len - 1; i >= len - fillsamples && i >= 0; i--)
-            endMean += data[i];
-        beginMean /= fillsamples;
-        endMean /= fillsamples;
+        if(fillsamples != 0) {
+            for(int i = 0; i < fillsamples && i < len; i++)
+                beginMean += data[i];
+            for(int i = len - 1; i >= len - fillsamples && i >= 0; i--)
+                endMean += data[i];
+            beginMean /= fillsamples;
+            endMean /= fillsamples;
+        }
         for(int i = 0; i < firstpos; i++)
             adjbuf[ch][i] = beginMean;
         for(int i = lastpos; i < EODSamples; i++)
@@ -611,7 +613,7 @@ static void waveformAdjust(SignalBuffer &buf, WindowFile &outfile,
         savedCh[ch] = false;
         const float *data = buf.ch(ch);
         bool chOk = false;
-        for(int i = 0; i < EODSamples; i++) {
+        for(int i = 0; i < len; i++) {
             const float sample = data[i];
             if(!chOk && fabsf(sample) >= onlyabove)
                 chOk = true;
