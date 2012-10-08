@@ -403,8 +403,8 @@ public:
                         if(saturated) {
                             for(; ind1 < fishlen1 && ind2 < fishlen2; i++, ind1++, ind2++) {
                                 float fishsum = fishdata1[ind1] + fishdata2[ind2];
-                                fishsum = qMax(fishsum, saturationHigh);
-                                fishsum = qMin(fishsum, saturationLow);
+                                fishsum = qMin(fishsum, saturationHigh);
+                                fishsum = qMax(fishsum, saturationLow);
                                 newdist += sqr(data[i] - fishsum);
                             }
                         }
