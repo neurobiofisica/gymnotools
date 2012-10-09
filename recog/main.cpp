@@ -89,6 +89,8 @@ public:
             dbp->close(dbp, 0);
     }
 
+    void sync() { dbp->sync(dbp, 0); }
+
     int first() { return curp->get(curp, &key, &data, DB_FIRST); }
     int last()  { return curp->get(curp, &key, &data, DB_LAST);  }
     int next()  { return curp->get(curp, &key, &data, DB_NEXT);  }
@@ -211,7 +213,21 @@ static AINLINE bool saturate(afloat *signal, int len,
     return saturated;
 }
 
-static AINLINE float sqr(float x) {
+static AINLINE void subtract(float *dest, afloat *orig, int len,
+                             float saturationLow, float saturationHigh)
+{
+    for(int i = 0; i < len; i++) {
+        if(dest[i] >= saturationHigh || orig[i] <= saturationLow)
+            dest[i] = saturationHigh;
+        else if(dest[i] <= saturationLow || orig[i] >= saturationHigh)
+            dest[i] = saturationLow;
+        else
+            dest[i] -= orig[i];
+    }
+}
+
+static AINLINE float sqr(float x)
+{
     return x*x;
 }
 
@@ -478,6 +494,28 @@ public:
         }
         else {
             // A and B fishes in the same event window
+            static float bufB[NumChannels][WinWorkerBufLen] ALIGN(16);
+            const int realLen = firstpos + len;
+            // copy buf to bufB
+            for(int ch = 0; ch < NumChannels; ch++)
+                memcpy(&bufB[ch][0], &buf[ch][0], realLen*sizeof(float));
+            // subtract B from A, and A from B
+            for(int ch = 0; ch < NumChannels; ch++) {
+                subtract(&buf [ch][posAB.second], fishvecB[ch], fishlenB,
+                         saturationLow, saturationHigh);
+                subtract(&bufB[ch][posAB.first],  fishvecA[ch], fishlenA,
+                         saturationLow, saturationHigh);
+            }
+            // set up spk vector pointers
+            float *spkA[NumChannels], *spkB[NumChannels];
+            for(int ch = 0; ch < NumChannels; ch++) {
+                spkA[ch] = &buf [ch][posAB.first];
+                spkB[ch] = &bufB[ch][posAB.second];
+            }
+            // emit to db
+            db.insert(off, distA, distB, distAB,
+                      posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
+                      posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
         }
 
         printf("recog: %30lld %30.5f %30.5f %30.5f (%5d, %5d)\n", off, distA, distB, distAB, posAB.first, posAB.second);
