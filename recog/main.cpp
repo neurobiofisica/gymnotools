@@ -456,6 +456,15 @@ public:
 
         const qint64 off = winfile.getEventOffset();
 
+        float curBestDist = inf;
+        if(db.search(off) == 0) {
+            switch(db.presentFish()) {
+            case 1: curBestDist = db.distA();  break;
+            case 2: curBestDist = db.distB();  break;
+            case 3: curBestDist = db.distAB(); break;
+            }
+        }
+
         if(distA < distB && distA < distAB) {
             // single A fish
             int copystart = firstpos, copylen = len;
@@ -470,9 +479,10 @@ public:
                 saturate(fishvecA[ch], copylen, saturationLow, saturationHigh);
             }
             // emit to db
-            db.insert(off, distA, distB, distAB,
-                      copystart - firstpos, fishlenA, fishvecA,
-                      0, 0, NULL);
+            if(distA < curBestDist)
+                db.insert(off, distA, distB, distAB,
+                          copystart - firstpos, fishlenA, fishvecA,
+                          0, 0, NULL);
         }
         else if(distB < distA && distB < distAB) {
             // single B fish
@@ -488,37 +498,38 @@ public:
                 saturate(fishvecB[ch], copylen, saturationLow, saturationHigh);
             }
             // emit to db
-            db.insert(off, distA, distB, distAB,
-                      0, 0, NULL,
-                      copystart - firstpos, fishlenB, fishvecB);
+            if(distB < curBestDist)
+                db.insert(off, distA, distB, distAB,
+                          0, 0, NULL,
+                          copystart - firstpos, fishlenB, fishvecB);
         }
         else {
             // A and B fishes in the same event window
-            static float bufB[NumChannels][WinWorkerBufLen] ALIGN(16);
-            const int realLen = firstpos + len;
-            // copy buf to bufB
-            for(int ch = 0; ch < NumChannels; ch++)
-                memcpy(&bufB[ch][0], &buf[ch][0], realLen*sizeof(float));
-            // subtract B from A, and A from B
-            for(int ch = 0; ch < NumChannels; ch++) {
-                subtract(&buf [ch][posAB.second], fishvecB[ch], fishlenB,
-                         saturationLow, saturationHigh);
-                subtract(&bufB[ch][posAB.first],  fishvecA[ch], fishlenA,
-                         saturationLow, saturationHigh);
+            if(distAB < curBestDist) {
+                static float bufB[NumChannels][WinWorkerBufLen] ALIGN(16);
+                const int realLen = firstpos + len;
+                // copy buf to bufB
+                for(int ch = 0; ch < NumChannels; ch++)
+                    memcpy(&bufB[ch][0], &buf[ch][0], realLen*sizeof(float));
+                // subtract B from A, and A from B
+                for(int ch = 0; ch < NumChannels; ch++) {
+                    subtract(&buf [ch][posAB.second], fishvecB[ch], fishlenB,
+                             saturationLow, saturationHigh);
+                    subtract(&bufB[ch][posAB.first],  fishvecA[ch], fishlenA,
+                             saturationLow, saturationHigh);
+                }
+                // set up spk vector pointers
+                float *spkA[NumChannels], *spkB[NumChannels];
+                for(int ch = 0; ch < NumChannels; ch++) {
+                    spkA[ch] = &buf [ch][posAB.first];
+                    spkB[ch] = &bufB[ch][posAB.second];
+                }
+                // emit to db
+                db.insert(off, distA, distB, distAB,
+                          posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
+                          posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
             }
-            // set up spk vector pointers
-            float *spkA[NumChannels], *spkB[NumChannels];
-            for(int ch = 0; ch < NumChannels; ch++) {
-                spkA[ch] = &buf [ch][posAB.first];
-                spkB[ch] = &bufB[ch][posAB.second];
-            }
-            // emit to db
-            db.insert(off, distA, distB, distAB,
-                      posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
-                      posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
         }
-
-        printf("recog: %30lld %30.5f %30.5f %30.5f (%5d, %5d)\n", off, distA, distB, distAB, posAB.first, posAB.second);
     }
 };
 
