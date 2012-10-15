@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 import matplotlib.pyplot as plt
 import numpy as np
 import sys, bsddb3, recogdb
@@ -25,21 +26,27 @@ for rec in db.iteritems():
     apszB = arrsz - dataB.shape[1]
     dataA = np.concatenate((dataA, np.nan*np.ones((7,apszA))),1)
     dataB = np.concatenate((dataB, np.nan*np.ones((7,apszB))),1)
-    [A[i].append(dataA[i,:]) for i in xrange(7)]
-    [B[i].append(dataB[i,:]) for i in xrange(7)]
+    for i in xrange(7):
+        A[i].append(dataA[i,:])
+        B[i].append(dataB[i,:])
 
 A = map(np.concatenate, A)
 B = map(np.concatenate, B)
 
-ax=plt.subplot(14,1,1)
+ax=plt.subplot(7,1,1)
 plt.plot(A[0],'r',alpha=.4)
 plt.plot(B[0],'g',alpha=.4)
 plt.plot([mark,mark],[-10,10],'b')
+plt.setp(ax.axes.get_xaxis(), visible=False)
+plt.axis([0, len(A[0]), -10, 10])
 for i in xrange(1,7):
-    plt.subplot(7,1,i+1,sharex=ax)
+    axx=plt.subplot(7,1,i+1,sharex=ax)
     plt.plot(A[i],'r',alpha=.4)
     plt.plot(B[i],'g',alpha=.4)
     plt.plot([mark,mark],[-10,10],'b')
+    plt.setp(axx.axes.get_xaxis(), visible=False)
+    plt.axis([0, len(A[0]), -10, 10])
+
 plt.show()
         
         
