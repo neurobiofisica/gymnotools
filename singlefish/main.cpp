@@ -112,9 +112,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         sigfile.seek(curOff + ((winSamples - EODSamples) / 2) * BytesPerSample);
         sigfile.readCh(sigbuf);
 
-        // Feed SVM and calculate probability mean
+        // Feed SVM and calculate joint probability
 
-        double probA = 0., probB = 0.;
+        double probA = 1., probB = 1.;
 
         for(int ch = 0; ch < NumChannels; ch++) {
             if(!winOk[ch])
@@ -135,14 +135,11 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
             double probEstim[2];
             nodelist.fill(featureFilt);
             svm_predict_probability(model, nodelist, probEstim);
-            probA += probEstim[0];
-            probB += probEstim[1];
+            probA *= probEstim[0];
+            probB *= probEstim[1];
         }
 
-        probA /= numWinOk;
-        probB /= numWinOk;
-
-        // Check if probability mean is above minimum
+        // Check if joint probability is above minimum
         if(probA < minprob && probB < minprob) {
             prevWasSingle = false;
             continue;
