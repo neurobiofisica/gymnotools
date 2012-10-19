@@ -106,7 +106,8 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
                                   const bool *chExcluded, bool fixedwin,
                                   float onlyabove, float minlevel,
                                   float minratio, int stopsamples,
-                                  float saturationLow, float saturationHigh)
+                                  float saturationLow, float saturationHigh,
+                                  qint64 &lastEndPos)
 {
     float *squareSum = buffer.ch(0);   // we overwrite ch(0) with the sum of squares
 
@@ -159,14 +160,18 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     }
 
     // prepare to read buffer before detectedAt
-    int scanAmount;
-    if(detectedAt >= buffer.bytes()) {
-        sigfile.seek(detectedAt - buffer.bytes());
-        scanAmount = buffer.spc() - 1;
+    int scanEndPos, scanBeginPos = 0;
+    if(LIKELY(detectedAt >= buffer.bytes())) {
+        const qint64 seekPos = detectedAt - buffer.bytes();
+        sigfile.seek(seekPos);
+        scanEndPos = buffer.spc() - 1;
+        // avoid overlaping with the last already emitted window
+        if(UNLIKELY(seekPos < lastEndPos))
+            scanBeginPos = (lastEndPos - seekPos)/BytesPerSample;
     }
     else {
         sigfile.seek(0);
-        scanAmount = detectedAt/BytesPerSample - 1;
+        scanEndPos = detectedAt/BytesPerSample - 1;
     }
 
     // read buffer before detectedAt
@@ -181,7 +186,7 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     // find start of the spike
     int startPos = -1;
     samplesBelow = 0;
-    for(int i = scanAmount - 1; i >= 0; i--) {
+    for(int i = scanEndPos - 1; i >= scanBeginPos; i--) {
         if(squareSum[i] >= minlevel) {
             samplesBelow = 0;
         }
@@ -191,11 +196,13 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
         }
     }
 
-    if(startPos == -1) {
-        fputs(QString("warning: pos %1: spike too long, truncating at start\n")
-                .arg(detectedAt)
-                .toUtf8(), stderr);
-        startPos = 0;
+    if(UNLIKELY(startPos == -1)) {
+        if(LIKELY(scanBeginPos == 0)) {
+            fputs(QString("warning: pos %1: spike too long, truncating at start\n")
+                    .arg(detectedAt)
+                    .toUtf8(), stderr);
+        }
+        startPos = scanBeginPos;
     }
 
     // locate spike window
@@ -250,7 +257,8 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     }
 
     // seek to the position after the spike
-    sigfile.seek(detectedAt + endPos*BytesPerSample);
+    lastEndPos = detectedAt + endPos*BytesPerSample;
+    sigfile.seek(lastEndPos);
 }
 
 static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, QFile *winlenfile,
@@ -264,6 +272,8 @@ static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, QFile *w
 
     const qint64 fileStart = cutIncompleteAtStartOrEnd(sigfile, minlevel, false);
     const qint64 fileEnd   = cutIncompleteAtStartOrEnd(sigfile, minlevel, true);
+
+    qint64 lastEndPos = 0;
 
     sigfile.seek(fileStart);
 
@@ -305,7 +315,8 @@ static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, QFile *w
                     spikeDetected(sigfile, outfile, winlenfile, buffer, NULL,
                                   fixedwin, onlyabove, minlevel,
                                   minratio, stopsamples,
-                                  saturationLow, saturationHigh);
+                                  saturationLow, saturationHigh,
+                                  lastEndPos);
                     break;
                 }
             }
@@ -344,7 +355,8 @@ static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, QFile *w
                                       (*excl).chExcluded, fixedwin,
                                       onlyabove, correctedMinLevel,
                                       correctedMinRatio, stopsamples,
-                                      saturationLow, saturationHigh);
+                                      saturationLow, saturationHigh,
+                                      lastEndPos);
                         break;
                     }
                 }
@@ -366,7 +378,8 @@ static int spikeDiscriminator(SignalFile &sigfile, WindowFile &outfile, QFile *w
                 spikeDetected(sigfile, outfile, winlenfile, buffer, NULL,
                               fixedwin, onlyabove, minlevel,
                               minratio, stopsamples,
-                              saturationLow, saturationHigh);
+                              saturationLow, saturationHigh,
+                              lastEndPos);
                 break;
             }
         }
