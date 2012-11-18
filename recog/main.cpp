@@ -295,7 +295,7 @@ public:
             saturate(fishvecB[ch], fishlenB, saturationLow, saturationHigh);
         }
         // emit to db
-        db.insert(winfile.getEventOffset(), 0., inf, inf,
+        db.insert(winfile.getEventOffset(), inf, 0., inf,
                   0, 0, NULL,
                   0, fishlenB, fishvecB);
     }

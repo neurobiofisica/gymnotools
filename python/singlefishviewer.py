@@ -42,6 +42,7 @@ def showdata(f, info):
         plt.plot(charr,'k')
         plt.axvspan(posA, posA + EODSamples, fc='r', ec='r', alpha=.5)
         plt.axvspan(posB, posB + EODSamples, fc='g', ec='g', alpha=.5)
+        plt.axis([0, len(charr), -10, 10])
         plt.ylabel('ch%d'%ch)
         
     plt.show()

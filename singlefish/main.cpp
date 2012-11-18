@@ -153,6 +153,7 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
                               .arg(curOff)
                               .toAscii());
                 prevWasSingle = false;
+                continue;
             }
             else if(!prevWasA && (probA > probB)) {
                 outfile.write(QString("%1 %2\n")
@@ -160,12 +161,12 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
                               .arg(prevOffBck)
                               .toAscii());
                 prevWasSingle = false;
+                continue;
             }
         }
-        else {
-            prevWasA = (probA > probB);
-            prevWasSingle = true;
-        }
+
+        prevWasA = (probA > probB);
+        prevWasSingle = true;
     }
 }
 
