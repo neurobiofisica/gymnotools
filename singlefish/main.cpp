@@ -31,6 +31,7 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
     ResizableBuffer winbuf(maxsize);
     SignalBuffer sigbuf(EODSamples);
     qint64 prevOff = std::numeric_limits<qint64>::min();
+    int prevSamples = 0;
 
     bool prevWasSingle = false, prevWasA = false;
     qint64 prevOffBck;
@@ -48,6 +49,8 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         // Check if event is below maxsize
         if(winSamples > maxsize) {
             prevWasSingle = false;
+            prevSamples = winSamples;
+            prevOff = curOff;
             continue;
         }
 
@@ -60,6 +63,8 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         }
         const int distPrev = (curOff - prevOff) / BytesPerSample;
         const int distNext = (nextOff - curOff) / BytesPerSample;
+        const qint64 prevEndOff = prevOff + prevSamples * BytesPerSample;
+        prevSamples = winSamples;
         prevOffBck = prevOff;
         prevOff = curOff;
 
@@ -110,6 +115,12 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
 
         // Read centered EODSamples from the signal file
         sigfile.seek(curOff + ((winSamples - EODSamples) / 2) * BytesPerSample);
+        // Check if sigbuf data overlaps with the next or the previous window
+        const qint64 curEndOff = sigfile.pos() + winSamples * BytesPerSample;
+        if((prevEndOff > sigfile.pos()) || (curEndOff > nextOff)) {
+            prevWasSingle = false;
+            continue;
+        }
         sigfile.readCh(sigbuf);
 
         // Feed SVM and calculate joint probability
