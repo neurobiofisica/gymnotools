@@ -717,13 +717,41 @@ static void waveform(RecogDB &db, WindowFile &fishAfile, WindowFile &fishBfile,
     } while(db.next() == 0);
 }
 
-static void txtexport(RecogDB &db, QFile &outfile, float isiwindow, float distfactor)
+static void txtexport(RecogDB &db, QFile &outfile)
 {
-    // XXX stub
-    (void) db;
-    (void) outfile;
-    (void) isiwindow;
-    (void) distfactor;
+    SignalBuffer buf(EODSamples);
+    assert(db.first() == 0);
+    do {
+        const qint64 off = db.k();
+        const qint32 fish = db.presentFish();
+        assert(off % BytesPerSample == 0);
+        const qint64 startSample = off / BytesPerSample;
+        if(fish == 1 || fish == 2) {
+            qint32 displacement;
+            db.spikeData(1, displacement, buf);
+            outfile.write(QString("%1\t%2\n")
+                          .arg(fish == 1 ? 1 : -1)
+                          .arg(startSample + displacement)
+                          .toAscii());
+        }
+        else {
+            qint32 fishAdisp, fishBdisp;
+            db.spikeData(1, fishAdisp, buf);
+            db.spikeData(2, fishBdisp, buf);
+            if(fishAdisp <= fishBdisp) {
+                outfile.write(QString("1\t%1\n-1\t%2\n")
+                              .arg(startSample + fishAdisp)
+                              .arg(startSample + fishBdisp)
+                              .toAscii());
+            }
+            else {
+                outfile.write(QString("-1\t%1\n1\t%2\n")
+                              .arg(startSample + fishBdisp)
+                              .arg(startSample + fishAdisp)
+                              .toAscii());
+            }
+        }
+    } while(db.next() == 0);
 }
 
 static int usage(const char *progname)
@@ -739,10 +767,7 @@ static int usage(const char *progname)
             "  -a|--onlyabove=a    Only output spikes above this amplitude\n"
             "  -f|--fillsamples=f  Number of samples used to compute filling amplitude\n\n");
 
-    fprintf(stderr, "%s export [options] recog.db out.txt\n", progname);
-    fprintf(stderr, "options:\n"
-            "  -i|--isiwindow=i    Misdetection window around twice and half the last ISI\n"
-            "  -d|--distfactor=d   Maximum distance factor to fix ISI misdetection\n\n");
+    fprintf(stderr, "%s export recog.db out.txt\n\n", progname);
 
     return 1;
 }
@@ -877,47 +902,17 @@ int main(int argc, char **argv)
         fishBfile.close();
     }
     else if(!strcmp(argv[1], "export")) {
-        argc--;
-        argv = &argv[1];
-
-        float isiwindow = defaultRecogISIWindow;
-        float distfactor = defaultRecogDistFactor;
-
-        while(1) {
-            int option_index = 0;
-            static struct option long_options[] = {
-                { "isiwindow",  required_argument, 0, 'i' },
-                { "distfactor", required_argument, 0, 'd' },
-                { 0, 0, 0, 0 }
-            };
-
-            int c = getopt_long(argc, argv, "i:d:", long_options, &option_index);
-            if(c == -1)
-                break;
-
-            switch(c) {
-            case 'i':
-                isiwindow = QString(optarg).toFloat();
-                break;
-            case 'd':
-                distfactor = QString(optarg).toFloat();
-                break;
-            default:
-                return usage(progname);
-            }
-        }
-
-        if(argc - optind != 2)
+        if(argc != 4)
             return usage(progname);
 
-        RecogDB db(argv[optind]);
-        QFile outfile(argv[optind+1]);
+        RecogDB db(argv[2]);
+        QFile outfile(argv[3]);
         if(!outfile.open(QIODevice::WriteOnly)) {
-            fprintf(stderr, "Can't open output file (%s).\n", argv[optind+1]);
+            fprintf(stderr, "Can't open output file (%s).\n", argv[3]);
             return 1;
         }
 
-        txtexport(db, outfile, isiwindow, distfactor);
+        txtexport(db, outfile);
 
         outfile.close();
     }

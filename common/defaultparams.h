@@ -20,7 +20,5 @@ static const float defaultSingleMinProb = 0.95;
 static const int   defaultSingleMaxDist = 10000000;
 
 static const int   defaultRecogFillSamples = 3;
-static const float defaultRecogISIWindow = .1;
-static const float defaultRecogDistFactor = .1;
 
 #endif // DEFAULTPARAMS_H
