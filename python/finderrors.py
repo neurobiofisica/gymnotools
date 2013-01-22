@@ -32,4 +32,4 @@ for rec in db.iteritems():
     fishdetected = 1 if checkfish in fishwins else 0
     
     if fishexists ^ fishdetected == 1:
-        print '%d\t%d\t%d' % (off, fishexists, fishdetected)
+        print '%d\t%d\t%d' % (checkoff, fishexists, fishdetected)
