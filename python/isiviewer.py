@@ -52,9 +52,8 @@ class SigFig:
     def plotdata(self, offset, nsamples=spksamples):
         f = self.datafile
         f.seek(offset*nchannels*4)
-        data = f.read(4*nsamples*nchannels)
-        nsamples = len(data) // nchannels // 4
-        data = np.array(struct.unpack('%df'%(nsamples*nchannels), data))
+        data = np.frombuffer(f.read(4*nsamples*nchannels), dtype=np.float32)
+        nsamples = len(data) // nchannels
 
         t = np.arange(offset, offset+nsamples)/samplingrate
         axis = [t.min(), t.max(), -maxamp, maxamp]
@@ -66,7 +65,7 @@ class SigFig:
         
         for i in xrange(nchannels):
             ax = self.ax[i]
-            self.p[i], = ax.plot(t, data[i:nsamples*nchannels:nchannels], 'k-',
+            self.p[i], = ax.plot(t, data[i::nchannels], 'k-',
                                  scalex=False, scaley=False)
             ax.axis(axis)
             
