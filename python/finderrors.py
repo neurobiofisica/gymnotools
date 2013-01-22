@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 import numpy as np
 import sys, struct, bsddb3, recogdb
+import scipy.signal as sig
 
 NumChannels = 7
 
@@ -11,6 +12,8 @@ checkfile = open(sys.argv[4],'rb')
 threshold = float(sys.argv[5])
 
 assert(checkfish in ('A', 'B'))
+
+filt = sig.firwin(100, .1)
 
 for rec in db.iteritems():
     off, distA, distB, distAB, fishwins = recogdb.fishrec(rec)
@@ -24,6 +27,7 @@ for rec in db.iteritems():
     checkfile.seek(checkoff)
     
     buf = np.frombuffer(checkfile.read(wsamples*4), dtype=np.float32)
+    buf = np.convolve(filt, buf)
     fishexists = 1 if abs(buf).max() >= threshold else 0
     fishdetected = 1 if checkfish in fishwins else 0
     
