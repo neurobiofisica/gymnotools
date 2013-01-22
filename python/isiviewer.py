@@ -51,7 +51,7 @@ class SigFig:
         
     def plotdata(self, offset, nsamples=spksamples):
         f = self.datafile
-        f.seek(offset*7*4)
+        f.seek(offset*nchannels*4)
         data = f.read(4*nsamples*nchannels)
         nsamples = len(data) // nchannels // 4
         data = np.array(struct.unpack('%df'%(nsamples*nchannels), data))
