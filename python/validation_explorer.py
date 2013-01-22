@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import struct, re, sys, os
 import cPickle as pickle
+import scipy.signal as sig
 
 samplingrate = 50.e3
 spksamples = 128
@@ -26,11 +27,11 @@ def spikerange(recog, i, start, end):
     return l
 
 class SigFig:
-    def __init__(self, filename, recog):
+    def __init__(self, filename, recog, errmat, validationfile, validationamp):
         self.fig = plt.figure()
-        self.ax  = [self.fig.add_subplot(nchannels,1,1)]
-        self.ax += [self.fig.add_subplot(nchannels,1,i, sharex=self.ax[0]) for i in xrange(2,nchannels+1)]
-        self.p = [None for i in xrange(nchannels)]
+        self.ax  = [self.fig.add_subplot(nchannels+1,1,1)]
+        self.ax += [self.fig.add_subplot(nchannels+1,1,i, sharex=self.ax[0]) for i in xrange(2,nchannels+2)]
+        self.p = [None for i in xrange(nchannels+1)]
         self.spk = []
 
         for ax in self.ax[:-1]:
@@ -42,9 +43,17 @@ class SigFig:
         for i in xrange(nchannels):
             self.ax[i].set_ylabel(u'$A_{%d}$ (V)'%i)
         self.ax[-1].set_xlabel(u't (s)')
+        self.ax[-1].set_ylabel(u'Validation\ndata (V)')
         
         self.datafile = open(filename, 'rb')
         self.recog = recog
+        self.errmat = errmat
+        self.validationdata = open(validationfile, 'rb')
+        self.validationamp = validationamp
+        
+        self.filt = sig.firwin(100, .1) 
+        self.filti = (len(self.filt) - 1) // 2
+        self.filtj = (len(self.filt) - 1) - self.filti
 
     def draw(self):
         self.fig.canvas.draw()
@@ -75,6 +84,15 @@ class SigFig:
                                  scalex=False, scaley=False)
             ax.axis(axis)
             
+        f = self.validationdata
+        f.seek(offset*4)
+        data = np.frombuffer(f.read(4*nsamples), dtype=np.float32)
+        data = np.convolve(self.filt, data)[self.filti:-self.filtj]
+        ax = self.ax[nchannels]
+        self.p[nchannels], = ax.plot(t, data, 'k-',
+                                 scalex=False, scaley=False)
+        ax.axis([t.min(), t.max(), -self.validationamp, self.validationamp])
+            
         return nsamples
             
     def plotspike(self, ind, margin=12*spksamples):
@@ -103,6 +121,7 @@ class SigFig:
         
 class ISIFig:
     def __init__(self, sigfig):
+        assert(isinstance(sigfig, SigFig))
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(1,1,1)
         self.ax.set_xlabel(u't (s)')
@@ -112,10 +131,17 @@ class ISIFig:
         self.sopts = {'scalex': True, 'scaley': True}
         self.sigfig = sigfig
         self.recog = sigfig.recog
+        self.errmat = sigfig.errmat
         
     def onpick(self, event):
-        artist = event.artist
-        try: fish = 1 if self.p.index(artist)==0 else -1
+        try:
+            idx = self.p.index(event.artist)
+            if idx==0:
+                fish = 1
+            elif idx==1:
+                fish = -1
+            else:
+                return
         except: return
         
         # workaround for matplotlib bug (was need in v0.99.3, now it is fixed)
@@ -146,33 +172,55 @@ class ISIFig:
         self.B = np.zeros(nB-1)
         Amap, Bmap, At, Bt, A, B = self.Amap, self.Bmap, self.At, self.Bt, self.A, self.B
         iA, iB = 0, 0
+        errmat = self.errmat
+        ierr, numerr = 0, errmat.shape[0]
+        yerr, erryyy = 0., np.zeros(numerr)
         for i in xrange(recog.shape[0]):
             fish,pos = recog[i]
             if fish == 1:
                 Amap[iA] = i
                 At[iA] = pos / samplingrate
-                if iA > 0: A[iA-1] = At[iA] - At[iA-1]
+                if iA > 0:
+                    yerr = At[iA] - At[iA-1]
+                    A[iA-1] = yerr
                 iA += 1
             else:
                 Bmap[iB] = i
                 Bt[iB] = pos / samplingrate
-                if iB > 0: B[iB-1] = Bt[iB] - Bt[iB-1]
+                if iB > 0: 
+                    yerr = Bt[iB] - Bt[iB-1]
+                    B[iB-1] = yerr
                 iB += 1
+            if ierr < numerr:
+                if 4*pos >= errmat[ierr,0]:
+                    erryyy[ierr] = yerr
+                    ierr += 1
+        self.errmatx0 = errmat[errmat[:,1]==0,0]/(4.*samplingrate)
+        self.errmaty0 = erryyy[errmat[:,1]==0]
+        self.errmatx1 = errmat[errmat[:,1]==1,0]/(4.*samplingrate)
+        self.errmaty1 = erryyy[errmat[:,1]==1]
                 
     def plot(self):
         ax = self.ax
         for p in self.p:
             if p: p.remove()
         self.p = [ax.plot(self.At[1:], self.A, 'r.', picker=5, **self.sopts)[0],
-                  ax.plot(self.Bt[1:], self.B, 'g.', picker=5, **self.sopts)[0]]
+                  ax.plot(self.Bt[1:], self.B, 'g.', picker=5, **self.sopts)[0],
+                  ax.plot(self.errmatx0, self.errmaty0, 'ys', alpha=.7)[0],
+                  ax.plot(self.errmatx1, self.errmaty1, 'bs', alpha=.7)[0]]
         self.sopts = {'scalex': False, 'scaley': False}
         
         
 def main():
-    datafile = sys.argv[1]     # I32 data file
-    recogfile = sys.argv[2]    # generated by recog export
+    datafile = sys.argv[1]             # I32 data file
+    recogfile = sys.argv[2]            # generated by recog export
+    errorfile = sys.argv[3]            # generated by finderrors.py
+    validationfile = sys.argv[4]       # I32 validation data file
+    validationamp = float(sys.argv[5]) # threshold
+    
     recog = np.loadtxt(recogfile, dtype=np.int)
-    sigfig = SigFig(datafile, recog)
+    errmat = np.loadtxt(errorfile, dtype=np.int, usecols=[0,1])
+    sigfig = SigFig(datafile, recog, errmat, validationfile, validationamp)
     isifig = ISIFig(sigfig)
     isifig.calc()
     isifig.plot()
