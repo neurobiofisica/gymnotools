@@ -21,13 +21,21 @@ def parsefile(f):
         yield (start, end, chs)
         
 def showdata(f, storminfo):
+    addlen = 128*1000
+    
     print(repr(storminfo))
     start, end, chs = storminfo
+    start -= addlen
+    end += addlen
     stormlen = end - start
+    
+    assert(start >= 0)
     
     f.seek(start * BytesPerSample)
     data = f.read(stormlen * BytesPerSample)
     arr = np.frombuffer(data, dtype=np.float32)
+    
+    assert(len(arr) == stormlen * NumChannels)
     
     plt.clf()
     derivec = []    
@@ -43,11 +51,15 @@ def showdata(f, storminfo):
             plt.subplot(nplots, 1, i, sharex=ax)
         i += 1
         plt.plot(charr, 'g')
+        plt.axvspan(0, addlen, -10, 10, facecolor='r', alpha=.3)
+        plt.axvspan(stormlen - addlen, stormlen, -10, 10, facecolor='r', alpha=.3)
         plt.ylabel('ch%d'%ch)
         
     plt.subplot(nplots, 1, nplots, sharex=ax)
     derivec = np.vstack(derivec)
     plt.plot((derivec**2).sum(axis=0),'r')
+    plt.axvspan(0, addlen, -10, 10, facecolor='g', alpha=.3)
+    plt.axvspan(stormlen - addlen, stormlen, -10, 10, facecolor='g', alpha=.3)
     plt.ylabel('Esum')
     
     plt.show()
