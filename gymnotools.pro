@@ -1,7 +1,8 @@
 TEMPLATE = subdirs
-SUBDIRS = common commongui dsfmt dtcwpt features paramchooser recog singlefish slice spikes storms svm svmtool winview
+SUBDIRS = common commongui crosspat dsfmt dtcwpt features paramchooser recog singlefish slice spikes storms svm svmtool winview
 
 commongui.depends = common
+crosspat.depends = common
 features.depends = common dtcwpt
 paramchooser.depends = commongui
 recog.depends = common

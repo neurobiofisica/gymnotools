@@ -190,7 +190,7 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
     printf("=> Errors: %d (%.2f%%)\n", bestErrors, (100.*bestErrors)/problem.l);
 }
 
-static void cmd_train(char *modelfile, double cParam, double gParam,
+static void cmd_train(const char *modelfile, double cParam, double gParam,
                       WindowFile &trainA, WindowFile &trainB)
 {
     SVMProblem problem(trainA, trainB);
@@ -298,15 +298,15 @@ static int usage(const char *progname)
             "    -c start,stop,step   specify 'c' values to be tried\n"
             "    -g start,stop,step   specify 'g' values to be tried\n", progname);
     fprintf(stderr, "%s train svm.model c-param g-param A.features B.features\n"
-            "  Train a SVM using the given test set and 'c' and 'g' parameters.\n", progname);
+            "  Train a SVM using the given training set and 'c' and 'g' parameters.\n", progname);
     fprintf(stderr, "%s test [count|list] svm.model file.features\n"
             "  Classify the features contained in the file in order to test a SVM model.\n"
             "  If 'count' is asked, only counts the number of A and B results.\n"
             "  If 'list' is asked, outputs a list of results with probability estimators.\n",
             progname);
     fprintf(stderr, "%s roc svm.model testA.features testB.features\n"
-            "  Outputs a list of FPR (false positive rate) and TPR (true positive rate)\n"
-            "  values, which can be used to plot a ROC curve.\n", progname);
+            "  Outputs a list of FAR (false A rate) and TAR (true A rate) values,\n"
+            "  which can be used to plot a ROC curve.\n", progname);
     return 1;
 }
 
@@ -443,17 +443,17 @@ int main(int argc, char **argv)
             return usage(progname);
         svm_model *model = svm_load_model(argv[2]);
         if(model == NULL) {
-            fprintf(stderr, "can't open model file '%s' for reading\n", argv[3]);
+            fprintf(stderr, "can't open model file '%s' for reading\n", argv[2]);
             return 1;
         }
         WindowFile testA(argv[3]);
         if(!testA.open(QIODevice::ReadOnly)) {
-            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[4]);
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[3]);
             return 1;
         }
         WindowFile testB(argv[4]);
         if(!testB.open(QIODevice::ReadOnly)) {
-            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[5]);
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[4]);
             return 1;
         }
         cmd_roc(model, testA, testB);
