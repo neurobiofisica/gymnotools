@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <limits>
 
+#include <omp.h>
+
 #include <QString>
 #include <QStringList>
 #include <QList>
@@ -16,12 +18,17 @@
 #include "common/commoninit.h"
 #include "common/windowfile.h"
 #include "common/sigcfg.h"
+#include "common/sigutil.h"
 
 struct CrossModel {
     float A[EODSamples] ALIGN(16);
     float B[EODSamples] ALIGN(16);
 
-    bool load(const char *filename) {
+    void normA() { normalizeAbsAlignedFloat(A, EODSamples); }
+    void normB() { normalizeAbsAlignedFloat(B, EODSamples); }
+
+    bool load(const char *filename)
+    {
         QFile file(filename);
         if(!file.open(QIODevice::ReadOnly))
             return false;
@@ -31,7 +38,8 @@ struct CrossModel {
         return true;
     }
 
-    void save(const char *filename) {
+    void save(const char *filename)
+    {
         QFile file(filename);
         file.open(QIODevice::WriteOnly);
         file.write((char*)A, sizeof(A));
@@ -65,21 +73,16 @@ static AINLINE double maxCrossCorrelation(const afloat *pattern, const afloat *w
     return maxCross;
 }
 
-static AINLINE double decisionValue(const CrossModel *model, const afloat *window)
+static AINLINE double decisionValue(const CrossModel &model, const afloat *window)
 {
-    const double a = maxCrossCorrelation(model->A, window);
-    const double b = maxCrossCorrelation(model->B, window);
-    if(a >= b)
-        return a;
-    return -b;
+    const double a = maxCrossCorrelation(model.A, window);
+    const double b = maxCrossCorrelation(model.B, window);
+    return a - b;
 }
 
-static void predictAndCount(const CrossModel *model, WindowFile &file, int &nA, int &nB)
+static void predictAndCount(const CrossModel &model, WindowFile &file, int &nA, int &nB, afloat *buf)
 {
-    static float buf[3*EODSamples] ALIGN(16) = { 0. };
-
     nA = nB = 0;
-
     while(file.nextChannel()) {
         assert(file.getEventSamples() == EODSamples);
         file.read((char*)&buf[EODSamples], EODSamples*sizeof(float));
@@ -88,43 +91,102 @@ static void predictAndCount(const CrossModel *model, WindowFile &file, int &nA, 
         else
             nB++;
     }
-
     file.rewind();
 }
 
-static int countErrors(CrossModel *model, WindowFile &crossA, WindowFile &crossB)
+static AINLINE void predictAndCount(const CrossModel &model, WindowFile &file, int &nA, int &nB)
 {
-    int errors = 0;
-    int nA = 0, nB = 0;
-    predictAndCount(model, crossA, nA, nB);
-    errors += nB;
-    predictAndCount(model, crossB, nA, nB);
-    errors += nA;
-    return errors;
+    static float buf[3*EODSamples] ALIGN(16) = { 0. };
+    predictAndCount(model, file, nA, nB, buf);
 }
+
+static int countErrors(const CrossModel &model, WindowFile &crossA, WindowFile &crossB)
+{
+    static float bufA[3*EODSamples] ALIGN(16) = { 0. };
+    static float bufB[3*EODSamples] ALIGN(16) = { 0. };
+    int errorsA, errorsB;
+#pragma omp parallel sections
+    {
+#pragma omp section
+        {
+            int nA = 0, nB = 0;
+            predictAndCount(model, crossA, nA, nB, bufA);
+            errorsA = nB;
+        }
+#pragma omp section
+        {
+            int nA = 0, nB = 0;
+            predictAndCount(model, crossB, nA, nB, bufB);
+            errorsB = nA;
+        }
+    }
+    return errorsA + errorsB;
+}
+
+typedef QPair<int,int> IntPair;
 
 static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
                       WindowFile &crossA, WindowFile &crossB)
 {
+    static CrossModel model ALIGN(16);
+    const int numA = countWins(trainA), numB = countWins(trainB);
+    double percentFactor = 100./(((double)numA) * numB);
+
+    printf("=> Trying all (A,B) window pairs...\n");
+
+    int bestErr = std::numeric_limits<int>::max();
+    IntPair bestij(-1, -1);
+    qint64 cont = 0;
+
+    for(int i = 1; i <= numA; i++) {
+        bool hasNext = trainA.nextChannel();
+        assert(hasNext);
+        assert(trainA.getEventSamples() == EODSamples);
+        trainA.read((char*)model.A, EODSamples*sizeof(float));
+        model.normA();
+
+        trainB.rewind();
+        for(int j = 1; j <= numB; j++) {
+            printf("\r%8.3f%%", (cont++)*percentFactor);
+            fflush(stdout);
+
+            bool hasNext = trainB.nextChannel();
+            assert(hasNext);
+            assert(trainB.getEventSamples() == EODSamples);
+            trainB.read((char*)model.B, EODSamples*sizeof(float));
+            model.normB();
+
+            const int err = countErrors(model, crossA, crossB);
+            if(err < bestErr) {
+                bestErr = err;
+                bestij = IntPair(i, j);
+            }
+        }
+    }
+
+    printf("\n=> Best (A,B): %d %d\n", bestij.first, bestij.second);
+    printf("=> Number of errors: %d\n", bestErr);
 }
 
 static void cmd_train(const char *modelfile, int Apat, int Bpat,
                       WindowFile &trainA, WindowFile &trainB)
 {
-    CrossModel model;
+    static CrossModel model ALIGN(16);
 
-    for(int i = 0; i <= Apat && trainA.nextChannel(); i++);
+    for(int i = 0; i < Apat && trainA.nextChannel(); i++);
     assert(trainA.getEventSamples() == EODSamples);
     trainA.read((char*)model.A, EODSamples*sizeof(float));
+    model.normA();
 
-    for(int i = 0; i <= Bpat && trainB.nextChannel(); i++);
+    for(int i = 0; i < Bpat && trainB.nextChannel(); i++);
     assert(trainB.getEventSamples() == EODSamples);
-    trainA.read((char*)model.B, EODSamples*sizeof(float));
+    trainB.read((char*)model.B, EODSamples*sizeof(float));
+    model.normB();
 
     model.save(modelfile);
 }
 
-static void cmd_test_count(CrossModel *model, WindowFile &testFile)
+static void cmd_test_count(const CrossModel &model, WindowFile &testFile)
 {
     int nA = 0, nB = 0;
     predictAndCount(model, testFile, nA, nB);
@@ -133,7 +195,7 @@ static void cmd_test_count(CrossModel *model, WindowFile &testFile)
     printf("B: %d (%.2f%%)\n", nB, (100.*nB)/total);
 }
 
-static void cmd_test_list(CrossModel *model, WindowFile &testFile)
+static void cmd_test_list(const CrossModel &model, WindowFile &testFile)
 {
     const QString fmt("%1: decision { %2 } @ %3 ch %4\n");
     static float buf[3*EODSamples] ALIGN(16) = { 0. };
@@ -157,7 +219,7 @@ static void cmd_test_list(CrossModel *model, WindowFile &testFile)
 
 typedef QPair<double,int> DecisionLabel;
 
-static void populateDecisionLabelPairs(CrossModel *model, QList<DecisionLabel> &list,
+static void populateDecisionLabelPairs(const CrossModel &model, QList<DecisionLabel> &list,
                                        WindowFile &file, int label)
 {
     static float buf[3*EODSamples] ALIGN(16) = { 0. };
@@ -165,13 +227,13 @@ static void populateDecisionLabelPairs(CrossModel *model, QList<DecisionLabel> &
     while(file.nextChannel()) {
         assert(file.getEventSamples() == EODSamples);
         file.read((char*)&buf[EODSamples], EODSamples*sizeof(float));
-        list.append(DecisionLabel(decisionValue(model, buf), label));
+        list.append(DecisionLabel(-decisionValue(model, buf), label));
     }
 
     file.rewind();
 }
 
-static void cmd_roc(CrossModel *model, WindowFile &testA, WindowFile &testB)
+static void cmd_roc(const CrossModel &model, WindowFile &testA, WindowFile &testB)
 {
     QList<DecisionLabel> list;
     populateDecisionLabelPairs(model, list, testA, +1);
@@ -198,18 +260,18 @@ static void cmd_roc(CrossModel *model, WindowFile &testA, WindowFile &testB)
 static int usage(const char *progname)
 {
     fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "%s optim A.features B.features crossA.features crossB.features\n"
+    fprintf(stderr, "%s optim A.spikes B.spikes crossA.spikes crossB.spikes\n"
             "  Find the best patterns for training a cross-correlation model to tell A and B\n"
             "  subjects apart. Use crossA.features and crossB.features to construct the\n"
             "  cross-validation set.\n", progname);
-    fprintf(stderr, "%s train cross.model A-pattern B-pattern A.features B.features\n"
+    fprintf(stderr, "%s train cross.model A-pattern B-pattern A.spikes B.spikes"
             "  Train a model using the given training set and A and B patterns.\n", progname);
-    fprintf(stderr, "%s test [count|list] cross.model file.features\n"
+    fprintf(stderr, "%s test [count|list] cross.model file.spikes"
             "  Classify the features contained in the file in order to test a model.\n"
             "  If 'count' is asked, only counts the number of A and B results.\n"
             "  If 'list' is asked, outputs a list of results with probability estimators.\n",
             progname);
-    fprintf(stderr, "%s roc cross.model testA.features testB.features\n"
+    fprintf(stderr, "%s roc cross.model testA.features testB.spikes"
             "  Outputs a list of FAR (false A rate) and TAR (true A rate) values,\n"
             "  which can be used to plot a ROC curve.\n", progname);
     return 1;
@@ -217,6 +279,7 @@ static int usage(const char *progname)
 
 int main(int argc, char **argv)
 {
+    static CrossModel model ALIGN(16);
     const char *progname = argv[0];
     commonInit();
 
@@ -283,7 +346,7 @@ int main(int argc, char **argv)
     else if(!strcmp(argv[1], "test")) {
         if(argc != 5)
             return usage(progname);
-        CrossModel model;
+
         if(!model.load(argv[3])) {
             fprintf(stderr, "can't open model file '%s' for reading\n", argv[3]);
             return 1;
@@ -294,16 +357,15 @@ int main(int argc, char **argv)
             return 1;
         }
         if(!strcmp(argv[2], "count"))
-            cmd_test_count(&model, testFile);
+            cmd_test_count(model, testFile);
         else if(!strcmp(argv[2], "list"))
-            cmd_test_list(&model, testFile);
+            cmd_test_list(model, testFile);
         else return usage(progname);
         testFile.close();
     }
     else if(!strcmp(argv[1], "roc")) {
         if(argc != 5)
             return usage(progname);
-        CrossModel model;
         if(!model.load(argv[2])) {
             fprintf(stderr, "can't open model file '%s' for reading\n", argv[2]);
             return 1;
@@ -318,7 +380,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "can't open feature file '%s' for reading\n", argv[4]);
             return 1;
         }
-        cmd_roc(&model, testA, testB);
+        cmd_roc(model, testA, testB);
         testA.close();
         testB.close();
     }

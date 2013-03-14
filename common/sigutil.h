@@ -39,6 +39,22 @@ static AINLINE float maxAbsFloat(float *sig, int len) {
 }
 
 /**
+ * Finds the maximum element of an aligned vector in absolute value
+ * @param sig vector
+ * @param len length of the vector
+ * @returns the maximum absolute value
+ */
+static AINLINE float maxAbsAlignedFloat(afloat *sig, int len) {
+    float max = fabsf(sig[0]);
+    for(int i = 1; i < len; i++) {
+        const float sample = fabsf(sig[i]);
+        if(sample > max)
+            max = sample;
+    }
+    return max;
+}
+
+/**
  * Finds the maximum element of an aligned vector
  * @param sig aligned vector
  * @param len length of the vector
@@ -60,6 +76,18 @@ static AINLINE float maxAlignedFloat(afloat *sig, int len) {
  */
 static AINLINE void normalizeAlignedFloat(afloat *sig, int len) {
     const float normFactor = 1./maxAlignedFloat(sig, len);
+    for(int i = 0; i < len; i++) {
+        sig[i] *= normFactor;
+    }
+}
+
+/**
+ * Normalizes an aligned vector using absolute value
+ * @param sig aligned vector
+ * @param len length of the vector
+ */
+static AINLINE void normalizeAbsAlignedFloat(afloat *sig, int len) {
+    const float normFactor = 1./maxAbsAlignedFloat(sig, len);
     for(int i = 0; i < len; i++) {
         sig[i] *= normFactor;
     }
