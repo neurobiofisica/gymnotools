@@ -28,9 +28,10 @@ struct CrossModel {
         file.read((char*)A, sizeof(A));
         file.read((char*)B, sizeof(B));
         file.close();
+        return true;
     }
 
-    void write(const char *filename) {
+    void save(const char *filename) {
         QFile file(filename);
         file.open(QIODevice::WriteOnly);
         file.write((char*)A, sizeof(A));
@@ -48,16 +49,44 @@ static qint64 countWins(WindowFile &file)
     return numWins;
 }
 
-static void predictAndCount(CrossModel *model, WindowFile &file, int &nA, int &nB)
+static AINLINE double maxCrossCorrelation(const afloat *pattern, const afloat *window)
 {
-    static float buf[EODSamples] ALIGN(16);
+    // pattern length: EODSamples, window length: 3*EODSamples (zero fill)
+    double maxCross = 0.;
+    for(int i = 0; i <= 2*EODSamples; i++) {
+        double cross = 0.;
+        for(int j = 0; j < EODSamples; j++)
+            cross += pattern[j]*window[i+j];
+
+        cross = fabs(cross);
+        if(cross > maxCross)
+            maxCross = cross;
+    }
+    return maxCross;
+}
+
+static AINLINE double decisionValue(const CrossModel *model, const afloat *window)
+{
+    const double a = maxCrossCorrelation(model->A, window);
+    const double b = maxCrossCorrelation(model->B, window);
+    if(a >= b)
+        return a;
+    return -b;
+}
+
+static void predictAndCount(const CrossModel *model, WindowFile &file, int &nA, int &nB)
+{
+    static float buf[3*EODSamples] ALIGN(16) = { 0. };
 
     nA = nB = 0;
 
     while(file.nextChannel()) {
         assert(file.getEventSamples() == EODSamples);
-        file.read((char*)buf, EODSamples*sizeof(float));
-
+        file.read((char*)&buf[EODSamples], EODSamples*sizeof(float));
+        if(decisionValue(model, buf) >= 0.)
+            nA++;
+        else
+            nB++;
     }
 
     file.rewind();
@@ -82,6 +111,17 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
 static void cmd_train(const char *modelfile, int Apat, int Bpat,
                       WindowFile &trainA, WindowFile &trainB)
 {
+    CrossModel model;
+
+    for(int i = 0; i <= Apat && trainA.nextChannel(); i++);
+    assert(trainA.getEventSamples() == EODSamples);
+    trainA.read((char*)model.A, EODSamples*sizeof(float));
+
+    for(int i = 0; i <= Bpat && trainB.nextChannel(); i++);
+    assert(trainB.getEventSamples() == EODSamples);
+    trainA.read((char*)model.B, EODSamples*sizeof(float));
+
+    model.save(modelfile);
 }
 
 static void cmd_test_count(CrossModel *model, WindowFile &testFile)
@@ -95,27 +135,23 @@ static void cmd_test_count(CrossModel *model, WindowFile &testFile)
 
 static void cmd_test_list(CrossModel *model, WindowFile &testFile)
 {
-    const QString fmt("%1: prob { %2 , %3 } @ %4 ch %5\n");
-    static float buf[EODSamples] ALIGN(16);
+    const QString fmt("%1: decision { %2 } @ %3 ch %4\n");
+    static float buf[3*EODSamples] ALIGN(16) = { 0. };
 
     while(testFile.nextChannel()) {
         assert(testFile.getEventSamples() == EODSamples);
-        testFile.read((char*)buf, EODSamples*sizeof(float));
-/*
-        const char subj =
-                (svm_predict_probability(model, nodelist, probEstim) > 0)
-                ? 'A' : 'B';
+        testFile.read((char*)&buf[EODSamples], EODSamples*sizeof(float));
 
+        double decision = decisionValue(model, buf);
+        const char subj = (decision >= 0.) ? 'A' : 'B';
         const double t = (testFile.getEventOffset() / BytesPerSample)/
                 (double)SamplingRate;
 
         fputs(fmt.arg(subj)
-                .arg(probEstim[0], 0, 'f', 4)
-                .arg(probEstim[1], 0, 'f', 4)
+                .arg(decision, 0, 'f', 4)
                 .arg(t, 0, 'f', 6)
                 .arg(testFile.getChannelId())
                 .toAscii(), stdout);
-*/
     }
 }
 
@@ -124,13 +160,12 @@ typedef QPair<double,int> DecisionLabel;
 static void populateDecisionLabelPairs(CrossModel *model, QList<DecisionLabel> &list,
                                        WindowFile &file, int label)
 {
-    static float buf[EODSamples] ALIGN(16);
-    double decision = 0.;
+    static float buf[3*EODSamples] ALIGN(16) = { 0. };
 
     while(file.nextChannel()) {
         assert(file.getEventSamples() == EODSamples);
-        file.read((char*)buf, EODSamples*sizeof(float));
-        list.append(DecisionLabel(-decision, label));
+        file.read((char*)&buf[EODSamples], EODSamples*sizeof(float));
+        list.append(DecisionLabel(decisionValue(model, buf), label));
     }
 
     file.rewind();
