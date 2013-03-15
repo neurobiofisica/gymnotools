@@ -130,7 +130,8 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
 {
     static CrossModel model ALIGN(16);
     const int numA = countWins(trainA), numB = countWins(trainB);
-    double percentFactor = 100./(((double)numA) * numB);
+    const double percentFactorTrain = 100./(((double)numA) * numB);
+    const double percentFactorCross = 100./(countWins(crossA) + countWins(crossB));
 
     printf("=> Trying all (A,B) window pairs...\n");
 
@@ -147,9 +148,6 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
 
         trainB.rewind();
         for(int j = 1; j <= numB; j++) {
-            printf("\r%8.3f%%", (cont++)*percentFactor);
-            fflush(stdout);
-
             bool hasNext = trainB.nextChannel();
             assert(hasNext);
             assert(trainB.getEventSamples() == EODSamples);
@@ -161,11 +159,16 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
                 bestErr = err;
                 bestij = IntPair(i, j);
             }
+
+            printf("\r%8.3f%%  (bestErr: %7d, A: %5d, B: %5d)        ",
+                   (cont++)*percentFactorTrain,
+                   bestErr, bestij.first, bestij.second);
+            fflush(stdout);
         }
     }
 
-    printf("\n=> Best (A,B): %d %d\n", bestij.first, bestij.second);
-    printf("=> Number of errors: %d\n", bestErr);
+    printf("\n=> Best (A,B): %5d %5d\n", bestij.first, bestij.second);
+    printf("=> Number of errors: %d (%.2f%%)\n", bestErr, bestErr*percentFactorCross);
 }
 
 static void cmd_train(const char *modelfile, int Apat, int Bpat,
