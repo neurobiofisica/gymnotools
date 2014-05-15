@@ -200,13 +200,32 @@ static void cmd_train(const char *modelfile, double cParam, double gParam,
     svm_free_and_destroy_model(&model);
 }
 
+
+static void cmd_cross(int nFold, double cParam, double gParam,
+                      WindowFile &trainA, WindowFile &trainB)
+{
+    SVMProblem problem(trainA, trainB);
+    SVMParam param(cParam, gParam);
+    double *target = new double[problem.l];
+    svm_cross_validation(&problem, &param, nFold, target);
+
+    int correct = 0;
+    for(int i = 0; i < problem.l; i++)
+        if(target[i] == problem.y[i])
+            ++correct;
+
+    delete [] target;
+
+    printf("Cross Validation Accuracy = %g%%\n",(100.*correct)/problem.l);
+}
+
 static void cmd_test_count(svm_model *model, WindowFile &testFile)
 {
     int nA = 0, nB = 0;
     predictAndCount(model, testFile, nA, nB);
     double total = nA + nB;
-    printf("A: %d (%.2f%%)\n", nA, (100.*nA)/total);
-    printf("B: %d (%.2f%%)\n", nB, (100.*nB)/total);
+    printf("A: %d (%g%%)\n", nA, (100.*nA)/total);
+    printf("B: %d (%g%%)\n", nB, (100.*nB)/total);
 }
 
 static void cmd_test_list(svm_model *model, WindowFile &testFile)
@@ -299,6 +318,8 @@ static int usage(const char *progname)
             "    -g start,stop,step   specify 'g' values to be tried\n", progname);
     fprintf(stderr, "%s train svm.model c-param g-param A.features B.features\n"
             "  Train a SVM using the given training set and 'c' and 'g' parameters.\n", progname);
+    fprintf(stderr, "%s cross n-fold c-param g-param A.features B.features\n"
+            "  Do a true n-fold cross-validation.\n", progname);
     fprintf(stderr, "%s test [count|list] svm.model file.features\n"
             "  Classify the features contained in the file in order to test a SVM model.\n"
             "  If 'count' is asked, only counts the number of A and B results.\n"
@@ -414,6 +435,31 @@ int main(int argc, char **argv)
             return 1;
         }
         cmd_train(modelfile, cParam, gParam, trainA, trainB);
+        trainA.close();
+        trainB.close();
+    }
+    else if(!strcmp(argv[1], "cross")) {
+        if(argc != 7)
+            return usage(progname);
+        bool ok1 = false, ok2 = false, ok3 = false;
+        int nFold = QString(argv[2]).toInt(&ok1);
+        double cParam = QString(argv[3]).toDouble(&ok2);
+        double gParam = QString(argv[4]).toDouble(&ok3);
+        if(!ok1 || !ok2 || !ok3) {
+            fprintf(stderr, "invalid number passed as n-fold or 'c' or 'g' parameter\n");
+            return 1;
+        }
+        WindowFile trainA(argv[5]);
+        if(!trainA.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[5]);
+            return 1;
+        }
+        WindowFile trainB(argv[6]);
+        if(!trainB.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "can't open feature file '%s' for reading\n", argv[6]);
+            return 1;
+        }
+        cmd_cross(nFold, cParam, gParam, trainA, trainB);
         trainA.close();
         trainB.close();
     }
