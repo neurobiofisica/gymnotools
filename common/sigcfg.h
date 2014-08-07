@@ -5,9 +5,10 @@
  * Base settings
  */
 
-static const int NumChannels = 7;
+static const int NumChannels = 11;
 static const int SamplingRate = 50000;
-static const int EODSamples = 128;
+//static const int EODSamples = 128;
+static const int EODSamples = 64;
 
 /*
  * Derived settings

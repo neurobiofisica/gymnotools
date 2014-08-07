@@ -2,7 +2,7 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 
-NumChannels = 7
+NumChannels = 11
 BytesPerSample = NumChannels*4
 EODSamples = 128
 
