@@ -30,7 +30,8 @@ def showdata(f, info):
     f.seek(offMin)
     data = f.read(rlen)
     arr = np.frombuffer(data, dtype=np.float32)
-    
+   
+    plt.figure(1,figsize=(24,14))
     plt.clf()
     ax = None
     for ch in xrange(NumChannels):

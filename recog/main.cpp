@@ -38,7 +38,7 @@ static int recogdb_compare(DB *dbp, const DBT *a, const DBT *b)
 
 // XXX Not very portable, doesn't deal correctly with alignment issues
 // Record layout:
-// { presentFish, distA, distB, distAB,
+// { presentFish, distA, distB, distAB, saturationFlags,
 //   [{offA, sizeA, {Ach0, Ach1, ...}}],
 //   [{offB, sizeB, {Bch0, Bch1, ...}}] }
 class RecogDB
@@ -121,14 +121,18 @@ public:
         const float *p = (const float *)data.data;
         return p[3];
     }
+    quint32 saturationFlags() const {
+        const quint32 *p = (const quint32 *)data.data;
+        return p[4];
+    }
     qint32 spikeData(int n, qint32 &off, SignalBuffer &buf) const {
         assert(n==1 || n==2);
         assert(data.size > 6*sizeof(qint32));
         const qint32 *p = (const qint32 *)data.data;
-        p = &p[4];
+        p = &p[5];
         if(n==2) {
             qint32 firstSize = p[1];
-            assert(data.size > (8 + NumChannels*firstSize)*sizeof(qint32));
+            assert(data.size > (9 + NumChannels*firstSize)*sizeof(qint32));
             p = &p[2 + NumChannels*firstSize];
         }
         off = p[0];
@@ -142,7 +146,7 @@ public:
         return size;
     }
 
-    void insert(qint64 k, float distA, float distB, float distAB,
+    void insert(qint64 k, float distA, float distB, float distAB, quint32 saturationFlags,
                 qint32 offA, qint32 sizeA, const float *const* dataA,
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
@@ -159,9 +163,10 @@ public:
         recbuff[1] = distA;
         recbuff[2] = distB;
         recbuff[3] = distAB;
+        recbufi[4] = saturationFlags;
 
-        recbuff = &recbuff[4];
-        recbufi = &recbufi[4];
+        recbuff = &recbuff[5];
+        recbufi = &recbufi[5];
 
         if(dataA != NULL && sizeA)
             copybuf(recbuff, recbufi, offA, sizeA, dataA);
@@ -213,17 +218,24 @@ static AINLINE bool saturate(afloat *signal, int len,
     return saturated;
 }
 
-static AINLINE void subtract(float *dest, afloat *orig, int len,
+static AINLINE bool subtract(float *dest, afloat *orig, int len,
                              float saturationLow, float saturationHigh)
 {
+    bool saturated = false;
     for(int i = 0; i < len; i++) {
-        if(dest[i] >= saturationHigh || orig[i] <= saturationLow)
+        if(dest[i] >= saturationHigh || orig[i] <= saturationLow) {
             dest[i] = saturationHigh;
-        else if(dest[i] <= saturationLow || orig[i] >= saturationHigh)
+            saturated = true;
+        }
+        else if(dest[i] <= saturationLow || orig[i] >= saturationHigh) {
             dest[i] = saturationLow;
-        else
+            saturated = true;
+        }
+        else {
             dest[i] -= orig[i];
+        }
     }
+    return saturated;
 }
 
 static AINLINE float sqr(float x)
@@ -281,7 +293,7 @@ public:
             saturate(fishvecA[ch], fishlenA, saturationLow, saturationHigh);
         }
         // emit to db
-        db.insert(winfile.getEventOffset(), 0., inf, inf,
+        db.insert(winfile.getEventOffset(), 0., inf, inf, 0,
                   0, fishlenA, fishvecA,
                   0, 0, NULL);
     }
@@ -295,7 +307,7 @@ public:
             saturate(fishvecB[ch], fishlenB, saturationLow, saturationHigh);
         }
         // emit to db
-        db.insert(winfile.getEventOffset(), inf, 0., inf,
+        db.insert(winfile.getEventOffset(), inf, 0., inf, 0,
                   0, 0, NULL,
                   0, fishlenB, fishvecB);
     }
@@ -474,13 +486,15 @@ public:
             }
             // copy spike
             fishlenA = copylen;
+            quint32 satFlag = 0;
             for(int ch = 0; ch < NumChannels; ch++) {
                 memcpy(fishvecA[ch], &buf[ch][copystart], copylen*sizeof(float));
-                saturate(fishvecA[ch], copylen, saturationLow, saturationHigh);
+                if(saturate(fishvecA[ch], copylen, saturationLow, saturationHigh))
+                    satFlag |= (1<<ch);
             }
             // emit to db
             if(distA < curBestDist)
-                db.insert(off, distA, distB, distAB,
+                db.insert(off, distA, distB, distAB, satFlag,
                           copystart - firstpos, fishlenA, fishvecA,
                           0, 0, NULL);
         }
@@ -493,13 +507,15 @@ public:
             }
             // copy spike
             fishlenB = copylen;
+            quint32 satFlag = 0;
             for(int ch = 0; ch < NumChannels; ch++) {
                 memcpy(fishvecB[ch], &buf[ch][copystart], copylen*sizeof(float));
-                saturate(fishvecB[ch], copylen, saturationLow, saturationHigh);
+                if(saturate(fishvecB[ch], copylen, saturationLow, saturationHigh))
+                    satFlag |= (1<<ch);
             }
             // emit to db
             if(distB < curBestDist)
-                db.insert(off, distA, distB, distAB,
+                db.insert(off, distA, distB, distAB, satFlag,
                           0, 0, NULL,
                           copystart - firstpos, fishlenB, fishvecB);
         }
@@ -512,11 +528,15 @@ public:
                 for(int ch = 0; ch < NumChannels; ch++)
                     memcpy(&bufB[ch][0], &buf[ch][0], realLen*sizeof(float));
                 // subtract B from A, and A from B
+                quint32 satFlag = 0;
                 for(int ch = 0; ch < NumChannels; ch++) {
-                    subtract(&buf [ch][posAB.second], fishvecB[ch], fishlenB,
+                    bool saturated;
+                    saturated = subtract(&buf [ch][posAB.second], fishvecB[ch], fishlenB,
                              saturationLow, saturationHigh);
-                    subtract(&bufB[ch][posAB.first],  fishvecA[ch], fishlenA,
-                             saturationLow, saturationHigh);
+                    saturated = subtract(&bufB[ch][posAB.first],  fishvecA[ch], fishlenA,
+                             saturationLow, saturationHigh) || saturated;
+                    if(saturated)
+                        satFlag |= (1<<ch);
                 }
                 // set up spk vector pointers
                 float *spkA[NumChannels], *spkB[NumChannels];
@@ -525,7 +545,7 @@ public:
                     spkB[ch] = &bufB[ch][posAB.second];
                 }
                 // emit to db
-                db.insert(off, distA, distB, distAB,
+                db.insert(off, distA, distB, distAB, satFlag,
                           posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
                           posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
             }

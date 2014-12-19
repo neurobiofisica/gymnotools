@@ -32,3 +32,16 @@ def readwinsEx(f, N=np.inf):
             n+=1
             if n >= N:
                 break
+
+def readwinsEx2(f, N=np.inf):
+    n = 0
+    while n < N:
+        lastlenRaw = f.read(4)
+        if lastlenRaw == '':
+            break
+        lastlen, = struct.unpack('i', lastlenRaw)
+        off, samples, channels = struct.unpack('qii', f.read(8+4*2))
+        for ch in xrange(channels):
+            chid, = struct.unpack('i', f.read(4))
+            f.read(samples*4)
+        yield off
