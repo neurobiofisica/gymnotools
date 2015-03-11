@@ -22,6 +22,7 @@ if not os.path.isfile(sys.argv[1]):
 print sys.argv[1]
 db = bsddb3.btopen(sys.argv[1],'r')
 f = open(sys.argv[2],'w')
+f2 = open(sys.argv[3], 'w')
 
 # Variables for each fish
 SpikesLidos = { 'A':0, 
@@ -42,9 +43,12 @@ MediaCentro = { 'A':0,
 flag = {    'A': 1,
             'B': -1,
        }
+prob = {    'A': 0.,
+            'B': 0.,
+       }
 
 for rec in db.iteritems():
-    off, distA, distB, distAB, SaturationFlag, fishwins = recogdb.fishrec(rec)
+    off, distA, distB, distAB, SaturationFlag, svm, prob['A'], prob['B'], fishwins = recogdb.fishrec(rec)
     off = off/4/NumChannels
 
     if SaturationFlag == 2**NumChannels - 1:
@@ -86,7 +90,11 @@ for rec in db.iteritems():
                 Maximos[i] = Derivada[PIdx][ IdxMaximos[i] ]
 
             MediaCentro[PIdx] = np.dot(IdxMaximos,Maximos) / sum(Maximos)
-        f.write(str(flag[PIdx]) + '\t' + str(int(round(off + offset + MediaCentro[PIdx]))) + '\n' )
+
+        out = int(round(off + offset + MediaCentro[PIdx]))
+        f.write( '%d\t%d\n'%(flag[PIdx],out) )
+        f2.write( '%d\t%d\t%d\t%f\n'%(flag[PIdx],out,svm,prob[PIdx]) )
 
 f.close()
+f2.close()
 db.close()

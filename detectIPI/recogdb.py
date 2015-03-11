@@ -16,11 +16,11 @@ def fishwin(bindata):
 def fishrec(tup):
     off, bindata = tup
     off, = struct.unpack('q', off)
-    presentFish, distA, distB, distAB, flags = struct.unpack('ifffi', bindata[:20])
+    presentFish, distA, distB, distAB, flags, svm, probA, probB = struct.unpack('ifffiiff', bindata[:20])
     bindata = bindata[20:]
     fishwins = {}
     if presentFish & 1:
         fishwins['A'], bindata = fishwin(bindata)
     if presentFish & 2:
         fishwins['B'], bindata = fishwin(bindata)
-    return off, distA, distB, distAB, flags, fishwins
+    return off, distA, distB, distAB, flags, svm, probA, probB, fishwins

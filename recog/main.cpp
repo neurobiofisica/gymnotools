@@ -125,8 +125,8 @@ public:
         const quint32 *p = (const quint32 *)data.data;
         return p[4];
     }
-    bool svm() const {
-        const bool *p = (const bool *)data.data;
+    int svm() const {
+        const int *p = (const int *)data.data;
         return p[5];
     }
     float probA() const {
@@ -159,7 +159,7 @@ public:
     }
 
     void insert(qint64 k, float distA, float distB, float distAB, quint32 saturationFlags,
-                bool svm, float probA, float probB,
+                int svm, float probA, float probB,
                 qint32 offA, qint32 sizeA, const float *const* dataA,
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
@@ -218,7 +218,7 @@ static QList<SFishPair> parseSFish(QFile &sfishfile)
 }
 
 struct probs {
-    bool svm;
+    int svm;
     float probA, probB;
 };
 
@@ -234,7 +234,10 @@ static QMap<qint64, probs> parseProbs(QFile &probsfile)
         float probA, probB;
         line >> svm >> off >> probA >> probB;
         if(!line.atEnd()) {
-            list[off].svm = (svm == 's');
+            if (svm == 's')
+                list[off].svm = 1;
+            else
+                list[off].svm = 0;
             list[off].probA = probA;
             list[off].probB = probB;
         }
