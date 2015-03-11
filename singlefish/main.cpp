@@ -24,7 +24,7 @@
 
 static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
                                    afloat *minval, afloat *maxval,
-                                   FeatureFilter &feafilter, svm_model *model, QFile &outfile,
+                                   FeatureFilter &feafilter, svm_model *model, QFile &outfile, QFile &completeoutfile,
                                    float onlyabove, float saturationLow, float saturationHigh,
                                    int minwins, float minprob, int maxdist, int maxsize)
 {
@@ -78,6 +78,7 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         assert(winfile.getEventChannels() <= NumChannels);
         int numWinOk = 0;
         bool winOk[NumChannels];
+        double maxAmp[NumChannels];
 
         for(int ch = 0; ch < NumChannels; ch++)
             winOk[ch] = false;
@@ -99,6 +100,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
                 if(sample <= saturationLow || sample >= saturationHigh) {
                     chOk = false;
                     break;
+                }
+                if (fabs(sample) > maxAmp[ch]) {
+                    maxAmp[ch] = fabs(sample);
                 }
             }
             if(chOk) {
@@ -126,6 +130,8 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         // Feed SVM and calculate joint probability
 
         double probA = 1., probB = 1.;
+        //double probA = 0., probB = 0.;
+        double TotalMaxAmp = 0;
 
         for(int ch = 0; ch < NumChannels; ch++) {
             if(!winOk[ch])
@@ -143,12 +149,35 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
             feafilter.filter(featureData, featureFilt);
 
             // Apply SVM
-            double probEstim[2];
+            double probEstim[2] = {0., 0.};
             nodelist.fill(featureFilt);
-            svm_predict_probability(model, nodelist, probEstim);
-            probA *= probEstim[0];
-            probB *= probEstim[1];
+            svm_predict_probability(model, nodelist, probEstim); //////////////////
+            // Independent channels
+            //probA *= probEstim[0];
+            //probB *= probEstim[1];
+            // Aritmetic mean
+            //probA += probEstim[0] * maxAmp[ch];
+            //probB += probEstim[1] * maxAmp[ch];
+
+            //TotalMaxAmp += maxAmp[ch];
+            //
+            // Weighted geometric mean
+            probA *= pow(probEstim[0], 1./maxAmp[ch]);
+            probB *= pow(probEstim[1], 1./maxAmp[ch]);
+
+            TotalMaxAmp += 1./maxAmp[ch];
         }
+
+        // Try to make a geometric mean on the probability
+        //probA = pow(probA, 1./numWinOk);
+        //probB = pow(probB, 1./numWinOk);
+        // Aritmetic mean
+        //probA = probA / TotalMaxAmp;
+        //probB = probB / TotalMaxAmp;
+        // Weighted geometric mean
+        probA = pow(probA, 1./TotalMaxAmp);
+        probB = pow(probB, 1./TotalMaxAmp);
+
 
         // Check if joint probability is above minimum
         if(probA < minprob && probB < minprob) {
@@ -158,8 +187,16 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
 
         // Everything OK, write event pair offsets to outfile
         if(prevWasSingle) {
+
+            // Write TS and probs on complete outfile
+            completeoutfile.write(QString("s %1 %2 %3\n")
+                                    .arg(curOff)
+                                    .arg(probA)
+                                    .arg(probB)
+                                    .toAscii());
+
             if(prevWasA && (probB > probA)) {
-                outfile.write(QString("%1 %2\n")
+                outfile.write(QString("%1 %2\n") //////////////////
                               .arg(prevOffBck)
                               .arg(curOff)
                               .toAscii());
@@ -175,6 +212,14 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
                 continue;
             }
         }
+        else {
+            // Write TS and probs on complete outfile
+            completeoutfile.write(QString("c %1 %2 %3\n")
+                                    .arg(curOff)
+                                    .arg(probA)
+                                    .arg(probB)
+                                    .toAscii());
+        }
 
         prevWasA = (probA > probB);
         prevWasSingle = true;
@@ -183,7 +228,7 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
 
 static int usage(const char *progname)
 {
-    fprintf(stderr, "%s [options] in.I32 in.spikes in.scale in.filter in.svm out.singlefish\n",
+    fprintf(stderr, "%s [options] in.I32 in.spikes in.scale in.filter in.svm out.singlefish out.prob\n",
             progname);
     fprintf(stderr, "options:\n"
             "  -a|--onlyabove=a    Only analyze with SVM if above this amplitude\n"
@@ -258,7 +303,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if(argc - optind != 6)
+    if(argc - optind != 7)
         return usage(argv[0]);
 
     SignalFile sigfile(argv[optind]);
@@ -301,14 +346,21 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    QFile completeoutfile(argv[optind+6]);
+    if(!completeoutfile.open(QIODevice::WriteOnly)) {
+        fprintf(stderr, "Can't open probability output file (%s).\n", argv[optind+5]);
+        return 1;
+    }
+
     findSingleFish(sigfile, winfile, minval, maxval,
-                   feafilter, model, outfile, onlyabove,
+                   feafilter, model, outfile, completeoutfile, onlyabove,
                    saturationLow, saturationHigh,
                    minwins, minprob, maxdist, maxsize);
 
     sigfile.close();
     winfile.close();
     outfile.close();
+    completeoutfile.close();
     svm_free_and_destroy_model(&model);
 
     return 0;

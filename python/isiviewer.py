@@ -163,10 +163,10 @@ class ISIFig:
         ax = self.ax
         for p in self.p:
             if p: p.remove()
-        #self.p = [ax.plot(self.At[1:], self.A, 'r.-', picker=5, **self.sopts)[0],
-         #         ax.plot(self.Bt[1:], self.B, 'g.-', picker=5, **self.sopts)[0]]
-        self.p = [ax.plot(self.A, 'r.-', picker=5, **self.sopts)[0],
-                  ax.plot(self.B, 'g.-', picker=5, **self.sopts)[0]]
+        self.p = [ax.plot(self.At[1:], self.A, 'r.-', picker=5, **self.sopts)[0],
+                  ax.plot(self.Bt[1:], self.B, 'g.-', picker=5, **self.sopts)[0]]
+        #self.p = [ax.plot(self.A, 'r.-', picker=5, **self.sopts)[0],
+         #         ax.plot(self.B, 'g.-', picker=5, **self.sopts)[0]]
         self.sopts = {'scalex': False, 'scaley': False}
         
         

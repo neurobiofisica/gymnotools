@@ -125,14 +125,26 @@ public:
         const quint32 *p = (const quint32 *)data.data;
         return p[4];
     }
+    bool svm() const {
+        const bool *p = (const bool *)data.data;
+        return p[5];
+    }
+    float probA() const {
+        const float *p = (const float *)data.data;
+        return p[6];
+    }
+    float probB() const {
+        const float *p = (const float *)data.data;
+        return p[7];
+    }
     qint32 spikeData(int n, qint32 &off, SignalBuffer &buf) const {
         assert(n==1 || n==2);
         assert(data.size > 6*sizeof(qint32));
         const qint32 *p = (const qint32 *)data.data;
-        p = &p[5];
+        p = &p[8];
         if(n==2) {
             qint32 firstSize = p[1];
-            assert(data.size > (9 + NumChannels*firstSize)*sizeof(qint32));
+            assert(data.size > (12 + NumChannels*firstSize)*sizeof(qint32));
             p = &p[2 + NumChannels*firstSize];
         }
         off = p[0];
@@ -147,6 +159,7 @@ public:
     }
 
     void insert(qint64 k, float distA, float distB, float distAB, quint32 saturationFlags,
+                bool svm, float probA, float probB,
                 qint32 offA, qint32 sizeA, const float *const* dataA,
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
@@ -164,9 +177,12 @@ public:
         recbuff[2] = distB;
         recbuff[3] = distAB;
         recbufi[4] = saturationFlags;
+        recbufi[5] = svm;
+        recbuff[6] = probA;
+        recbuff[7] = probB;
 
-        recbuff = &recbuff[5];
-        recbufi = &recbufi[5];
+        recbuff = &recbuff[8];
+        recbufi = &recbufi[8];
 
         if(dataA != NULL && sizeA)
             copybuf(recbuff, recbufi, offA, sizeA, dataA);
@@ -196,6 +212,32 @@ static QList<SFishPair> parseSFish(QFile &sfishfile)
         s >> fishAoff >> fishBoff;
         if(!s.atEnd())
             list.append(SFishPair(fishAoff, fishBoff));
+        else break;
+    }
+    return list;
+}
+
+struct probs {
+    bool svm;
+    float probA, probB;
+};
+
+static QMap<qint64, probs> parseProbs(QFile &probsfile)
+{
+
+    QTextStream line(&probsfile);
+    QMap<qint64, probs> list;
+
+    while(true) {
+        char svm;
+        qint64 off;
+        float probA, probB;
+        line >> svm >> off >> probA >> probB;
+        if(!line.atEnd()) {
+            list[off].svm = (svm == 's');
+            list[off].probA = probA;
+            list[off].probB = probB;
+        }
         else break;
     }
     return list;
@@ -251,6 +293,7 @@ class WinWorker
 private:
     RecogDB &db;
     WindowFile &winfile;
+    QMap<qint64, probs> &problist;
     float saturationLow, saturationHigh;
     afloat **fishvecA, **fishvecB;
 
@@ -261,10 +304,11 @@ private:
     static float fishB[NumChannels][EODSamples] ALIGN(16);
 
 public:
-    WinWorker(RecogDB &db, WindowFile &winfile,
+    WinWorker(RecogDB &db, WindowFile &winfile, QMap<qint64, probs> &problist,
               float saturationLow, float saturationHigh)
         : db(db),
           winfile(winfile),
+          problist(problist),
           saturationLow(saturationLow),
           saturationHigh(saturationHigh)
     {
@@ -293,7 +337,9 @@ public:
             saturate(fishvecA[ch], fishlenA, saturationLow, saturationHigh);
         }
         // emit to db
-        db.insert(winfile.getEventOffset(), 0., inf, inf, 0,
+        qint64 off = winfile.getEventOffset();
+        db.insert(off, 0., inf, inf, 0,
+                  problist[off].svm, problist[off].probA, problist[off].probB,
                   0, fishlenA, fishvecA,
                   0, 0, NULL);
     }
@@ -307,7 +353,9 @@ public:
             saturate(fishvecB[ch], fishlenB, saturationLow, saturationHigh);
         }
         // emit to db
-        db.insert(winfile.getEventOffset(), inf, 0., inf, 0,
+        qint64 off = winfile.getEventOffset();
+        db.insert(off, inf, 0., inf, 0,
+                  problist[off].svm, problist[off].probA, problist[off].probB,
                   0, 0, NULL,
                   0, fishlenB, fishvecB);
     }
@@ -495,6 +543,7 @@ public:
             // emit to db
             if(distA < curBestDist)
                 db.insert(off, distA, distB, distAB, satFlag,
+                          problist[off].svm, problist[off].probA, problist[off].probB,
                           copystart - firstpos, fishlenA, fishvecA,
                           0, 0, NULL);
         }
@@ -516,6 +565,7 @@ public:
             // emit to db
             if(distB < curBestDist)
                 db.insert(off, distA, distB, distAB, satFlag,
+                          problist[off].svm, problist[off].probA, problist[off].probB,
                           0, 0, NULL,
                           copystart - firstpos, fishlenB, fishvecB);
         }
@@ -546,6 +596,7 @@ public:
                 }
                 // emit to db
                 db.insert(off, distA, distB, distAB, satFlag,
+                          problist[off].svm, problist[off].probA, problist[off].probB,
                           posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
                           posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
             }
@@ -558,11 +609,11 @@ qint32 WinWorker::fishlenA, WinWorker::fishlenB;
 float WinWorker::fishA[NumChannels][EODSamples] ALIGN(16);
 float WinWorker::fishB[NumChannels][EODSamples] ALIGN(16);
 
-static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist,
+static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist, QMap<qint64, probs> &problist,
                     float saturationLow, float saturationHigh, int direction)
 {
     QListIterator<SFishPair> it(sfishlist);
-    WinWorker worker(db, winfile, saturationLow, saturationHigh);
+    WinWorker worker(db, winfile, problist, saturationLow, saturationHigh);
     bool foundFirst = false;
 
     // manually "optimized" scan for each direction
@@ -836,7 +887,7 @@ int main(int argc, char **argv)
             }
         }
 
-        if(argc - optind != 3)
+        if(argc - optind != 4)
             return usage(progname);
 
         RecogDB db(argv[optind]);
@@ -854,7 +905,15 @@ int main(int argc, char **argv)
         QList<SFishPair> sfishlist = parseSFish(sfishfile);
         sfishfile.close();
 
-        iterate(db, winfile, sfishlist, saturationLow, saturationHigh, direction);
+        QFile probfile(argv[optind+3]);
+        if(!probfile.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "Can't open probability file (%s).\n", argv[optind+3]);
+            return 1;
+        }
+        QMap<qint64, probs> problist = parseProbs(probfile);
+        probfile.close();
+
+        iterate(db, winfile, sfishlist, problist, saturationLow, saturationHigh, direction);
         winfile.close();
     }
     else if(!strcmp(argv[1], "waveform")) {
