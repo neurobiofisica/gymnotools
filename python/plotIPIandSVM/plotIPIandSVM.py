@@ -284,7 +284,7 @@ class PickPoints:
 class PlotData(QtGui.QDialog):
     DPI = 80
 
-    def __init__(self, TS, SVM, datafile, parent=None):
+    def __init__(self, TS, SVMFlags, datafile, parent=None):
         QtGui.QWidget.__init__(self)
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
@@ -299,13 +299,30 @@ class PlotData(QtGui.QDialog):
         self.sigfig = self.ui.graphwave.canvas.fig
         self.sigaxes = self.ui.graphwave.canvas.sigaxes
 
-        P1 = TS[1][ find(TS[0] ==  1) ] / freq
-        P2 = TS[1][ find(TS[0] == -1) ] / freq
+        IdxP1 = find(TS[0] == 1)
+        IdxP2 = find(TS[0] == -1)
+
+        P1 = TS[1][ IdxP1 ] / freq
+        P2 = TS[1][ IdxP2 ] / freq
 
         self.TS = (P1, P2)
 
-        self.SVM = SVM
-        self.Tam = SVM[0].size
+        self.SVM = TS[1][ find(SVMFlags == 's') ]
+        self.Tam = self.SVM[0].size
+
+        svmFlag1 = SVMFlags[ IdxP1 ]
+        svmFlag2 = SVMFlags[ IdxP2 ]
+        self.svmFlags = (svmFlag1, svmFlag2)
+
+        ProbP1 = TS[3][ IdxP1 ]
+        ProbP2 = TS[4][ IdxP2 ]
+
+        self.probs = (ProbP1, ProbP2)
+
+        distP1 = ( TS[5][ IdxP1 ], TS[6][ IdxP1 ], TS[7][ IdxP1 ] )
+        distP2 = ( TS[5][ IdxP2 ], TS[6][ IdxP2 ], TS[7][ IdxP2 ] )
+
+        self.dists = (distP1, distP2)
 
         self.SVM2Plot = []
         self.SVM2Plot.append( self.SVM[0].repeat(3) )
@@ -426,14 +443,12 @@ if __name__ == '__main__':
     parser = MyParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('timestamps_file', type=file, help='Location of the timestamps generated file')
-    parser.add_argument('singlefish_file', type=file, help='Location of the singlefish SVM generated file')
     parser.add_argument('timeseries_file', type=file, help='Location of the timeseries (I32) file')
     parser.add_argument('--stepSize', type=float, default=90., help='Step size for moving on the IPI time series. Default = 90s')
     parser.add_argument('--winSize', type=float, default=120., help='Window size for plotting the IPI time series. Default = 120s')
 
     args = parser.parse_args()
     timestampsf = args.timestamps_file
-    singlefishf = args.singlefish_file
     datafile = args.timeseries_file
     stepSize = args.stepSize
     winSize = args.winSize
@@ -441,10 +456,11 @@ if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
 
     TS = np.loadtxt(timestampsf,unpack=True,usecols=(0,1,2,4,5,6,7,8))
-    svmFlags = parseSVMFlags(timestampsf)
-    SVM0,SVM1 = np.loadtxt(singlefishf, unpack=True) / NChan / 4 / freq
+    timestampsf.seek(0)
+    svmFlags = np.array(parseSVMFlags(timestampsf))
+    timestampsf.close()
 
-    myapp = PlotData(TS, (SVM0,SVM1), datafile)
+    myapp = PlotData(TS, svmFlags, datafile)
 
     Pick = PickPoints(myapp)
 
