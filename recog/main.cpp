@@ -218,7 +218,7 @@ static QList<SFishPair> parseSFish(QFile &sfishfile)
 }
 
 struct probs {
-    int svm;
+    char svm;
     float probA, probB;
 };
 
@@ -228,21 +228,17 @@ static QMap<qint64, probs> parseProbs(QFile &probsfile)
     QTextStream line(&probsfile);
     QMap<qint64, probs> list;
 
-    while(true) {
+    do {
         char svm;
         qint64 off;
         float probA, probB;
         line >> svm >> off >> probA >> probB;
-        if(!line.atEnd()) {
-            if (svm == 's')
-                list[off].svm = 1;
-            else
-                list[off].svm = 0;
-            list[off].probA = probA;
-            list[off].probB = probB;
-        }
-        else break;
-    }
+        //list[off].svm = (svm == 's');
+        list[off].svm = svm;
+        list[off].probA = probA;
+        list[off].probB = probB;
+        line.skipWhiteSpace();
+    } while(!line.atEnd());
     return list;
 }
 

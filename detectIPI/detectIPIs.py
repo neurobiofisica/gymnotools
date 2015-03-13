@@ -13,7 +13,7 @@ def usage():
     sys.exit(-1)
 
 
-if len(sys.argv) != 3:
+if len(sys.argv) != 4:
     usage()
 
 if not os.path.isfile(sys.argv[1]):
@@ -92,8 +92,9 @@ for rec in db.iteritems():
             MediaCentro[PIdx] = np.dot(IdxMaximos,Maximos) / sum(Maximos)
 
         out = int(round(off + offset + MediaCentro[PIdx]))
+        off_orig = off*4*11
         f.write( '%d\t%d\n'%(flag[PIdx],out) )
-        f2.write( '%d\t%d\t%d\t%f\n'%(flag[PIdx],out,svm,prob[PIdx]) )
+        f2.write( '%d\t%d\t%d\t%c\t%f\t%f\t%f\t%f\t%f\n'%(flag[PIdx],out,off_orig,svm,prob['A'], prob['B'], distA, distB, distAB ) )
 
 f.close()
 f2.close()
