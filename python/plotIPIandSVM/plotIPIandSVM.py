@@ -30,13 +30,7 @@ FIGSIG = 2
 freq = 45454.545454
 NChan = 11
 
-# Argument parser
-
-class MyParser(argparse.ArgumentParser): # Prints help message in case of error
-    def error(self, message):
-        self.print_help()
-        sys.stderr.write('\nerror: %s\n' %message)
-        sys.exit(2)
+###### Auxiliary funcs ####
 
 # Auxiliary function for reading
 def parseSVMFlags(f, col=3):
@@ -45,6 +39,32 @@ def parseSVMFlags(f, col=3):
         flags.append( line.split()[col] )
     return flags
 
+# make a color from number
+# base is a list containing the chars 'r','g','b'
+def num2color(num, base):
+    c = hex(num)[2:].rjust(2,'0')
+    out = '#'
+    if 'r' in base:
+        out = out + c
+    else:
+        out = out + '00'
+    if 'g' in base:
+        out = out + c
+    else:
+        out = out + '00'
+    if 'b' in base:
+        out = out + c
+    else:
+        out = out + '00'
+    return out
+
+# Argument parser
+
+class MyParser(argparse.ArgumentParser): # Prints help message in case of error
+    def error(self, message):
+        self.print_help()
+        sys.stderr.write('\nerror: %s\n' %message)
+        sys.exit(2)
 
 # Deactivate keyboard shortcuts of matplotlib
 for v in plt.rcParams.keys():
