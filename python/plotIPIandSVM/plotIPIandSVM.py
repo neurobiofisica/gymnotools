@@ -114,21 +114,23 @@ class PickPoints:
             elif h.zorder == LEGENDSVM:
                 self.dicHandles.update( {'SVM':h} )
 
-        self.callback = self.Index(self.ax)
-        self.make_buttons(self.callback)
+        self.ind = 0
+        self.ylim = self.ax.get_ylim()
+        self.end = self.ax.get_xaxis().get_data_interval()[1]
+        self.make_buttons()
 
-    def make_buttons(self, callback):
+    def make_buttons(self):
         self.fig.subplots_adjust(bottom=0.15)
 
         axprev = self.fig.add_axes([0.001, 0.005, 0.1, 0.07])
         axhome = self.fig.add_axes([0.111, 0.005, 0.1, 0.07])
         axnext = self.fig.add_axes([0.221, 0.005, 0.1, 0.07])
         self.bnext = Button(axnext, 'Next')
-        self.bnext.on_clicked(self.callback.next)
+        self.bnext.on_clicked(self.next)
         self.bprev = Button(axprev, 'Previous')
-        self.bprev.on_clicked(self.callback.prev)
+        self.bprev.on_clicked(self.prev)
         self.bhome = Button(axhome, 'Home')
-        self.bhome.on_clicked(self.callback.home)
+        self.bhome.on_clicked(self.home)
 
         self.fig.canvas.draw()
 
@@ -183,15 +185,15 @@ class PickPoints:
             else:
                 self.dicHandles['IPI'].set_label('\'i\' IPI off')
         elif key == 'right':
-            self.callback.next(event)
+            self.next(event)
         elif key == 'left':
-            self.callback.prev(event)
+            self.prev(event)
         elif key == 'up':
             self.zoom(event)
         elif key == 'down':
             self.zoom(event)
         elif key == 'h' or key == 'escape':
-            self.callback.home(event)
+            self.home(event)
 
         self.ax.legend()
         self.fig.canvas.draw()
@@ -233,7 +235,7 @@ class PickPoints:
         Mean = (xlim[1] + xlim[0])/2.
 
         ClosestIndex = int(Mean / stepSize)
-        self.callback.ind = ClosestIndex
+        self.ind = ClosestIndex
 
         self.fig.canvas.draw()
 
@@ -276,32 +278,25 @@ class PickPoints:
 
         self.fig.canvas.draw() # force re-draw
 
-    class Index:
-        def __init__(self,ax):
+    def update(self):
+        self.plotObject.plotData( stepSize*self.ind, stepSize*self.ind+winSize )
+        self.ax.set_ylim( self.ylim )
+        self.ax.get_figure().canvas.draw()
+
+    def prev(self, event):
+        if self.ind > 0:
+            self.ind -= 1
+        else:
             self.ind = 0
-            self.ax = ax
-            self.ylim = ax.get_ylim()
-            self.end = ax.get_xaxis().get_data_interval()[1]
+        self.update()
 
-        def update(self):
-            self.ax.set_xlim( (stepSize*self.ind, stepSize*self.ind+winSize) )
-            self.ax.set_ylim( self.ylim )
-            self.ax.get_figure().canvas.draw()
+    def next(self, event):
+        if stepSize*(self.ind+1) < self.end:
+            self.ind += 1
+        self.update()
 
-        def prev(self, event):
-            if self.ind > 0:
-                self.ind -= 1
-            else:
-                self.ind = 0
-            self.update()
-
-        def next(self, event):
-            if stepSize*(self.ind+1) < self.end:
-                self.ind += 1
-            self.update()
-
-        def home(self, event):
-            self.update()
+    def home(self, event):
+        self.update()
 
 
 class PlotData(QtGui.QDialog):
@@ -370,6 +365,7 @@ class PlotData(QtGui.QDialog):
 
         self.formatter = FuncFormatter(self.sec2hms)
 
+        self.plotted = False
         self.plotData(0, winSize) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
         self.createSigFig() # Creates self.sigfig, self.ui.graphwave.canvas.sigaxes attributes
 
@@ -381,13 +377,6 @@ class PlotData(QtGui.QDialog):
 
     def createSigFig(self):
         NColumns = self.ui.graphwave.canvas.NColumns
-        #NRows = NChan/NColumns + NChan%NColumns
-        #self.sigfig = plt.figure(FIGSIG, figsize=(NColumns*(700./self.DPI),900./self.DPI/NColumns), dpi=self.DPI)
-        #self.ui.graphwave.canvas.sigaxes = [self.sigfig.add_subplot(NRows,NColumns,1)] #2 columns
-        #self.ui.graphwave.canvas.sigaxes += [self.sigfig.add_subplot(NRows,NColumns,i, \
-        #        sharex=self.ui.graphwave.canvas.sigaxes[0], sharey=self.ui.graphwave.canvas.sigaxes[0]) \
-        #        for i in xrange(2,NChan+1)]
-        #self.sigfig.subplots_adjust(hspace=0.20) #################
 
         for i in xrange(NChan):
             self.sigaxes[i].xaxis.set_major_formatter(self.formatter)
@@ -464,13 +453,17 @@ class PlotData(QtGui.QDialog):
         except StopIteration:
             maxIdxX2 = self.TS[1].size-1
 
-        # Plot SVM Lines
-        self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATABLUE)
-        self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATARED)
+        # Not yet plotted
+        if self.plotted == False:
+            # Plot SVM Lines
+            self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATABLUE)
+            self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATARED)
 
-        # Lines and dots are plotter separately for picker act only on dots
-        self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b-')
-        self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r-')
+            # Lines and dots are plotter separately for picker act only on dots
+            self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b-')
+            self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r-')
+            
+            self.plotted = True
 
         try:
             self.plot1.pop(0).remove()
