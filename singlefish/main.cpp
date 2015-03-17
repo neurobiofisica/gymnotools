@@ -46,18 +46,15 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         const qint64 curOff = winfile.getEventOffset();
         const int winSamples = winfile.getEventSamples();
 
+        char cause = 's';
+
         // Check if event is below maxsize
         if(winSamples > maxsize) {
-            completeoutfile.write(QString("a %1 %2 %3 %4\n")
-                                    .arg(curOff)
-                                    .arg(0)
-                                    .arg(0)
-                                    .arg(0)
-                                    .toAscii());
             prevWasSingle = false;
             prevSamples = winSamples;
             prevOff = curOff;
-            continue;
+
+            cause = 'a';
         }
 
         // Calculate and check distance to next and previous events
@@ -75,14 +72,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         prevOff = curOff;
 
         if(distPrev > maxdist && distNext > maxdist) {
-            completeoutfile.write(QString("m %1 %2 %3 %4\n")
-                                    .arg(curOff)
-                                    .arg(0)
-                                    .arg(0)
-                                    .arg(0)
-                                    .toAscii());
             prevWasSingle = false;
-            continue;
+
+            cause = 'm';
         }
 
         // Verify which channels can be used to feed the SVM
@@ -125,14 +117,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
 
         // Check if there are sufficient windows to trust SVM
         if(numWinOk < minwins) {
-            completeoutfile.write(QString("i %1 %2 %3 %4\n")
-                                    .arg(curOff)
-                                    .arg(0)
-                                    .arg(0)
-                                    .arg(0)
-                                    .toAscii());
             prevWasSingle = false;
-            continue;
+
+            cause = 'i';
         }
 
         // Read centered EODSamples from the signal file
@@ -140,14 +127,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         // Check if sigbuf data overlaps with the next or the previous window
         const qint64 curEndOff = sigfile.pos() + winSamples * BytesPerSample;
         if((prevEndOff > sigfile.pos()) || (curEndOff > nextOff)) {
-            completeoutfile.write(QString("o %1 %2 %3 %4\n")
-                                    .arg(curOff)
-                                    .arg(0)
-                                    .arg(0)
-                                    .arg(0)
-                                    .toAscii());
             prevWasSingle = false;
-            continue;
+
+            cause = 'o';
         }
         sigfile.readCh(sigbuf);
 
@@ -179,12 +161,13 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
             // Independent channels
             //probA *= probEstim[0];
             //probB *= probEstim[1];
+
             // Aritmetic mean
             //probA += probEstim[0] * maxAmp[ch];
             //probB += probEstim[1] * maxAmp[ch];
 
             //TotalMaxAmp += maxAmp[ch];
-            //
+
             // Weighted geometric mean
             probA *= pow(probEstim[0], 1./maxAmp[ch]);
             probB *= pow(probEstim[1], 1./maxAmp[ch]);
@@ -195,9 +178,11 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         // Try to make a geometric mean on the probability
         //probA = pow(probA, 1./numWinOk);
         //probB = pow(probB, 1./numWinOk);
+
         // Aritmetic mean
         //probA = probA / TotalMaxAmp;
         //probB = probB / TotalMaxAmp;
+
         // Weighted geometric mean
         probA = pow(probA, 1./TotalMaxAmp);
         probB = pow(probB, 1./TotalMaxAmp);
@@ -205,56 +190,62 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
 
         // Check if joint probability is above minimum
         if(probA < minprob && probB < minprob) {
-            completeoutfile.write(QString("p %1 %2 %3 %4\n")
-                                    .arg(curOff)
-                                    .arg(0)
-                                    .arg(probA)
-                                    .arg(probB)
-                                    .toAscii());
             prevWasSingle = false;
-            continue;
+
+            cause = 'p';
         }
 
         // Everything OK, write event pair offsets to outfile
-        if(prevWasSingle) {
+        if (cause == 's') {
+            if(prevWasSingle) {
 
-            // Write TS and probs on complete outfile
-            completeoutfile.write(QString("s %1 %2 %3 %4\n")
-                                    .arg(curOff)
-                                    .arg(prevOffBck)
-                                    .arg(probA)
-                                    .arg(probB)
-                                    .toAscii());
+                // Write TS and probs on complete outfile
+                completeoutfile.write(QString("s %1 %2 %3 %4\n")
+                                        .arg(curOff)
+                                        .arg(prevOffBck)
+                                        .arg(probA)
+                                        .arg(probB)
+                                        .toAscii());
 
-            if(prevWasA && (probB > probA)) {
-                outfile.write(QString("%1 %2\n") //////////////////
-                              .arg(prevOffBck)
-                              .arg(curOff)
-                              .toAscii());
-                prevWasSingle = false;
-                continue;
+                if(prevWasA && (probB > probA)) {
+                    outfile.write(QString("%1 %2\n") //////////////////
+                                  .arg(prevOffBck)
+                                  .arg(curOff)
+                                  .toAscii());
+                    prevWasSingle = false;
+                    continue;
+                }
+                else if(!prevWasA && (probA > probB)) {
+                    outfile.write(QString("%1 %2\n")
+                                  .arg(curOff)
+                                  .arg(prevOffBck)
+                                  .toAscii());
+                    prevWasSingle = false;
+                    continue;
+                }
             }
-            else if(!prevWasA && (probA > probB)) {
-                outfile.write(QString("%1 %2\n")
-                              .arg(curOff)
-                              .arg(prevOffBck)
-                              .toAscii());
-                prevWasSingle = false;
-                continue;
+            else {
+                // Write TS and probs on complete outfile
+                completeoutfile.write(QString("c %1 %2 %3 %4\n")
+                                        .arg(curOff)
+                                        .arg(0)
+                                        .arg(probA)
+                                        .arg(probB)
+                                        .toAscii());
             }
+
+            prevWasA = (probA > probB);
+            prevWasSingle = true;
         }
         else {
-            // Write TS and probs on complete outfile
-            completeoutfile.write(QString("c %1 %2 %3 %4\n")
-                                    .arg(curOff)
-                                    .arg(0)
-                                    .arg(probA)
-                                    .arg(probB)
-                                    .toAscii());
+            completeoutfile.write(QString("%1 %2 %3 %4 %5\n")
+                                  .arg(cause)
+                                  .arg(curOff)
+                                  .arg(0)
+                                  .arg(probA)
+                                  .arg(probB)
+                                  .toAscii());
         }
-
-        prevWasA = (probA > probB);
-        prevWasSingle = true;
     }
 }
 

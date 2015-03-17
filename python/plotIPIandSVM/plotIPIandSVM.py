@@ -218,8 +218,10 @@ class PickPoints:
         xdisplacement = event.xdata - self.initialPos[0]
         ydisplacement = event.ydata - self.initialPos[1]
 
-        self.ax.set_xlim([ cur_xlim[0] - xdisplacement,
-            cur_xlim[1] - xdisplacement ])
+        self.plotObject.plotData( cur_xlim[0] - xdisplacement,
+                cur_xlim[1] - xdisplacement)
+        #self.ax.set_xlim([ cur_xlim[0] - xdisplacement,
+            #cur_xlim[1] - xdisplacement ])
         self.ax.set_ylim([ cur_ylim[0] - ydisplacement,
             cur_ylim[1] - ydisplacement ])
 
@@ -271,8 +273,6 @@ class PickPoints:
             scale_factor = 1
             print button
         # set new limits
-        '''self.ax.set_xlim([xdata - cur_xrange*scale_factor*relposx,
-                     xdata + cur_xrange*scale_factor*(1-relposx)])'''
         self.plotObject.plotData( xdata - cur_xrange*scale_factor*relposx,
                 xdata + cur_xrange*scale_factor*(1-relposx) )
 
@@ -460,8 +460,10 @@ class PlotData(QtGui.QDialog):
             self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATARED)
 
             # Lines and dots are plotter separately for picker act only on dots
-            self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b-')
-            self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r-')
+            '''self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b-')
+            self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r-')'''
+            self.ax.plot(self.TS[0][:-1], np.diff(self.TS[0]), 'b-')
+            self.ax.plot(self.TS[1][:-1], np.diff(self.TS[1]), 'r-')
             
             self.plotted = True
 
