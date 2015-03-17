@@ -327,20 +327,33 @@ class PlotData(QtGui.QDialog):
 
         self.TS = (P1, P2)
 
-        self.SVM = TS[1][ find(SVMFlags == 's') ]
+        self.svmPair = TS[3]
+
+        SVMDec = find(SVMFlags == 's')
+        IdxSVM1 = np.intersect1d(IdxP1, SVMDec)
+        IdxSVM2 = np.intersect1d(IdxP2, SVMDec)
+
+        SVM1 = TS[1][IdxSVM1] / freq
+        SVM1 = np.append(SVM1, self.svmPair[IdxSVM2] / freq)
+
+        SVM2 = TS[1][IdxSVM2] / freq
+        SVM2 = np.append(SVM2, self.svmPair[IdxSVM1] / freq)
+
+        self.SVM = np.array([np.sort(SVM1), np.sort(SVM2)])
         self.Tam = self.SVM[0].size
 
         svmFlag1 = SVMFlags[ IdxP1 ]
         svmFlag2 = SVMFlags[ IdxP2 ]
         self.svmFlags = (svmFlag1, svmFlag2)
 
-        ProbP1 = TS[3][ IdxP1 ]
-        ProbP2 = TS[4][ IdxP2 ]
+
+        ProbP1 = TS[4][ IdxP1 ]
+        ProbP2 = TS[5][ IdxP2 ]
 
         self.probs = (ProbP1, ProbP2)
 
-        distP1 = ( TS[5][ IdxP1 ], TS[6][ IdxP1 ], TS[7][ IdxP1 ] )
-        distP2 = ( TS[5][ IdxP2 ], TS[6][ IdxP2 ], TS[7][ IdxP2 ] )
+        distP1 = ( TS[6][ IdxP1 ], TS[7][ IdxP1 ], TS[8][ IdxP1 ] )
+        distP2 = ( TS[6][ IdxP2 ], TS[7][ IdxP2 ], TS[8][ IdxP2 ] )
 
         self.dists = (distP1, distP2)
 
@@ -354,7 +367,7 @@ class PlotData(QtGui.QDialog):
 
         self.formatter = FuncFormatter(self.sec2hms)
 
-        self.plotData() # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
+        self.plotData(0, winSize) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
         self.createSigFig() # Creates self.sigfig, self.ui.graphwave.canvas.sigaxes attributes
 
         self.datafile = datafile
@@ -423,23 +436,55 @@ class PlotData(QtGui.QDialog):
         
         self.sigfig.canvas.draw()
 
-    def plotData(self):
-        #self.fig = plt.figure(FIGIPI, figsize=(700./self.DPI,450./self.DPI), dpi=self.DPI)
-        #self.ax= self.fig.add_subplot(1,1,1)
+    def plotData(self, minX, maxX):
+
+        # Will plot 3 windows, and rearange axes to only show 1
+        # This is for navigation
+        L = maxX - minX
+        MIN = minX - L
+        MAX = maxX + L
+
+        try:
+            minIdxX1 = next( n for n,i in enumerate(self.TS[0]) if i > MIN )
+        except StopIteration:
+            minIdxX1 = self.TS[0].size-1
+        try:
+            minIdxX2 = next( n for n,i in enumerate(self.TS[1]) if i > MIN )
+        except StopIteration:
+            minIdxX2 = self.TS[1].size-1
+
+        try:
+            maxIdxX1 = next( n for n,i in enumerate(self.TS[0]) if i > MAX)
+        except StopIteration:
+            maxIdxX1 = self.TS[0].size-1
+        try:
+            maxIdxX2 = next( n for n,i in enumerate(self.TS[1]) if i > MAX)
+        except StopIteration:
+            maxIdxX2 = self.TS[1].size-1
+
+        # Plot SVM Lines
 
         self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATABLUE)
         self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATARED)
 
         # Lines and dots are plotter separately for picker act only on dots
-        self.ax.plot(self.TS[0][:-1], np.diff(self.TS[0]), 'b-')
-        self.ax.plot(self.TS[1][:-1], np.diff(self.TS[1]), 'r-')
+        self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b-')
+        self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r-')
 
-        self.ax.plot(self.TS[0][:-1], np.diff(self.TS[0]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
-        self.ax.plot(self.TS[1][:-1], np.diff(self.TS[1]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
+        if L > 30:
+            self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
+            self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
+        else:
+            color1 = [ num2color(int(255*i),'b') for i in self.probs[0][minIdxX1:maxIdxX1][:-1] ]
+            color2 = [ num2color(int(255*i),'r') for i in self.probs[1][minIdxX2:maxIdxX2][:-1] ]
 
-        self.adjustAxes()
+            self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=30, picker=5, zorder=IPIDATABLUE)
+            self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=30, picker=5, zorder=IPIDATARED)
 
-    def adjustAxes(self):
+
+        self.adjustAxes(minX, maxX)
+
+    def adjustAxes(self, minX, maxX):
         self.ax.set_title('IPIs and SVM classification')
         self.ax.xaxis.set_major_formatter(self.formatter)
 
@@ -447,7 +492,7 @@ class PlotData(QtGui.QDialog):
         YMIN = 0.
         YMAX = 2.5 * Mean
 
-        self.ax.axis([0, winSize, YMIN, YMAX])
+        self.ax.axis([minX, maxX, YMIN, YMAX])
 
     def sec2hms(self, x, pos):
         t = int(round(1e4*x))
@@ -475,7 +520,7 @@ if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
 
-    TS = np.loadtxt(timestampsf,unpack=True,usecols=(0,1,2,4,5,6,7,8))
+    TS = np.loadtxt(timestampsf,unpack=True,usecols=(0,1,2,4,5,6,7,8,9))
     timestampsf.seek(0)
     svmFlags = np.array(parseSVMFlags(timestampsf))
     timestampsf.close()

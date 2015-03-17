@@ -48,8 +48,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
 
         // Check if event is below maxsize
         if(winSamples > maxsize) {
-            completeoutfile.write(QString("a %1 %2 %3\n")
+            completeoutfile.write(QString("a %1 %2 %3 %4\n")
                                     .arg(curOff)
+                                    .arg(0)
                                     .arg(0)
                                     .arg(0)
                                     .toAscii());
@@ -74,8 +75,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         prevOff = curOff;
 
         if(distPrev > maxdist && distNext > maxdist) {
-            completeoutfile.write(QString("m %1 %2 %3\n")
+            completeoutfile.write(QString("m %1 %2 %3 %4\n")
                                     .arg(curOff)
+                                    .arg(0)
                                     .arg(0)
                                     .arg(0)
                                     .toAscii());
@@ -123,8 +125,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
 
         // Check if there are sufficient windows to trust SVM
         if(numWinOk < minwins) {
-            completeoutfile.write(QString("i %1 %2 %3\n")
+            completeoutfile.write(QString("i %1 %2 %3 %4\n")
                                     .arg(curOff)
+                                    .arg(0)
                                     .arg(0)
                                     .arg(0)
                                     .toAscii());
@@ -137,8 +140,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         // Check if sigbuf data overlaps with the next or the previous window
         const qint64 curEndOff = sigfile.pos() + winSamples * BytesPerSample;
         if((prevEndOff > sigfile.pos()) || (curEndOff > nextOff)) {
-            completeoutfile.write(QString("o %1 %2 %3\n")
+            completeoutfile.write(QString("o %1 %2 %3 %4\n")
                                     .arg(curOff)
+                                    .arg(0)
                                     .arg(0)
                                     .arg(0)
                                     .toAscii());
@@ -201,8 +205,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
 
         // Check if joint probability is above minimum
         if(probA < minprob && probB < minprob) {
-            completeoutfile.write(QString("p %1 %2 %3\n")
+            completeoutfile.write(QString("p %1 %2 %3 %4\n")
                                     .arg(curOff)
+                                    .arg(0)
                                     .arg(probA)
                                     .arg(probB)
                                     .toAscii());
@@ -214,8 +219,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         if(prevWasSingle) {
 
             // Write TS and probs on complete outfile
-            completeoutfile.write(QString("s %1 %2 %3\n")
+            completeoutfile.write(QString("s %1 %2 %3 %4\n")
                                     .arg(curOff)
+                                    .arg(prevOffBck)
                                     .arg(probA)
                                     .arg(probB)
                                     .toAscii());
@@ -239,8 +245,9 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         }
         else {
             // Write TS and probs on complete outfile
-            completeoutfile.write(QString("c %1 %2 %3\n")
+            completeoutfile.write(QString("c %1 %2 %3 %4\n")
                                     .arg(curOff)
+                                    .arg(0)
                                     .arg(probA)
                                     .arg(probB)
                                     .toAscii());

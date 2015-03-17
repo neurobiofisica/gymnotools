@@ -129,22 +129,26 @@ public:
         const int *p = (const int *)data.data;
         return p[5];
     }
+    qint64 pairsvm() const {
+        const qint64 *p = (const qint64 *)data.data;
+        return p[6];
+    }
     float probA() const {
         const float *p = (const float *)data.data;
-        return p[6];
+        return p[8];
     }
     float probB() const {
         const float *p = (const float *)data.data;
-        return p[7];
+        return p[9];
     }
     qint32 spikeData(int n, qint32 &off, SignalBuffer &buf) const {
         assert(n==1 || n==2);
         assert(data.size > 6*sizeof(qint32));
         const qint32 *p = (const qint32 *)data.data;
-        p = &p[8];
+        p = &p[10];
         if(n==2) {
             qint32 firstSize = p[1];
-            assert(data.size > (12 + NumChannels*firstSize)*sizeof(qint32));
+            assert(data.size > (14 + NumChannels*firstSize)*sizeof(qint32));
             p = &p[2 + NumChannels*firstSize];
         }
         off = p[0];
@@ -159,7 +163,7 @@ public:
     }
 
     void insert(qint64 k, float distA, float distB, float distAB, quint32 saturationFlags,
-                int svm, float probA, float probB,
+                int svm, qint64 pairsvm, float probA, float probB,
                 qint32 offA, qint32 sizeA, const float *const* dataA,
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
@@ -178,11 +182,13 @@ public:
         recbuff[3] = distAB;
         recbufi[4] = saturationFlags;
         recbufi[5] = svm;
-        recbuff[6] = probA;
-        recbuff[7] = probB;
+        recbufi[6] = pairsvm; //64-bit field
+        recbufi[7] = (qint32)(pairsvm>>32); //64-bit field
+        recbuff[8] = probA;
+        recbuff[9] = probB;
 
-        recbuff = &recbuff[8];
-        recbufi = &recbufi[8];
+        recbuff = &recbuff[10];
+        recbufi = &recbufi[10];
 
         if(dataA != NULL && sizeA)
             copybuf(recbuff, recbufi, offA, sizeA, dataA);
@@ -219,6 +225,7 @@ static QList<SFishPair> parseSFish(QFile &sfishfile)
 
 struct probs {
     char svm;
+    qint64 pairsvm;
     float probA, probB;
 };
 
@@ -231,10 +238,11 @@ static QMap<qint64, probs> parseProbs(QFile &probsfile)
     do {
         char svm;
         qint64 off;
+        qint64 pairsvm;
         float probA, probB;
-        line >> svm >> off >> probA >> probB;
-        //list[off].svm = (svm == 's');
+        line >> svm >> off >> pairsvm >> probA >> probB;
         list[off].svm = svm;
+        list[off].pairsvm = pairsvm;
         list[off].probA = probA;
         list[off].probB = probB;
         line.skipWhiteSpace();
@@ -338,7 +346,7 @@ public:
         // emit to db
         qint64 off = winfile.getEventOffset();
         db.insert(off, 0., inf, inf, 0,
-                  problist[off].svm, problist[off].probA, problist[off].probB,
+                  problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                   0, fishlenA, fishvecA,
                   0, 0, NULL);
     }
@@ -354,7 +362,7 @@ public:
         // emit to db
         qint64 off = winfile.getEventOffset();
         db.insert(off, inf, 0., inf, 0,
-                  problist[off].svm, problist[off].probA, problist[off].probB,
+                  problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                   0, 0, NULL,
                   0, fishlenB, fishvecB);
     }
@@ -542,7 +550,7 @@ public:
             // emit to db
             if(distA < curBestDist)
                 db.insert(off, distA, distB, distAB, satFlag,
-                          problist[off].svm, problist[off].probA, problist[off].probB,
+                          problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           copystart - firstpos, fishlenA, fishvecA,
                           0, 0, NULL);
         }
@@ -564,7 +572,7 @@ public:
             // emit to db
             if(distB < curBestDist)
                 db.insert(off, distA, distB, distAB, satFlag,
-                          problist[off].svm, problist[off].probA, problist[off].probB,
+                          problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           0, 0, NULL,
                           copystart - firstpos, fishlenB, fishvecB);
         }
@@ -595,7 +603,7 @@ public:
                 }
                 // emit to db
                 db.insert(off, distA, distB, distAB, satFlag,
-                          problist[off].svm, problist[off].probA, problist[off].probB,
+                          problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
                           posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
             }
