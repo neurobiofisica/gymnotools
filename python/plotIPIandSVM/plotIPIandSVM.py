@@ -269,8 +269,11 @@ class PickPoints:
             scale_factor = 1
             print button
         # set new limits
-        self.ax.set_xlim([xdata - cur_xrange*scale_factor*relposx,
-                     xdata + cur_xrange*scale_factor*(1-relposx)])
+        '''self.ax.set_xlim([xdata - cur_xrange*scale_factor*relposx,
+                     xdata + cur_xrange*scale_factor*(1-relposx)])'''
+        self.plotObject.plotData( xdata - cur_xrange*scale_factor*relposx,
+                xdata + cur_xrange*scale_factor*(1-relposx) )
+
         self.fig.canvas.draw() # force re-draw
 
     class Index:
@@ -375,7 +378,6 @@ class PlotData(QtGui.QDialog):
 
     def onResize(self,event):
         self.ui.formLayoutWidget.setGeometry(0,0,self.size().width(),self.size().height())
-        #self.ui.graphwave.setGeometry(0,0,self.size().width(),450)
 
     def createSigFig(self):
         NColumns = self.ui.graphwave.canvas.NColumns
@@ -463,7 +465,6 @@ class PlotData(QtGui.QDialog):
             maxIdxX2 = self.TS[1].size-1
 
         # Plot SVM Lines
-
         self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATABLUE)
         self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATARED)
 
@@ -471,15 +472,32 @@ class PlotData(QtGui.QDialog):
         self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b-')
         self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r-')
 
+        try:
+            self.plot1.pop(0).remove()
+        except:
+            pass
+        try:
+            self.plot2.pop(0).remove()
+        except:
+            pass
+        try:
+            self.plot1.remove()
+        except:
+            pass
+        try:
+            self.plot2.remove()
+        except:
+            pass
+
         if L > 30:
-            self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
-            self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
+            self.plot1 = self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
+            self.plot2 = self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
         else:
             color1 = [ num2color(int(255*i),'b') for i in self.probs[0][minIdxX1:maxIdxX1][:-1] ]
             color2 = [ num2color(int(255*i),'r') for i in self.probs[1][minIdxX2:maxIdxX2][:-1] ]
 
-            self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=30, picker=5, zorder=IPIDATABLUE)
-            self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=30, picker=5, zorder=IPIDATARED)
+            self.plot1 = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=30, picker=5, zorder=IPIDATABLUE)
+            self.plot2 = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=30, picker=5, zorder=IPIDATARED)
 
 
         self.adjustAxes(minX, maxX)
