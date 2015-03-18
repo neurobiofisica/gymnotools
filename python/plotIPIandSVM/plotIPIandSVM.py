@@ -399,8 +399,8 @@ class PlotData(QtGui.QDialog):
 
         self.probs = (ProbP1, ProbP2)
 
-        distP1 = ( TS[6][ IdxP1 ], TS[7][ IdxP1 ], TS[8][ IdxP1 ] )
-        distP2 = ( TS[6][ IdxP2 ], TS[7][ IdxP2 ], TS[8][ IdxP2 ] )
+        distP1 = [ (TS[6][i], TS[7][i], TS[8][i])  for i in IdxP1 ]
+        distP2 = [ (TS[6][i], TS[7][i], TS[8][i])  for i in IdxP2 ]
 
         self.dists = (distP1, distP2)
 
@@ -539,8 +539,11 @@ class PlotData(QtGui.QDialog):
             color1 = [ num2color(int(255*i),'b') for i in self.probs[0][minIdxX1:maxIdxX1][:-1] ]
             color2 = [ num2color(int(255*i),'r') for i in self.probs[1][minIdxX2:maxIdxX2][:-1] ]
 
-            self.plot1 = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=30, picker=5, zorder=IPIDATABLUE)
-            self.plot2 = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=30, picker=5, zorder=IPIDATARED)
+            size1 = 20*np.array([ min(self.dists[0][i]) for i in xrange(minIdxX1,maxIdxX1-1) ])
+            size2 = 20*np.array([ min(self.dists[1][i]) for i in xrange(minIdxX2,maxIdxX2-1) ])
+
+            self.plot1 = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=10+np.pi*size1, picker=5, zorder=IPIDATABLUE)
+            self.plot2 = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=10+np.pi*size2, picker=5, zorder=IPIDATARED)
 
 
         self.adjustAxes(minX, maxX)
