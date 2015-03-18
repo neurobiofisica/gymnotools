@@ -329,6 +329,14 @@ class PlotData(QtGui.QDialog):
         IdxSVM1 = np.intersect1d(IdxP1, SVMDec)
         IdxSVM2 = np.intersect1d(IdxP2, SVMDec)
 
+        self.SVMDic = {}
+        for i in IdxSVM1:
+            self.SVMDic.update({ ( 1, TS[1][i]): TS[3][i] })
+            self.SVMDic.update({ (-1, TS[3][i]): TS[1][i] })
+        for i in IdxSVM2:
+            self.SVMDic.update({ (-1, TS[1][i]): TS[3][i] })
+            self.SVMDic.update({ ( 1, TS[3][i]): TS[1][i] })
+
         SVM1 = TS[1][IdxSVM1] / freq
         SVM1 = np.append(SVM1, self.svmPair[IdxSVM2] / freq)
 
@@ -341,7 +349,6 @@ class PlotData(QtGui.QDialog):
         svmFlag1 = SVMFlags[ IdxP1 ]
         svmFlag2 = SVMFlags[ IdxP2 ]
         self.svmFlags = (svmFlag1, svmFlag2)
-
 
         ProbP1 = TS[4][ IdxP1 ]
         ProbP2 = TS[5][ IdxP2 ]
