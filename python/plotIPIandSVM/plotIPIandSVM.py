@@ -145,7 +145,7 @@ class PickPoints:
             return
 
         zorder = event.artist.zorder
-        if self.svm == True:
+        if self.svm == True and (zorder == SVMDATABLUE or zorder == SVMDATARED):
 
             sample = (event.artist.get_xdata()[event.ind] * freq)[0]
 
