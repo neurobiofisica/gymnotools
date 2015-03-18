@@ -125,12 +125,18 @@ class PickPoints:
         axprev = self.fig.add_axes([0.001, 0.005, 0.1, 0.07])
         axhome = self.fig.add_axes([0.111, 0.005, 0.1, 0.07])
         axnext = self.fig.add_axes([0.221, 0.005, 0.1, 0.07])
+        axzoom = self.fig.add_axes([0.899, 0.006, 0.1, 0.07])
         self.bnext = Button(axnext, 'Next')
         self.bnext.on_clicked(self.next)
         self.bprev = Button(axprev, 'Previous')
         self.bprev.on_clicked(self.prev)
         self.bhome = Button(axhome, 'Home')
         self.bhome.on_clicked(self.home)
+
+        self.zoomStatus = 'X'
+
+        self.bzoom = Button(axzoom, self.zoomStatus + ' Zoom')
+        self.bzoom.on_clicked(self.click_zoom)
 
         self.fig.canvas.draw()
 
@@ -316,10 +322,20 @@ class PickPoints:
             scale_factor = 1
             print button
         # set new limits
-        self.plotObject.plotData( xdata - cur_xrange*scale_factor*relposx,
-                xdata + cur_xrange*scale_factor*(1-relposx) )
+        if self.zoomStatus == 'X':
+            self.plotObject.plotData( xdata - cur_xrange*scale_factor*relposx,
+                    xdata + cur_xrange*scale_factor*(1-relposx) )
+        elif self.zoomStatus == 'Y':
+            #self.ax.set_ylim([ max(0,ydata - cur_yrange*scale_factor*relposy),
+            self.ax.set_ylim([ cur_ylim[0],
+                ydata + cur_yrange*scale_factor*(1-relposy)])
 
         self.fig.canvas.draw() # force re-draw
+
+    def click_zoom(self, event):
+        self.zoomStatus = set(['X','Y']).difference(set(self.zoomStatus)).pop()
+        self.bzoom.label.set_text(self.zoomStatus + ' Zoom')
+        self.fig.canvas.draw()
 
     def update(self):
         self.plotObject.plotData( stepSize*self.ind, stepSize*self.ind+winSize )
