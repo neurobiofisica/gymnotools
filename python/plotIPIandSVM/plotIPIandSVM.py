@@ -81,11 +81,11 @@ class PickPoints:
         self.ax = plotObject.ax
 
         # Auxiliary plots for legend
-        self.ax.plot([], 'k-.', lw=2, label='\'s\' SVM off', zorder=LEGENDSVM)
-        self.ax.plot([], 'k-', lw=2, label='\'i\' IPI off', zorder=LEGENDIPI)
-        self.ax.plot([], 'b.-', mew=2, label='\'b\' Blue off', zorder=LEGENDBLUE)
-        self.ax.plot([], 'r.-', mew=2, label='\'r\' Red off', zorder=LEGENDRED)
-        self.ax.plot([], 'ko', mew=5, label='\'d\' Dots off', zorder=SCATTER)
+        self.ax.plot([], 'k-.', lw=2, label='\'s\' SVM on', zorder=LEGENDSVM)
+        self.ax.plot([], 'k-', lw=2, label='\'i\' IPI on', zorder=LEGENDIPI)
+        self.ax.plot([], 'b.-', mew=2, label='\'b\' Blue on', zorder=LEGENDBLUE)
+        self.ax.plot([], 'r.-', mew=2, label='\'r\' Red on', zorder=LEGENDRED)
+        self.ax.plot([], 'ko', mew=5, label='\'d\' Dots on', zorder=SCATTER)
         self.ax.legend()
         handles, labels = self.ax.get_legend_handles_labels()
 
@@ -96,10 +96,11 @@ class PickPoints:
         self.cidmotion = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
         self.cidbrelease = self.fig.canvas.mpl_connect('button_release_event', self.button_release)
 
-        self.b = False
-        self.r = False
-        self.svm = False
-        self.ipi = False
+        self.b = True
+        self.r = True
+        self.svm = True
+        self.ipi = True
+        #self.plotObject.scatterFlag = True # Ja inicializado na classe PlotData
 
         self.initialPos = None
 
@@ -394,7 +395,7 @@ class PlotData(QtGui.QDialog):
         self.sigfig = self.ui.graphwave.canvas.fig
         self.sigaxes = self.ui.graphwave.canvas.sigaxes
 
-        self.scatterFlag = False
+        self.scatterFlag = True
 
         IdxP1 = find(TS[0] == 1)
         IdxP2 = find(TS[0] == -1)
