@@ -323,8 +323,10 @@ class PickPoints:
             print button
         # set new limits
         if self.zoomStatus == 'X':
+            ylim = self.ax.get_ylim()
             self.plotObject.plotData( xdata - cur_xrange*scale_factor*relposx,
                     xdata + cur_xrange*scale_factor*(1-relposx) )
+            self.ax.set_ylim(ylim)
         elif self.zoomStatus == 'Y':
             #self.ax.set_ylim([ max(0,ydata - cur_yrange*scale_factor*relposy),
             self.ax.set_ylim([ cur_ylim[0],
@@ -502,8 +504,8 @@ class PlotData(QtGui.QDialog):
         # Will plot 3 windows, and rearange axes to only show 1
         # This is for navigation
         L = maxX - minX
-        MIN = minX - L
-        MAX = maxX + L
+        MIN = minX
+        MAX = maxX
 
         try:
             minIdxX1 = next( n for n,i in enumerate(self.TS[0]) if i > MIN )
@@ -519,7 +521,7 @@ class PlotData(QtGui.QDialog):
         except StopIteration:
             maxIdxX1 = self.TS[0].size-1
         try:
-            maxIdxX2 = next( n for n,i in enumerate(self.TS[1]) if i > MAX)
+            maxIdxX2 = next( n for n,i in enumerate(self.TS[1]) if i > MAX)+1
         except StopIteration:
             maxIdxX2 = self.TS[1].size-1
 
