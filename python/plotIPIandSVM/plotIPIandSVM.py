@@ -13,11 +13,11 @@ import time
 
 from graphicalInterface import *
 
-# Defines
+# Defines (zorder -> used of selecting picker)
 SVMDATABLUE = 0
 SVMDATARED = 1
-IPIDATABLUE = 2
-IPIDATARED = 3
+IPIDATABLUE = 20 # The dots will be on top of every other plot
+IPIDATARED = 30
 LEGENDSVM = 4
 LEGENDIPI = 5
 LEGENDBLUE = 6
@@ -137,14 +137,54 @@ class PickPoints:
     def onpick(self,event):
         if event.mouseevent.button != 1:
             return
+
         zorder = event.artist.zorder
         if self.svm == True:
+
+            sample = (event.artist.get_xdata()[event.ind] * freq)[0]
+
             if zorder == SVMDATABLUE and self.b == True:
+                try:
+                    self.pltsvmstrongB.pop(0).remove()
+                except:
+                    pass
+                try:
+                    self.pltsvmstrongR.pop(0).remove()
+                except:
+                    pass
+
                 print (event.ind[0] / 3) + 1
                 print (event.artist.get_xdata()[event.ind] * freq * 4 * NChan)[0]
+                print (event.artist.get_xdata()[event.ind] * freq)[0]
+
+                sample2 = self.plotObject.SVMDic[(1,int(round(sample)))]
+                print sample/freq
+
+                self.pltsvmstrongR = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'r-')
+                self.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'b-')
+
+                self.plotObject.plotSigData( (sample/freq, 'b') )
             if zorder == SVMDATARED and self.r == True:
+                try:
+                    self.pltsvmstrongB.pop(0).remove()
+                except:
+                    pass
+                try:
+                    self.pltsvmstrongR.pop(0).remove()
+                except:
+                    pass
+
                 print (event.ind[0] / 3) + 1
                 print (event.artist.get_xdata()[event.ind] * freq * 4 * NChan)[0]
+                print (event.artist.get_xdata()[event.ind] * freq)[0]
+
+                sample2 = self.plotObject.SVMDic[(-1,int(round(sample)))]
+
+                self.pltsvmstrongB = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'b-')
+                self.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'r-')
+
+                self.plotObject.plotSigData( (sample/freq, 'r') )
+            self.fig.canvas.draw()
         if self.ipi == True and (\
                 (zorder == IPIDATABLUE and self.b == True) or \
                 (zorder == IPIDATARED and self.r == True)):
@@ -153,7 +193,11 @@ class PickPoints:
             elif zorder == IPIDATARED:
                 color = 'r'
             ind = event.ind[0]
-            xdata = event.artist.get_xdata()
+            try: ######### TODO: Utilizar flag no lugar de try-except
+                xdata = event.artist.get_xdata()
+            except:
+                data = event.artist.get_offsets()
+                xdata = [x for x,y in data]
             central = (xdata[ind], color)
             self.plotObject.plotSigData(central)
 
@@ -331,11 +375,11 @@ class PlotData(QtGui.QDialog):
 
         self.SVMDic = {}
         for i in IdxSVM1:
-            self.SVMDic.update({ ( 1, TS[1][i]): TS[3][i] })
-            self.SVMDic.update({ (-1, TS[3][i]): TS[1][i] })
+            self.SVMDic.update({ ( 1, int(round(TS[1][i]))): int(round(TS[3][i])) })
+            self.SVMDic.update({ (-1, int(round(TS[3][i]))): int(round(TS[1][i])) })
         for i in IdxSVM2:
-            self.SVMDic.update({ (-1, TS[1][i]): TS[3][i] })
-            self.SVMDic.update({ ( 1, TS[3][i]): TS[1][i] })
+            self.SVMDic.update({ (-1, int(round(TS[1][i]))): int(round(TS[3][i])) })
+            self.SVMDic.update({ ( 1, int(round(TS[3][i]))): int(round(TS[1][i])) })
 
         SVM1 = TS[1][IdxSVM1] / freq
         SVM1 = np.append(SVM1, self.svmPair[IdxSVM2] / freq)
@@ -465,8 +509,8 @@ class PlotData(QtGui.QDialog):
             self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATARED)
 
             # Lines and dots are plotter separately for picker act only on dots
-            self.ax.plot(self.TS[0][:-1], np.diff(self.TS[0]), 'b-')
             self.ax.plot(self.TS[1][:-1], np.diff(self.TS[1]), 'r-')
+            self.ax.plot(self.TS[0][:-1], np.diff(self.TS[0]), 'b-')
             
             self.plotted = True
 
