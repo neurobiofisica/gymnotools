@@ -22,6 +22,7 @@ LEGENDSVM = 4
 LEGENDIPI = 5
 LEGENDBLUE = 6
 LEGENDRED = 7
+SCATTER = 8
 
 FIGIPI = 1
 FIGSIG = 2
@@ -84,6 +85,7 @@ class PickPoints:
         self.ax.plot([], 'k-', lw=2, label='\'i\' IPI off', zorder=LEGENDIPI)
         self.ax.plot([], 'b.-', mew=2, label='\'b\' Blue off', zorder=LEGENDBLUE)
         self.ax.plot([], 'r.-', mew=2, label='\'r\' Red off', zorder=LEGENDRED)
+        self.ax.plot([], 'ko', mew=5, label='\'d\' Dots off', zorder=SCATTER)
         self.ax.legend()
         handles, labels = self.ax.get_legend_handles_labels()
 
@@ -113,6 +115,8 @@ class PickPoints:
                 self.dicHandles.update( {'IPI':h} )
             elif h.zorder == LEGENDSVM:
                 self.dicHandles.update( {'SVM':h} )
+            elif h.zorder == SCATTER:
+                self.dicHandles.update( {'Dots':h} )
 
         self.ind = 0
         self.ylim = self.ax.get_ylim()
@@ -235,6 +239,15 @@ class PickPoints:
                 self.dicHandles['IPI'].set_label('\'i\' IPI on')
             else:
                 self.dicHandles['IPI'].set_label('\'i\' IPI off')
+        elif key == 'd':
+            self.plotObject.scatterFlag = not(self.plotObject.scatterFlag)
+            if self.plotObject.scatterFlag == True:
+                self.dicHandles['Dots'].set_label('\'d\' Dots on')
+            else:
+                self.dicHandles['Dots'].set_label('\'d\' Dots off')
+
+            xlim = self.ax.get_xlim()
+            self.plotObject.plotData(xlim[0],xlim[1])
         elif key == 'right':
             self.next(event)
         elif key == 'left':
@@ -328,9 +341,12 @@ class PickPoints:
                     xdata + cur_xrange*scale_factor*(1-relposx) )
             self.ax.set_ylim(ylim)
         elif self.zoomStatus == 'Y':
-            #self.ax.set_ylim([ max(0,ydata - cur_yrange*scale_factor*relposy),
-            self.ax.set_ylim([ cur_ylim[0],
-                ydata + cur_yrange*scale_factor*(1-relposy)])
+            if cur_yrange > 2.5*self.plotObject.Mean:
+                self.ax.set_ylim([ max(0,ydata - cur_yrange*scale_factor*relposy),
+                    ydata + cur_yrange*scale_factor*(1-relposy)])
+            else:
+                self.ax.set_ylim([ ydata - cur_yrange*scale_factor*relposy,
+                    ydata + cur_yrange*scale_factor*(1-relposy)])
 
         self.fig.canvas.draw() # force re-draw
 
@@ -377,6 +393,8 @@ class PlotData(QtGui.QDialog):
         self.ax = self.ui.graphIPI.canvas.ax
         self.sigfig = self.ui.graphwave.canvas.fig
         self.sigaxes = self.ui.graphwave.canvas.sigaxes
+
+        self.scatterFlag = False
 
         IdxP1 = find(TS[0] == 1)
         IdxP2 = find(TS[0] == -1)
@@ -555,12 +573,7 @@ class PlotData(QtGui.QDialog):
             pass
 
         # Color proportional to probability only if window is lesser than 30s
-        if L >= 30:
-            self.isScatter = False
-
-            self.plot1 = self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
-            self.plot2 = self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
-        else:
+        if L<=30 and self.scatterFlag == True:
             self.isScatter = True
 
             color1 = [ num2color(int(255*i),'b') for i in self.probs[0][minIdxX1:maxIdxX1][:-1] ]
@@ -572,6 +585,11 @@ class PlotData(QtGui.QDialog):
             self.plot1 = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=5, zorder=IPIDATABLUE)
             self.plot2 = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=5, zorder=IPIDATARED)
 
+        else:
+            self.isScatter = False
+
+            self.plot1 = self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
+            self.plot2 = self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
 
         self.adjustAxes(minX, maxX)
 
@@ -579,9 +597,9 @@ class PlotData(QtGui.QDialog):
         self.ax.set_title('IPIs and SVM classification')
         self.ax.xaxis.set_major_formatter(self.formatter)
 
-        Mean = ( np.diff(self.TS[0]).mean() + np.diff(self.TS[1]).mean() ) / 2.
+        self.Mean = ( np.diff(self.TS[0]).mean() + np.diff(self.TS[1]).mean() ) / 2.
         YMIN = 0.
-        YMAX = 2.5 * Mean
+        YMAX = 2.5 * self.Mean
 
         self.ax.axis([minX, maxX, YMIN, YMAX])
 
