@@ -193,9 +193,9 @@ class PickPoints:
             elif zorder == IPIDATARED:
                 color = 'r'
             ind = event.ind[0]
-            try: ######### TODO: Utilizar flag no lugar de try-except
+            if self.plotObject.isScatter == False:
                 xdata = event.artist.get_xdata()
-            except:
+            else:
                 data = event.artist.get_offsets()
                 xdata = [x for x,y in data]
             central = (xdata[ind], color)
@@ -533,9 +533,13 @@ class PlotData(QtGui.QDialog):
 
         # Color proportional to probability only if window is lesser than 30s
         if L >= 30:
+            self.isScatter = False
+
             self.plot1 = self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
             self.plot2 = self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
         else:
+            self.isScatter = True
+
             color1 = [ num2color(int(255*i),'b') for i in self.probs[0][minIdxX1:maxIdxX1][:-1] ]
             color2 = [ num2color(int(255*i),'r') for i in self.probs[1][minIdxX2:maxIdxX2][:-1] ]
 
