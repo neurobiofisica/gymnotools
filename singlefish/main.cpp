@@ -200,14 +200,14 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
             if(prevWasSingle) {
 
                 // Write TS and probs on complete outfile
-                completeoutfile.write(QString("s %1 %2 %3 %4\n")
-                                        .arg(curOff)
-                                        .arg(prevOffBck)
-                                        .arg(probA)
-                                        .arg(probB)
-                                        .toAscii());
-
                 if(prevWasA && (probB > probA)) {
+                    completeoutfile.write(QString("s %1 %2 %3 %4\n")
+                                            .arg(curOff)
+                                            .arg(prevOffBck)
+                                            .arg(probA)
+                                            .arg(probB)
+                                            .toAscii());
+
                     outfile.write(QString("%1 %2\n") //////////////////
                                   .arg(prevOffBck)
                                   .arg(curOff)
@@ -216,6 +216,13 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
                     continue;
                 }
                 else if(!prevWasA && (probA > probB)) {
+                    completeoutfile.write(QString("s %1 %2 %3 %4\n")
+                                            .arg(curOff)
+                                            .arg(prevOffBck)
+                                            .arg(probA)
+                                            .arg(probB)
+                                            .toAscii());
+
                     outfile.write(QString("%1 %2\n")
                                   .arg(curOff)
                                   .arg(prevOffBck)
@@ -223,6 +230,15 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
                     prevWasSingle = false;
                     continue;
                 }
+                else {
+                    completeoutfile.write(QString("w %1 %2 %3 %4\n")
+                                            .arg(curOff)
+                                            .arg(prevOffBck)
+                                            .arg(probA)
+                                            .arg(probB)
+                                            .toAscii());
+                }
+
             }
             else {
                 // Write TS and probs on complete outfile
