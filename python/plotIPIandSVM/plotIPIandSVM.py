@@ -156,9 +156,10 @@ class PickPoints:
                 print (event.ind[0] / 3) + 1
                 print (event.artist.get_xdata()[event.ind] * freq * 4 * NChan)[0]
                 print (event.artist.get_xdata()[event.ind] * freq)[0]
+                print self.plotObject.offs[ int(round(event.artist.get_xdata()[event.ind][0] * freq)) ]
+                print ''
 
                 sample2 = self.plotObject.SVMDic[(1,int(round(sample)))]
-                print sample/freq
 
                 self.pltsvmstrongR = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'r-')
                 self.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'b-')
@@ -366,10 +367,14 @@ class PlotData(QtGui.QDialog):
         P2 = TS[1][ IdxP2 ] / freq
 
         self.TS = (P1, P2)
+        self.offs = {}
+        for i in xrange(TS[1].size):
+            self.offs[ int(round(TS[1][i])) ] = int(round(TS[2][i]))
 
         self.svmPair = TS[3]
 
         SVMDec = find(SVMFlags == 's')
+
         IdxSVM1 = np.intersect1d(IdxP1, SVMDec)
         IdxSVM2 = np.intersect1d(IdxP2, SVMDec)
 
@@ -543,11 +548,11 @@ class PlotData(QtGui.QDialog):
             color1 = [ num2color(int(255*i),'b') for i in self.probs[0][minIdxX1:maxIdxX1][:-1] ]
             color2 = [ num2color(int(255*i),'r') for i in self.probs[1][minIdxX2:maxIdxX2][:-1] ]
 
-            size1 = 20*np.array([ min(self.dists[0][i]) for i in xrange(minIdxX1,maxIdxX1-1) ])
-            size2 = 20*np.array([ min(self.dists[1][i]) for i in xrange(minIdxX2,maxIdxX2-1) ])
+            size1 = 5*np.array([ min(self.dists[0][i]) for i in xrange(minIdxX1,maxIdxX1-1) ])
+            size2 = 5*np.array([ min(self.dists[1][i]) for i in xrange(minIdxX2,maxIdxX2-1) ])
 
-            self.plot1 = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=10+np.pi*size1, picker=5, zorder=IPIDATABLUE)
-            self.plot2 = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=10+np.pi*size2, picker=5, zorder=IPIDATARED)
+            self.plot1 = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=5, zorder=IPIDATABLUE)
+            self.plot2 = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=5, zorder=IPIDATARED)
 
 
         self.adjustAxes(minX, maxX)
