@@ -248,7 +248,9 @@ class PickPoints:
                 self.dicHandles['Dots'].set_label('\'d\' Dots off')
 
             xlim = self.ax.get_xlim()
+            ylim = self.ax.get_ylim()
             self.plotObject.plotData(xlim[0],xlim[1])
+            self.ax.set_ylim(ylim)
         elif key == 'right':
             self.next(event)
         elif key == 'left':
@@ -392,6 +394,7 @@ class PlotData(QtGui.QDialog):
 
         self.fig = self.ui.graphIPI.canvas.fig
         self.ax = self.ui.graphIPI.canvas.ax
+        self.ax.yaxis.grid()
         self.sigfig = self.ui.graphwave.canvas.fig
         self.sigaxes = self.ui.graphwave.canvas.sigaxes
 
@@ -606,7 +609,6 @@ class PlotData(QtGui.QDialog):
         YMAX = 2.5 * self.Mean
 
         self.ax.axis([minX, maxX, YMIN, YMAX])
-        self.ax.yaxis.grid()
 
     def sec2hms(self, x, pos):
         t = int(round(1e4*x))
