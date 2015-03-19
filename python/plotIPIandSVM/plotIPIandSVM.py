@@ -454,7 +454,8 @@ class PlotData(QtGui.QDialog):
         Max = max( np.diff(self.TS[0]).max(), np.diff(self.TS[1]).max() )
         self.SVMY = np.array( self.Tam * [Min,Max,Min] )
 
-        self.formatter = FuncFormatter(self.sec2hms)
+        self.formatterX = FuncFormatter(self.sec2hms)
+        self.formatterY = FuncFormatter(self.sec2msus)
 
         self.plotted = False
         self.plotData(0, winSize) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
@@ -470,7 +471,8 @@ class PlotData(QtGui.QDialog):
         NColumns = self.ui.graphwave.canvas.NColumns
 
         for i in xrange(NChan):
-            self.sigaxes[i].xaxis.set_major_formatter(self.formatter)
+            self.sigaxes[i].xaxis.set_major_formatter(self.formatterX)
+            self.sigaxes[i].yaxis.set_major_formatter(self.formatterY)
             self.sigaxes[i].set_ylabel(u'$A_{%s}$ (V)'%i)
             self.sigaxes[i].xaxis.set_major_locator(plt.LinearLocator(numticks=5))
             self.sigaxes[i].yaxis.set_major_locator(plt.LinearLocator(numticks=3))
@@ -596,13 +598,15 @@ class PlotData(QtGui.QDialog):
 
     def adjustAxes(self, minX, maxX):
         self.ax.set_title('IPIs and SVM classification')
-        self.ax.xaxis.set_major_formatter(self.formatter)
+        self.ax.xaxis.set_major_formatter(self.formatterX)
+        self.ax.yaxis.set_major_formatter(self.formatterY)
 
         self.Mean = ( np.diff(self.TS[0]).mean() + np.diff(self.TS[1]).mean() ) / 2.
         YMIN = 0.
         YMAX = 2.5 * self.Mean
 
         self.ax.axis([minX, maxX, YMIN, YMAX])
+        self.ax.yaxis.grid()
 
     def sec2hms(self, x, pos):
         t = int(round(1e4*x))
@@ -610,6 +614,11 @@ class PlotData(QtGui.QDialog):
         m, s = divmod(x, 60)
         h, m = divmod(m, 60)
         return '%02d:%02d:%02d.%04d' % (h, m, s, ms)
+
+    def sec2msus(self,x,pos):
+        ms = int(1e3*x)
+        us = int(((1e3*x)%1)*1e3)
+        return '%03d.%03d' % (ms,us)
 
 
 
