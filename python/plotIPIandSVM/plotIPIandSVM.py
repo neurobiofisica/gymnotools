@@ -251,6 +251,18 @@ class PickPoints:
             ylim = self.ax.get_ylim()
             self.plotObject.plotData(xlim[0],xlim[1])
             self.ax.set_ylim(ylim)
+        elif key == 'z':
+            self.zoomStatus = set(['X','Y']).difference(set(self.zoomStatus)).pop()
+            self.bzoom.label.set_text(self.zoomStatus + ' Zoom')
+            self.fig.canvas.draw()
+        elif key == 'x':
+            self.zoomStatus = 'X'
+            self.bzoom.label.set_text(self.zoomStatus + ' Zoom')
+            self.fig.canvas.draw()
+        elif key == 'y':
+            self.zoomStatus = 'Y'
+            self.bzoom.label.set_text(self.zoomStatus + ' Zoom')
+            self.fig.canvas.draw()
         elif key == 'right':
             self.next(event)
         elif key == 'left':
