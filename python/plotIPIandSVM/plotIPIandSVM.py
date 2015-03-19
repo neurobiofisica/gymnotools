@@ -487,7 +487,6 @@ class PlotData(QtGui.QDialog):
 
         for i in xrange(NChan):
             self.sigaxes[i].xaxis.set_major_formatter(self.formatterX)
-            self.sigaxes[i].yaxis.set_major_formatter(self.formatterY)
             self.sigaxes[i].set_ylabel(u'$A_{%s}$ (V)'%i)
             self.sigaxes[i].xaxis.set_major_locator(plt.LinearLocator(numticks=5))
             self.sigaxes[i].yaxis.set_major_locator(plt.LinearLocator(numticks=3))
@@ -597,8 +596,8 @@ class PlotData(QtGui.QDialog):
             color1 = [ num2color(int(255*i),'b') for i in self.probs[0][minIdxX1:maxIdxX1][:-1] ]
             color2 = [ num2color(int(255*i),'r') for i in self.probs[1][minIdxX2:maxIdxX2][:-1] ]
 
-            size1 = 5*np.array([ min(self.dists[0][i]) for i in xrange(minIdxX1,maxIdxX1-1) ])
-            size2 = 5*np.array([ min(self.dists[1][i]) for i in xrange(minIdxX2,maxIdxX2-1) ])
+            size1 = 1*np.array([ min(self.dists[0][i]) for i in xrange(minIdxX1,maxIdxX1-1) ])
+            size2 = 1*np.array([ min(self.dists[1][i]) for i in xrange(minIdxX2,maxIdxX2-1) ])
 
             self.plot1 = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=5, zorder=IPIDATABLUE)
             self.plot2 = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=5, zorder=IPIDATARED)
