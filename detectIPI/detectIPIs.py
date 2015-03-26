@@ -49,7 +49,7 @@ prob = {    'A': 0.,
 allOffs = {}
 
 for rec in db.iteritems():
-    offraw, distA, distB, distAB, SaturationFlag, svm, pairsvm, prob['A'], prob['B'], fishwins = recogdb.fishrec(rec)
+    offraw, direction, distA, distB, distAB, SaturationFlag, svm, pairsvm, prob['A'], prob['B'], fishwins = recogdb.fishrec(rec)
     off = offraw/4/NumChannels
 
     if SaturationFlag == 2**NumChannels - 1:
@@ -100,7 +100,7 @@ for rec in db.iteritems():
             pair = allOffs[pairsvm]
 
         f.write( '%d\t%d\n'%(flag[PIdx],out) )
-        f2.write( '%d\t%d\t%d\t%c\t%d\t%f\t%f\t%f\t%f\t%f\n'%(flag[PIdx],out,offraw,svm,pair,prob['A'], prob['B'], distA, distB, distAB ) )
+        f2.write( '%d\t%d\t%d\t%d\t%c\t%d\t%f\t%f\t%f\t%f\t%f\n'%(flag[PIdx],out,offraw,direction,svm,pair,prob['A'], prob['B'], distA, distB, distAB ) )
 
 f.close()
 f2.close()

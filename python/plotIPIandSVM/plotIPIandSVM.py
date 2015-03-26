@@ -34,7 +34,7 @@ NChan = 11
 ###### Auxiliary funcs ####
 
 # Auxiliary function for reading
-def parseSVMFlags(f, col=3):
+def parseSVMFlags(f, col=4):
     flags = []
     for line in f.xreadlines():
         flags.append( line.split()[col] )
@@ -189,6 +189,8 @@ class PickPoints:
                 print (event.ind[0] / 3) + 1
                 print (event.artist.get_xdata()[event.ind] * freq * 4 * NChan)[0]
                 print (event.artist.get_xdata()[event.ind] * freq)[0]
+                print self.plotObject.offs[ int(round(event.artist.get_xdata()[event.ind][0] * freq)) ]
+                print ''
 
                 sample2 = self.plotObject.SVMDic[(-1,int(round(sample)))]
 
@@ -200,16 +202,28 @@ class PickPoints:
         if self.ipi == True and (\
                 (zorder == IPIDATABLUE and self.b == True) or \
                 (zorder == IPIDATARED and self.r == True)):
-            if zorder == IPIDATABLUE:
-                color = 'b'
-            elif zorder == IPIDATARED:
-                color = 'r'
+
             ind = event.ind[0]
             if self.plotObject.isScatter == False:
                 xdata = event.artist.get_xdata()
             else:
                 data = event.artist.get_offsets()
                 xdata = [x for x,y in data]
+
+            if zorder == IPIDATABLUE:
+                color = 'b'
+                TS = int(round(xdata[ind] * freq))
+                print 'off:\t' + str(self.plotObject.offs[ TS ])
+                print 'dists:\t' + str(self.plotObject.distsDic[ TS ])
+                print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
+                print
+            elif zorder == IPIDATARED:
+                color = 'r'
+                TS = int(round(xdata[ind] * freq))
+                print 'off:\t:' + str(self.plotObject.offs[ TS ])
+                print 'dists:\t' + str(self.plotObject.distsDic[ TS ])
+                print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
+                print
             central = (xdata[ind], color)
             self.plotObject.plotSigData(central)
 
@@ -423,7 +437,12 @@ class PlotData(QtGui.QDialog):
         for i in xrange(TS[1].size):
             self.offs[ int(round(TS[1][i])) ] = int(round(TS[2][i]))
 
-        self.svmPair = TS[3]
+        direction0 = TS[3][ IdxP1 ]
+        direction1 = TS[3][ IdxP2 ]
+
+        self.direction = (direction0, direction1)
+
+        self.svmPair = TS[4]
 
         SVMDec = find(SVMFlags == 's')
 
@@ -432,11 +451,11 @@ class PlotData(QtGui.QDialog):
 
         self.SVMDic = {}
         for i in IdxSVM1:
-            self.SVMDic.update({ ( 1, int(round(TS[1][i]))): int(round(TS[3][i])) })
-            self.SVMDic.update({ (-1, int(round(TS[3][i]))): int(round(TS[1][i])) })
+            self.SVMDic.update({ ( 1, int(round(TS[1][i]))): int(round(self.svmPair[i])) })
+            self.SVMDic.update({ (-1, int(round(self.svmPair[i]))): int(round(TS[1][i])) })
         for i in IdxSVM2:
-            self.SVMDic.update({ (-1, int(round(TS[1][i]))): int(round(TS[3][i])) })
-            self.SVMDic.update({ ( 1, int(round(TS[3][i]))): int(round(TS[1][i])) })
+            self.SVMDic.update({ (-1, int(round(TS[1][i]))): int(round(self.svmPair[i])) })
+            self.SVMDic.update({ ( 1, int(round(self.svmPair[i]))): int(round(TS[1][i])) })
 
         SVM1 = TS[1][IdxSVM1] / freq
         SVM1 = np.append(SVM1, self.svmPair[IdxSVM2] / freq)
@@ -451,15 +470,25 @@ class PlotData(QtGui.QDialog):
         svmFlag2 = SVMFlags[ IdxP2 ]
         self.svmFlags = (svmFlag1, svmFlag2)
 
-        ProbP1 = TS[4][ IdxP1 ]
-        ProbP2 = TS[5][ IdxP2 ]
+        ProbP1 = [ (TS[5][i], TS[6][i]) for i in IdxP1]
+        ProbP2 = [ (TS[5][i], TS[6][i]) for i in IdxP2]
 
         self.probs = (ProbP1, ProbP2)
+        self.probsDic = {}
+        for i in IdxP1:
+            self.probsDic[ TS[1][i] ] = (TS[5][i], TS[6][i])
+        for i in IdxP2:
+            self.probsDic[ TS[1][i] ] = (TS[5][i], TS[6][i])
 
-        distP1 = [ (TS[6][i], TS[7][i], TS[8][i])  for i in IdxP1 ]
-        distP2 = [ (TS[6][i], TS[7][i], TS[8][i])  for i in IdxP2 ]
+        distP1 = [ (TS[7][i], TS[8][i], TS[9][i])  for i in IdxP1 ]
+        distP2 = [ (TS[7][i], TS[8][i], TS[9][i])  for i in IdxP2 ]
 
         self.dists = (distP1, distP2)
+        self.distsDic = {}
+        for i in IdxP1:
+            self.distsDic[ TS[1][i] ] = (TS[7][i], TS[8][i], TS[9][i])
+        for i in IdxP2:
+            self.distsDic[ TS[1][i] ] = (TS[7][i], TS[8][i], TS[9][i])
 
         self.SVM2Plot = []
         self.SVM2Plot.append( self.SVM[0].repeat(3) )
@@ -560,18 +589,42 @@ class PlotData(QtGui.QDialog):
         except StopIteration:
             maxIdxX2 = self.TS[1].size-1
 
-        # Not yet plotted
+        # Only plot once
         if self.plotted == False:
             # Plot SVM Lines
             self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATABLUE)
             self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATARED)
 
             # Lines and dots are plotter separately for picker act only on dots
-            self.ax.plot(self.TS[1][:-1], np.diff(self.TS[1]), 'r-')
-            self.ax.plot(self.TS[0][:-1], np.diff(self.TS[0]), 'b-')
+            self.ax.plot(self.TS[1][1:], np.diff(self.TS[1]), 'r-')
+            self.ax.plot(self.TS[0][1:], np.diff(self.TS[0]), 'b-')
             
             self.plotted = True
 
+        try:
+            self.scatter1d.remove()
+        except:
+            pass
+        try:
+            self.scatter2d.remove()
+        except:
+            pass
+        try:
+            self.scatter1r.remove()
+        except:
+            pass
+        try:
+            self.scatter2r.remove()
+        except:
+            pass
+        try:
+            self.scatter1s.remove()
+        except:
+            pass
+        try:
+            self.scatter2s.remove()
+        except:
+            pass
         try:
             self.plot1.pop(0).remove()
         except:
@@ -580,33 +633,43 @@ class PlotData(QtGui.QDialog):
             self.plot2.pop(0).remove()
         except:
             pass
-        try:
-            self.plot1.remove()
-        except:
-            pass
-        try:
-            self.plot2.remove()
-        except:
-            pass
 
         # Color proportional to probability only if window is lesser than 30s
         if L<=30 and self.scatterFlag == True:
             self.isScatter = True
 
-            color1 = [ num2color(int(255*i),'b') for i in self.probs[0][minIdxX1:maxIdxX1][:-1] ]
-            color2 = [ num2color(int(255*i),'r') for i in self.probs[1][minIdxX2:maxIdxX2][:-1] ]
+            P0 = [i for i,j in self.probs[0][minIdxX1:maxIdxX1]]
+            P1 = [j for i,j in self.probs[1][minIdxX2:maxIdxX2]]
+
+            color1 = [ num2color(int(255*i),'b') for i in P0[1:] ]
+            color2 = [ num2color(int(255*i),'r') for i in P1[1:] ]
 
             size1 = 1*np.array([ min(self.dists[0][i]) for i in xrange(minIdxX1,maxIdxX1-1) ])
             size2 = 1*np.array([ min(self.dists[1][i]) for i in xrange(minIdxX2,maxIdxX2-1) ])
 
-            self.plot1 = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=5, zorder=IPIDATABLUE)
-            self.plot2 = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=5, zorder=IPIDATARED)
+            directIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] > 0)
+            directIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] > 0)
+
+            self.scatter1d = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][directIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[directIdx1], c=color1, marker='>', linewidths=0, s=50+np.pi*size1, picker=5, zorder=IPIDATABLUE)
+            self.scatter2d = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][directIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[directIdx2], c=color2, marker='>', linewidths=0, s=50+np.pi*size2, picker=5, zorder=IPIDATARED)
+
+            reverseIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] < 0)
+            reverseIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] < 0)
+
+            self.scatter1r = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][reverseIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[reverseIdx1], c=color1, marker='<', linewidths=0, s=50+np.pi*size1, picker=5, zorder=IPIDATABLUE)
+            self.scatter2r = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][reverseIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[reverseIdx2], c=color2, marker='<', linewidths=0, s=50+np.pi*size2, picker=5, zorder=IPIDATARED)
+
+            svmIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] == 0)
+            svmIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] == 0)
+
+            self.scatter1s = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][svmIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[svmIdx1], c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=5, zorder=IPIDATABLUE)
+            self.scatter2s = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][svmIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[svmIdx2], c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=5, zorder=IPIDATARED)
 
         else:
             self.isScatter = False
 
-            self.plot1 = self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][:-1], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
-            self.plot2 = self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][:-1], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
+            self.plot1 = self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][1:], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
+            self.plot2 = self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][1:], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
 
         self.adjustAxes(minX, maxX)
 
@@ -652,7 +715,7 @@ if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
 
-    TS = np.loadtxt(timestampsf,unpack=True,usecols=(0,1,2,4,5,6,7,8,9))
+    TS = np.loadtxt(timestampsf,unpack=True,usecols=(0,1,2,3,5,6,7,8,9,10))
     timestampsf.seek(0)
     svmFlags = np.array(parseSVMFlags(timestampsf))
     timestampsf.close()

@@ -38,7 +38,8 @@ static int recogdb_compare(DB *dbp, const DBT *a, const DBT *b)
 
 // XXX Not very portable, doesn't deal correctly with alignment issues
 // Record layout:
-// { presentFish, distA, distB, distAB, saturationFlags,
+// { presentFish, direction, distA, distB, distAB, saturationFlags,
+//   svm, pairsvn, probA, probB,
 //   [{offA, sizeA, {Ach0, Ach1, ...}}],
 //   [{offB, sizeB, {Bch0, Bch1, ...}}] }
 class RecogDB
@@ -68,7 +69,7 @@ public:
         :dbp(NULL), curp(NULL)
     {
         assert(sizeof(float) == sizeof(qint32));
-        recbuf = new float[8 + 2*NumChannels*EODSamples];
+        recbuf = new float[10 + 2*NumChannels*EODSamples];
 
         db_create(&dbp, NULL, 0);
         dbp->set_bt_compare(dbp, recogdb_compare);
@@ -109,46 +110,50 @@ public:
         const qint32 *p = (const qint32 *)data.data;
         return p[0];
     }
-    float distA() const {
-        const float *p = (const float *)data.data;
+    quint32 direction() const {
+        const quint32 *p = (const quint32 *)data.data;
         return p[1];
     }
-    float distB() const {
+    float distA() const {
         const float *p = (const float *)data.data;
         return p[2];
     }
-    float distAB() const {
+    float distB() const {
         const float *p = (const float *)data.data;
         return p[3];
     }
-    quint32 saturationFlags() const {
-        const quint32 *p = (const quint32 *)data.data;
+    float distAB() const {
+        const float *p = (const float *)data.data;
         return p[4];
     }
-    int svm() const {
-        const int *p = (const int *)data.data;
+    quint32 saturationFlags() const {
+        const quint32 *p = (const quint32 *)data.data;
         return p[5];
+    }
+    qint32 svm() const {
+        const qint32 *p = (const qint32 *)data.data;
+        return p[6];
     }
     qint64 pairsvm() const {
         const qint64 *p = (const qint64 *)data.data;
-        return p[6];
+        return p[7];
     }
     float probA() const {
         const float *p = (const float *)data.data;
-        return p[8];
+        return p[9];
     }
     float probB() const {
         const float *p = (const float *)data.data;
-        return p[9];
+        return p[10];
     }
     qint32 spikeData(int n, qint32 &off, SignalBuffer &buf) const {
         assert(n==1 || n==2);
-        assert(data.size > 6*sizeof(qint32));
+        assert(data.size > 12*sizeof(qint32));
         const qint32 *p = (const qint32 *)data.data;
-        p = &p[10];
+        p = &p[11];
         if(n==2) {
             qint32 firstSize = p[1];
-            assert(data.size > (14 + NumChannels*firstSize)*sizeof(qint32));
+            assert(data.size > (15 + NumChannels*firstSize)*sizeof(qint32));
             p = &p[2 + NumChannels*firstSize];
         }
         off = p[0];
@@ -162,11 +167,16 @@ public:
         return size;
     }
 
-    void insert(qint64 k, float distA, float distB, float distAB, quint32 saturationFlags,
-                int svm, qint64 pairsvm, float probA, float probB,
+    void insert(qint64 k, qint32 direction, float distA, float distB, float distAB, quint32 saturationFlags,
+                qint32 svm, qint64 pairsvm, float probA, float probB,
                 qint32 offA, qint32 sizeA, const float *const* dataA,
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
+        if ((k == 2947124884) || (k == 2947149744)) {
+            printf("before DB Insert\n");
+            printf("direction: %d\n",direction);
+            printf("%lld\t%f\t%f\t%f\n",k,distA,distB,distAB);
+        }
         qint32 presentFish = 0;
         if(dataA != NULL && sizeA)
             presentFish |= 1;
@@ -177,18 +187,19 @@ public:
         qint32 *recbufi = (qint32 *)recbuf;
 
         recbufi[0] = presentFish;
-        recbuff[1] = distA;
-        recbuff[2] = distB;
-        recbuff[3] = distAB;
-        recbufi[4] = saturationFlags;
-        recbufi[5] = svm;
-        recbufi[6] = pairsvm; //64-bit field
-        recbufi[7] = (qint32)(pairsvm>>32); //64-bit field
-        recbuff[8] = probA;
-        recbuff[9] = probB;
+        recbufi[1] = direction;
+        recbuff[2] = distA;
+        recbuff[3] = distB;
+        recbuff[4] = distAB;
+        recbufi[5] = saturationFlags;
+        recbufi[6] = svm;
+        recbufi[7] = pairsvm; //64-bit field
+        recbufi[8] = (qint32)(pairsvm>>32); //64-bit field
+        recbuff[9] = probA;
+        recbuff[10] = probB;
 
-        recbuff = &recbuff[10];
-        recbufi = &recbufi[10];
+        recbuff = &recbuff[11];
+        recbufi = &recbufi[11];
 
         if(dataA != NULL && sizeA)
             copybuf(recbuff, recbufi, offA, sizeA, dataA);
@@ -204,6 +215,7 @@ public:
         key.size = sizeof(k);
 
         dbp->put(dbp, NULL, &key, &recdata, DB_OVERWRITE_DUP);
+
     }
 };
 
@@ -345,7 +357,7 @@ public:
         }
         // emit to db
         qint64 off = winfile.getEventOffset();
-        db.insert(off, 0., inf, inf, 0,
+        db.insert(off, 0, 0., inf, inf, 0,
                   problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                   0, fishlenA, fishvecA,
                   0, 0, NULL);
@@ -361,13 +373,13 @@ public:
         }
         // emit to db
         qint64 off = winfile.getEventOffset();
-        db.insert(off, inf, 0., inf, 0,
+        db.insert(off, 0, inf, 0., inf, 0,
                   problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                   0, 0, NULL,
                   0, fishlenB, fishvecB);
     }
 
-    void recog()
+    void recog(qint32 direction)
     {
         static float buf[NumChannels][WinWorkerBufLen] ALIGN(16);
 
@@ -524,7 +536,8 @@ public:
         const qint64 off = winfile.getEventOffset();
 
         float curBestDist = inf;
-        if(db.search(off) == 0) {
+        bool existsInDB = db.search(off) == 0;
+        if(existsInDB) {
             switch(db.presentFish()) {
             case 1: curBestDist = db.distA();  break;
             case 2: curBestDist = db.distB();  break;
@@ -542,14 +555,29 @@ public:
             // copy spike
             fishlenA = copylen;
             quint32 satFlag = 0;
-            for(int ch = 0; ch < NumChannels; ch++) {
-                memcpy(fishvecA[ch], &buf[ch][copystart], copylen*sizeof(float));
-                if(saturate(fishvecA[ch], copylen, saturationLow, saturationHigh))
-                    satFlag |= (1<<ch);
+            if (existsInDB && db.presentFish()==1) {
+                qint32 offset;
+                SignalBuffer FishA(EODSamples);
+                db.spikeData(1,offset,FishA);
+                for(int ch = 0; ch < NumChannels; ch++) {
+                    memcpy(fishvecA[ch], FishA.ch(ch), copylen*sizeof(float));
+                    //memcpy(fishvecA[ch], &buf[ch][copystart], copylen*sizeof(float));
+                    if(saturate(fishvecA[ch], copylen, saturationLow, saturationHigh))
+                        satFlag |= (1<<ch);
+                }
             }
+            else {
+                for(int ch = 0; ch < NumChannels; ch++) {
+                    memcpy(fishvecA[ch], &buf[ch][copystart], copylen*sizeof(float));
+                    if(saturate(fishvecA[ch], copylen, saturationLow, saturationHigh))
+                        satFlag |= (1<<ch);
+                }
+            }
+
+
             // emit to db
             if(distA < curBestDist)
-                db.insert(off, distA, distB, distAB, satFlag,
+                db.insert(off, direction, distA, distB, distAB, satFlag,
                           problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           copystart - firstpos, fishlenA, fishvecA,
                           0, 0, NULL);
@@ -564,19 +592,34 @@ public:
             // copy spike
             fishlenB = copylen;
             quint32 satFlag = 0;
-            for(int ch = 0; ch < NumChannels; ch++) {
-                memcpy(fishvecB[ch], &buf[ch][copystart], copylen*sizeof(float));
-                if(saturate(fishvecB[ch], copylen, saturationLow, saturationHigh))
-                    satFlag |= (1<<ch);
+            if (existsInDB && db.presentFish()==2) {
+                qint32 offset;
+                SignalBuffer FishB(EODSamples);
+                db.spikeData(1,offset,FishB);
+                for(int ch = 0; ch < NumChannels; ch++) {
+                    memcpy(fishvecB[ch], FishB.ch(ch), copylen*sizeof(float));
+                    //memcpy(fishvecB[ch], &buf[ch][copystart], copylen*sizeof(float));
+                    if(saturate(fishvecB[ch], copylen, saturationLow, saturationHigh))
+                        satFlag |= (1<<ch);
+                }
             }
+            else {
+                for(int ch = 0; ch < NumChannels; ch++) {
+                    memcpy(fishvecB[ch], &buf[ch][copystart], copylen*sizeof(float));
+                    if(saturate(fishvecB[ch], copylen, saturationLow, saturationHigh))
+                        satFlag |= (1<<ch);
+                }
+            }
+
             // emit to db
             if(distB < curBestDist)
-                db.insert(off, distA, distB, distAB, satFlag,
+                db.insert(off, direction, distA, distB, distAB, satFlag,
                           problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           0, 0, NULL,
                           copystart - firstpos, fishlenB, fishvecB);
         }
         else {
+
             // A and B fishes in the same event window
             if(distAB < curBestDist) {
                 static float bufB[NumChannels][WinWorkerBufLen] ALIGN(16);
@@ -601,8 +644,9 @@ public:
                     spkA[ch] = &buf [ch][posAB.first];
                     spkB[ch] = &bufB[ch][posAB.second];
                 }
+
                 // emit to db
-                db.insert(off, distA, distB, distAB, satFlag,
+                db.insert(off, direction, distA, distB, distAB, satFlag,
                           problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
                           posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
@@ -617,7 +661,7 @@ float WinWorker::fishA[NumChannels][EODSamples] ALIGN(16);
 float WinWorker::fishB[NumChannels][EODSamples] ALIGN(16);
 
 static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist, QMap<qint64, probs> &problist,
-                    float saturationLow, float saturationHigh, int direction)
+                    float saturationLow, float saturationHigh, qint32 direction)
 {
     QListIterator<SFishPair> it(sfishlist);
     WinWorker worker(db, winfile, problist, saturationLow, saturationHigh);
@@ -661,7 +705,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
                 lookFor = qMax(curpair.first, curpair.second);
             }
             else if(foundFirst) {
-                worker.recog();
+                worker.recog(direction);
             }
         } while(winfile.prevEvent());
     }
@@ -699,7 +743,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
                 lookFor = qMin(curpair.first, curpair.second);
             }
             else if(foundFirst) {
-                worker.recog();
+                worker.recog(direction);
             }
         }
     }
