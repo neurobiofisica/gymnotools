@@ -172,11 +172,6 @@ public:
                 qint32 offA, qint32 sizeA, const float *const* dataA,
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
-        if ((k == 2947124884) || (k == 2947149744)) {
-            printf("before DB Insert\n");
-            printf("direction: %d\n",direction);
-            printf("%lld\t%f\t%f\t%f\n",k,distA,distB,distAB);
-        }
         qint32 presentFish = 0;
         if(dataA != NULL && sizeA)
             presentFish |= 1;
