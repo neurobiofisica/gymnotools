@@ -374,7 +374,24 @@ public:
                   0, fishlenB, fishvecB);
     }
 
-    void recog(qint32 direction)
+    void writeTemplateA(){
+        fishlenA = winfile.getEventSamples();
+        for (int ch=0; ch<NumChannels; ch++) {
+            winfile.nextChannel();
+            winfile.read((char*)fishvecA[ch], fishlenA*sizeof(float));
+            saturate(fishvecA[ch], fishlenA, saturationLow, saturationHigh);
+        }
+    }
+    void writeTemplateB(){
+        fishlenB = winfile.getEventSamples();
+        for (int ch=0; ch<NumChannels; ch++) {
+            winfile.nextChannel();
+            winfile.read((char*)fishvecB[ch], fishlenB*sizeof(float));
+            saturate(fishvecB[ch], fishlenB, saturationLow, saturationHigh);
+        }
+    }
+
+    void recog(qint32 direction, bool forceSub)
     {
         static float buf[NumChannels][WinWorkerBufLen] ALIGN(16);
 
@@ -571,7 +588,7 @@ public:
 
 
             // emit to db
-            if(distA < curBestDist)
+            if(distA < curBestDist || forceSub)
                 db.insert(off, direction, distA, distB, distAB, satFlag,
                           problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           copystart - firstpos, fishlenA, fishvecA,
@@ -607,7 +624,7 @@ public:
             }
 
             // emit to db
-            if(distB < curBestDist)
+            if(distB < curBestDist || forceSub)
                 db.insert(off, direction, distA, distB, distAB, satFlag,
                           problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           0, 0, NULL,
@@ -616,7 +633,7 @@ public:
         else {
 
             // A and B fishes in the same event window
-            if(distAB < curBestDist) {
+            if(distAB < curBestDist || forceSub) {
                 static float bufB[NumChannels][WinWorkerBufLen] ALIGN(16);
                 const int realLen = firstpos + len;
                 // copy buf to bufB
@@ -654,6 +671,93 @@ int WinWorker::instances = 0;
 qint32 WinWorker::fishlenA, WinWorker::fishlenB;
 float WinWorker::fishA[NumChannels][EODSamples] ALIGN(16);
 float WinWorker::fishB[NumChannels][EODSamples] ALIGN(16);
+
+static void iterate_from(RecogDB &db, WindowFile &winfile, SFishPair curpairBeg, SFishPair curpairEnd, QMap<qint64, probs> &problist,
+                    float saturationLow, float saturationHigh, qint32 direction)
+{
+    WinWorker worker(db, winfile, problist, saturationLow, saturationHigh);
+    if (direction < 0) {
+        assert( qMax(curpairBeg.first,curpairBeg.second) > qMin(curpairEnd.first, curpairEnd.second) );
+        qint64 off = winfile.getEventOffset();
+        qint64 last = qMax(curpairBeg.first, curpairBeg.second);
+        qint32 fish;
+        if (last == curpairBeg.first)
+            fish = 1;
+        else
+            fish = -1;
+
+        // Go to the last SVM detection
+        while (off != last) {
+            winfile.nextEvent();
+            off = winfile.getEventOffset();
+        }
+
+        // write SVM on templates
+        if (fish == 1) {
+            worker.writeTemplateA();
+            winfile.prevEvent();
+            worker.writeTemplateB();
+        }
+        else {
+            worker.writeTemplateB();
+            winfile.prevEvent();
+            worker.writeTemplateA();
+        }
+
+        // Go to next spike (non-SVM)
+        winfile.prevEvent();
+
+        // Apply recog on the next spikes
+        off = winfile.getEventOffset();
+        while (off != curpairEnd.first && off != curpairEnd.second) {
+            worker.recog(direction, true);
+            winfile.prevEvent();
+            off = winfile.getEventOffset();
+        }
+
+    }
+    else {
+        assert( qMin(curpairBeg.first,curpairBeg.second) < qMax(curpairEnd.first, curpairEnd.second) );
+        qint64 off = winfile.getEventOffset();
+        qint64 first = qMin(curpairBeg.first, curpairBeg.second);
+        qint32 fish;
+        if (first == curpairBeg.first)
+            fish = 1;
+        else
+            fish = -1;
+
+        // Go to the last SVM detection
+        while (off != first) {
+            winfile.nextEvent();
+            off = winfile.getEventOffset();
+        }
+
+        // write SVM on templates
+        if (fish == 1) {
+            worker.writeTemplateA();
+            winfile.nextEvent();
+            worker.writeTemplateB();
+        }
+        else {
+            worker.writeTemplateB();
+            winfile.nextEvent();
+            worker.writeTemplateA();
+        }
+
+        // Go to next spike (non-SVM)
+        winfile.nextEvent();
+
+        // Apply recog on the next spikes
+        off = winfile.getEventOffset();
+        while (off != curpairEnd.first && off != curpairEnd.second) {
+            worker.recog(direction, true);
+            winfile.nextEvent();
+            off = winfile.getEventOffset();
+        }
+
+    }
+
+}
 
 static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist, QMap<qint64, probs> &problist,
                     float saturationLow, float saturationHigh, qint32 direction)
@@ -700,7 +804,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
                 lookFor = qMax(curpair.first, curpair.second);
             }
             else if(foundFirst) {
-                worker.recog(direction);
+                worker.recog(direction, false);
             }
         } while(winfile.prevEvent());
     }
@@ -738,7 +842,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
                 lookFor = qMin(curpair.first, curpair.second);
             }
             else if(foundFirst) {
-                worker.recog(direction);
+                worker.recog(direction, false);
             }
         }
     }
@@ -877,6 +981,12 @@ static int usage(const char *progname)
     fprintf(stderr, "options:\n"
             "  -z|--saturation=a,b Low and high saturation levels\n"
             "  -d|--direction=d    Scan direction (positive or negative)\n\n");
+
+    fprintf(stderr, "%s iterate_from [options] [-f from] recog.db in.spikes in.singlefish\n", progname);
+    fprintf(stderr, "options:\n"
+            "  -z|--saturation=a,b Low and high saturation levels\n"
+            "  -d|--direction=d    Scan direction (positive or negative)\n\n"
+            "  -f|--from=f         iterate from this SVM detection to the next one, according to the direction");
 
     fprintf(stderr, "%s waveform [options] recog.db outA.spikes outB.spikes\n", progname);
     fprintf(stderr, "options:\n"
@@ -1025,6 +1135,106 @@ int main(int argc, char **argv)
 
         fishAfile.close();
         fishBfile.close();
+    }
+    else if(!strcmp(argv[1], "iterate_from")) {
+        argc--;
+        argv = &argv[1];
+
+        qint64 from = -1;
+        float saturationLow = defaultSaturationLow;
+        float saturationHigh = defaultSaturationHigh;
+        int direction = 1;
+
+        while(1) {
+            int option_index = 0;
+            static struct option long_options[] = {
+                { "saturation", required_argument, 0, 'z' },
+                { "direction",  required_argument, 0, 'd' },
+                { "from",       required_argument, 0, 'f' },
+                { 0, 0, 0, 0 }
+            };
+
+            int c = getopt_long(argc, argv, "z:d:f", long_options, &option_index);
+            if(c == -1)
+                break;
+
+            switch(c) {
+            case 'z':
+            {
+                QStringList sl = QString(optarg).split(",");
+                assert(sl.count() == 2);
+                saturationLow = sl.at(0).toFloat();
+                saturationHigh = sl.at(1).toFloat();
+                break;
+            }
+            case 'd':
+                direction = QString(optarg).toInt() >= 0 ? 1 : -1;
+                break;
+            case 'f':
+                from = QString(optarg).toLongLong();
+                break;
+            default:
+                return usage(progname);
+            }
+        }
+
+        if (from == -1)
+            return usage(progname);
+
+        if(argc - optind != 4)
+            return usage(progname);
+
+        RecogDB db(argv[optind]);
+        WindowFile winfile(argv[optind+1]);
+        if(!winfile.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "Can't open window file (%s).\n", argv[optind+1]);
+            return 1;
+        }
+
+        QFile sfishfile(argv[optind+2]);
+        if(!sfishfile.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "Can't open single fish file (%s).\n", argv[optind+2]);
+            return 1;
+        }
+        QList<SFishPair> sfishlist = parseSFish(sfishfile);
+        sfishfile.close();
+        QListIterator<SFishPair> it(sfishlist);
+        SFishPair curpairBeg, curpairEnd;
+        if (direction == 1) {
+            it.toFront();
+            while (it.hasNext()) {
+                curpairBeg = it.next();
+                if ((curpairBeg.first == from) || (curpairBeg.second == from))
+                        break;
+            }
+            if (!it.hasNext()) {
+                fprintf(stderr, "Can't locate specified SVM offset (%lld).\n", from);
+            }
+            curpairEnd = it.next();
+        }
+        else{
+            it.toBack();
+            while (it.hasPrevious()) {
+                curpairBeg = it.previous();
+                if ((curpairBeg.first == from) || (curpairBeg.second == from))
+                        break;
+            }
+            if (!it.hasPrevious()) {
+                fprintf(stderr, "Can't locate specified SVM offset (%lld).\n", from);
+            }
+            curpairEnd = it.previous();
+        }
+
+        QFile probfile(argv[optind+3]);
+        if(!probfile.open(QIODevice::ReadOnly)) {
+            fprintf(stderr, "Can't open probability file (%s).\n", argv[optind+3]);
+            return 1;
+        }
+        QMap<qint64, probs> problist = parseProbs(probfile);
+        probfile.close();
+
+        iterate_from(db, winfile, curpairBeg, curpairEnd, problist, saturationLow, saturationHigh, direction);
+        winfile.close();
     }
     else if(!strcmp(argv[1], "export")) {
         if(argc != 4)
