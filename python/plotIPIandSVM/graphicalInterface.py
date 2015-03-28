@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'graphicalInterface.ui'
 #
-# Created: Sat Feb 28 02:08:23 2015
+# Created: Sat Mar 28 13:38:16 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
