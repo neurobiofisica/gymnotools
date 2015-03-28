@@ -17,13 +17,14 @@ from IPIWindow import IPIWindow
 # Defines (zorder -> used of selecting picker)
 SVMDATABLUE = 0
 SVMDATARED = 1
-IPIDATABLUE = 20 # The dots will be on top of every other plot
-IPIDATARED = 30
+IPIDATABLUE = 200 # The dots will be on top of every other plot
+IPIDATARED = 300
 LEGENDSVM = 4
 LEGENDIPI = 5
 LEGENDBLUE = 6
 LEGENDRED = 7
 SCATTER = 8
+OPTIONS = 9
 
 FIGIPI = 1
 FIGSIG = 2
@@ -87,6 +88,7 @@ class PickPoints:
         self.ax.plot([], 'b.-', mew=2, label='\'b\' Blue on', zorder=LEGENDBLUE)
         self.ax.plot([], 'r.-', mew=2, label='\'r\' Red on', zorder=LEGENDRED)
         self.ax.plot([], 'ko', mew=5, label='\'d\' Dots on', zorder=SCATTER)
+        self.ax.plot([], 'wo', mew=2, label='\' Options off', zorder=OPTIONS)
         self.ax.legend()
         handles, labels = self.ax.get_legend_handles_labels()
 
@@ -101,6 +103,7 @@ class PickPoints:
         self.r = True
         self.svm = True
         self.ipi = True
+        self.options = False
         #self.plotObject.scatterFlag = True # Ja inicializado na classe PlotData
 
         self.initialPos = None
@@ -119,6 +122,8 @@ class PickPoints:
                 self.dicHandles.update( {'SVM':h} )
             elif h.zorder == SCATTER:
                 self.dicHandles.update( {'Dots':h} )
+            elif h.zorder == OPTIONS:
+                self.dicHandles.update( {'Options':h} )
 
         self.ind = 0
         self.ylim = self.ax.get_ylim()
@@ -179,13 +184,14 @@ class PickPoints:
 
                 self.plotObject.plotSigData( (sample/freq, 'b') )
 
-                self.plotObject.dialogIPI.setMainText("Blue SVM")
-                self.plotObject.dialogIPI.setParameterText("Parameters")
-                self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
-                self.plotObject.dialogIPI.setOpt(1, "Option 1")
-                self.plotObject.dialogIPI.setOpt(2, "Option 2")
-                self.plotObject.dialogIPI.setOpt(3, "Option 3")
-                self.plotObject.dialogIPI.exec_()
+                if self.options == True:
+                    self.plotObject.dialogIPI.setMainText("Blue SVM")
+                    self.plotObject.dialogIPI.setParameterText("Parameters")
+                    self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
+                    self.plotObject.dialogIPI.setOpt(1, "Option 1")
+                    self.plotObject.dialogIPI.setOpt(2, "Option 2")
+                    self.plotObject.dialogIPI.setOpt(3, "Option 3")
+                    self.plotObject.dialogIPI.exec_()
 
             if zorder == SVMDATARED and self.r == True:
                 try:
@@ -210,13 +216,14 @@ class PickPoints:
 
                 self.plotObject.plotSigData( (sample/freq, 'r') )
 
-                self.plotObject.dialogIPI.setMainText("Red SVM")
-                self.plotObject.dialogIPI.setParameterText("Parameters")
-                self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
-                self.plotObject.dialogIPI.setOpt(1, "Option 1")
-                self.plotObject.dialogIPI.setOpt(2, "Option 2")
-                self.plotObject.dialogIPI.setOpt(3, "Option 3")
-                self.plotObject.dialogIPI.exec_()
+                if self.options == True:
+                    self.plotObject.dialogIPI.setMainText("Red SVM")
+                    self.plotObject.dialogIPI.setParameterText("Parameters")
+                    self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
+                    self.plotObject.dialogIPI.setOpt(1, "Option 1")
+                    self.plotObject.dialogIPI.setOpt(2, "Option 2")
+                    self.plotObject.dialogIPI.setOpt(3, "Option 3")
+                    self.plotObject.dialogIPI.exec_()
 
             self.fig.canvas.draw()
         if self.ipi == True and (\
@@ -238,13 +245,14 @@ class PickPoints:
                 print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
                 print
 
-                self.plotObject.dialogIPI.setMainText("Blue IPI")
-                self.plotObject.dialogIPI.setParameterText("Parameters")
-                self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
-                self.plotObject.dialogIPI.setOpt(1, "Option 1")
-                self.plotObject.dialogIPI.setOpt(2, "Option 2")
-                self.plotObject.dialogIPI.setOpt(3, "Option 3")
-                self.plotObject.dialogIPI.exec_()
+                if self.options == True:
+                    self.plotObject.dialogIPI.setMainText("Blue IPI")
+                    self.plotObject.dialogIPI.setParameterText("Parameters")
+                    self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
+                    self.plotObject.dialogIPI.setOpt(1, "Option 1")
+                    self.plotObject.dialogIPI.setOpt(2, "Option 2")
+                    self.plotObject.dialogIPI.setOpt(3, "Option 3")
+                    self.plotObject.dialogIPI.exec_()
 
             elif zorder == IPIDATARED:
                 color = 'r'
@@ -254,13 +262,14 @@ class PickPoints:
                 print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
                 print
 
-                self.plotObject.dialogIPI.setMainText("Red IPI")
-                self.plotObject.dialogIPI.setParameterText("Parameters")
-                self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
-                self.plotObject.dialogIPI.setOpt(1, "Option 1")
-                self.plotObject.dialogIPI.setOpt(2, "Option 2")
-                self.plotObject.dialogIPI.setOpt(3, "Option 3")
-                self.plotObject.dialogIPI.exec_()
+                if self.options == True:
+                    self.plotObject.dialogIPI.setMainText("Red IPI")
+                    self.plotObject.dialogIPI.setParameterText("Parameters")
+                    self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
+                    self.plotObject.dialogIPI.setOpt(1, "Option 1")
+                    self.plotObject.dialogIPI.setOpt(2, "Option 2")
+                    self.plotObject.dialogIPI.setOpt(3, "Option 3")
+                    self.plotObject.dialogIPI.exec_()
 
             central = (xdata[ind], color)
             self.plotObject.plotSigData(central)
@@ -303,6 +312,13 @@ class PickPoints:
             ylim = self.ax.get_ylim()
             self.plotObject.plotData(xlim[0],xlim[1])
             self.ax.set_ylim(ylim)
+        elif key == 'o':
+            self.options = not(self.options)
+            if self.options == True:
+                self.dicHandles['Options'].set_label('\'o\' Options on')
+            else:
+                self.dicHandles['Options'].set_label('\'o\' Options off')
+
         elif key == 'z':
             self.zoomStatus = set(['X','Y']).difference(set(self.zoomStatus)).pop()
             self.bzoom.label.set_text(self.zoomStatus + ' Zoom')
