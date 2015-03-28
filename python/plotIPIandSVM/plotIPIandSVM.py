@@ -1,6 +1,5 @@
 import numpy as np
 
-import matplotlib ############################
 import matplotlib.pyplot as plt
 from matplotlib.mlab import find
 from matplotlib.ticker import FuncFormatter
@@ -11,7 +10,9 @@ import argparse
 import sys
 import time
 
-from graphicalInterface import *
+from PyQt4 import QtCore, QtGui
+from graphicalInterface import Ui_Dialog
+from IPIWindow import IPIWindow
 
 # Defines (zorder -> used of selecting picker)
 SVMDATABLUE = 0
@@ -149,6 +150,7 @@ class PickPoints:
         if event.mouseevent.button != 1:
             return
 
+
         zorder = event.artist.zorder
         if self.svm == True and (zorder == SVMDATABLUE or zorder == SVMDATARED):
 
@@ -176,6 +178,15 @@ class PickPoints:
                 self.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'b-')
 
                 self.plotObject.plotSigData( (sample/freq, 'b') )
+
+                self.plotObject.dialogIPI.setMainText("Blue SVM")
+                self.plotObject.dialogIPI.setParameterText("Parameters")
+                self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
+                self.plotObject.dialogIPI.setOpt(1, "Option 1")
+                self.plotObject.dialogIPI.setOpt(2, "Option 2")
+                self.plotObject.dialogIPI.setOpt(3, "Option 3")
+                self.plotObject.dialogIPI.exec_()
+
             if zorder == SVMDATARED and self.r == True:
                 try:
                     self.pltsvmstrongB.pop(0).remove()
@@ -198,6 +209,15 @@ class PickPoints:
                 self.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'r-')
 
                 self.plotObject.plotSigData( (sample/freq, 'r') )
+
+                self.plotObject.dialogIPI.setMainText("Red SVM")
+                self.plotObject.dialogIPI.setParameterText("Parameters")
+                self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
+                self.plotObject.dialogIPI.setOpt(1, "Option 1")
+                self.plotObject.dialogIPI.setOpt(2, "Option 2")
+                self.plotObject.dialogIPI.setOpt(3, "Option 3")
+                self.plotObject.dialogIPI.exec_()
+
             self.fig.canvas.draw()
         if self.ipi == True and (\
                 (zorder == IPIDATABLUE and self.b == True) or \
@@ -217,6 +237,15 @@ class PickPoints:
                 print 'dists:\t' + str(self.plotObject.distsDic[ TS ])
                 print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
                 print
+
+                self.plotObject.dialogIPI.setMainText("Blue IPI")
+                self.plotObject.dialogIPI.setParameterText("Parameters")
+                self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
+                self.plotObject.dialogIPI.setOpt(1, "Option 1")
+                self.plotObject.dialogIPI.setOpt(2, "Option 2")
+                self.plotObject.dialogIPI.setOpt(3, "Option 3")
+                self.plotObject.dialogIPI.exec_()
+
             elif zorder == IPIDATARED:
                 color = 'r'
                 TS = int(round(xdata[ind] * freq))
@@ -224,6 +253,15 @@ class PickPoints:
                 print 'dists:\t' + str(self.plotObject.distsDic[ TS ])
                 print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
                 print
+
+                self.plotObject.dialogIPI.setMainText("Red IPI")
+                self.plotObject.dialogIPI.setParameterText("Parameters")
+                self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
+                self.plotObject.dialogIPI.setOpt(1, "Option 1")
+                self.plotObject.dialogIPI.setOpt(2, "Option 2")
+                self.plotObject.dialogIPI.setOpt(3, "Option 3")
+                self.plotObject.dialogIPI.exec_()
+
             central = (xdata[ind], color)
             self.plotObject.plotSigData(central)
 
@@ -405,6 +443,7 @@ class PickPoints:
         self.update()
 
 
+
 class PlotData(QtGui.QDialog):
     DPI = 80
 
@@ -414,6 +453,8 @@ class PlotData(QtGui.QDialog):
         self.ui.setupUi(self)
         self.ui.graphIPI.canvas.setFocusPolicy( QtCore.Qt.ClickFocus )
         self.ui.graphIPI.canvas.setFocus()
+
+        self.dialogIPI = IPIWindow()
 
         self.resizeEvent = self.onResize
         self.showMaximized()
@@ -695,7 +736,6 @@ class PlotData(QtGui.QDialog):
         ms = int(1e3*x)
         us = int(((1e3*x)%1)*1e3)
         return '%03d.%03d' % (ms,us)
-
 
 
 if __name__ == '__main__':
