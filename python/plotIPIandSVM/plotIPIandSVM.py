@@ -707,20 +707,20 @@ class PlotData(QtGui.QDialog):
             directIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] > 0)
             directIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] > 0)
 
-            self.scatter1d = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][directIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[directIdx1], c=color1, marker='>', linewidths=0, s=50+np.pi*size1, picker=5, zorder=IPIDATABLUE)
-            self.scatter2d = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][directIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[directIdx2], c=color2, marker='>', linewidths=0, s=50+np.pi*size2, picker=5, zorder=IPIDATARED)
+            self.scatter1d = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][directIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[directIdx1], c=color1, marker='>', linewidths=0, s=50+np.pi*size1, picker=1, zorder=IPIDATABLUE)
+            self.scatter2d = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][directIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[directIdx2], c=color2, marker='>', linewidths=0, s=50+np.pi*size2, picker=1, zorder=IPIDATARED)
 
             reverseIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] < 0)
             reverseIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] < 0)
 
-            self.scatter1r = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][reverseIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[reverseIdx1], c=color1, marker='<', linewidths=0, s=50+np.pi*size1, picker=5, zorder=IPIDATABLUE)
-            self.scatter2r = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][reverseIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[reverseIdx2], c=color2, marker='<', linewidths=0, s=50+np.pi*size2, picker=5, zorder=IPIDATARED)
+            self.scatter1r = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][reverseIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[reverseIdx1], c=color1, marker='<', linewidths=0, s=50+np.pi*size1, picker=1, zorder=IPIDATABLUE)
+            self.scatter2r = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][reverseIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[reverseIdx2], c=color2, marker='<', linewidths=0, s=50+np.pi*size2, picker=1, zorder=IPIDATARED)
 
             svmIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] == 0)
             svmIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] == 0)
 
-            self.scatter1s = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][svmIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[svmIdx1], c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=5, zorder=IPIDATABLUE)
-            self.scatter2s = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][svmIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[svmIdx2], c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=5, zorder=IPIDATARED)
+            self.scatter1s = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][svmIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[svmIdx1], c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=3, zorder=IPIDATABLUE)
+            self.scatter2s = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][svmIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[svmIdx2], c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=3, zorder=IPIDATARED)
 
         else:
             self.isScatter = False
