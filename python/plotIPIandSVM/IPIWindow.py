@@ -17,6 +17,50 @@ class IPIWindow(QtGui.QDialog):
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
 
+    def parseSVMFlag(self,svmFlag):
+        if svmFlag == 'a':
+            return 'Spike has to much samples'
+        elif svmFlag == 'd':
+            return 'Interval between spikes (any fish) is too long'
+        elif svmFlag == 'm':
+            return 'Manually modificated'
+        elif svmFlag == 'i':
+            return 'Insufficient good channels'
+        elif svmFlag == 'o':
+            return 'Overlapping spikes'
+        elif svmFlag == 'p':
+            return 'Probability below minimum'
+        elif svmFlag == 'w':
+            return 'No pair detected'
+        elif svmFlag == 's':
+            return 'SVM Classified'
+        elif svmFlag == 'c':
+            return 'Previous spike was not ready for SVM classification'
+
+    def generateParameterText(self,Par):
+        text = '' + \
+            'fish: ' + '\n' + \
+            str(Par[0]) + '\n\n' + \
+            'Timestamp: ' + '\n' + \
+            str(Par[1]) + '\n\n' + \
+            'offset on .memmapf32 file (bytes): ' + '\n' + \
+            str(Par[2]) + '\n\n' + \
+            'direction: ' + '\n' + \
+            str(Par[3]) + '\n\n' + \
+            'SVM cause: ' + '\n' + \
+            str(self.parseSVMFlag(Par[4])) + '\n\n' + \
+            'Probability for A: ' + '\n' + \
+            str(Par[5]) + '\n\n' + \
+            'Probability for B: ' + '\n' + \
+            str(Par[6]) + '\n\n' + \
+            'Euclidean distance from last single A: ' + '\n' + \
+            str(Par[7]) + '\n\n' + \
+            'Euclidean distance from last single B: ' + '\n' + \
+            str(Par[8]) + '\n\n' + \
+            'Euclidean distance from overlapping last single A and last single B: ' + '\n' + \
+            str(Par[9]) + '\n\n'
+        return text
+
     def setMainText(self, text):
         self.uiObject.mainText.setText(_translate("IPIClick", text, None))
 

@@ -6,19 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>831</width>
-    <height>338</height>
+    <width>803</width>
+    <height>498</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>spike info</string>
   </property>
   <widget class="QLabel" name="mainText">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>741</width>
+     <width>291</width>
      <height>51</height>
     </rect>
    </property>
@@ -29,23 +29,26 @@
   <widget class="QLabel" name="parameters">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>70</y>
-     <width>741</width>
-     <height>51</height>
+     <x>320</x>
+     <y>10</y>
+     <width>471</width>
+     <height>481</height>
     </rect>
    </property>
    <property name="text">
     <string>TextLabel</string>
    </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+   </property>
   </widget>
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
-     <x>140</x>
-     <y>150</y>
-     <width>120</width>
-     <height>161</height>
+     <x>10</x>
+     <y>80</y>
+     <width>301</width>
+     <height>411</height>
     </rect>
    </property>
    <property name="title">

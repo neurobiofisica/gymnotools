@@ -88,7 +88,7 @@ class PickPoints:
         self.ax.plot([], 'b.-', mew=2, label='\'b\' Blue on', zorder=LEGENDBLUE)
         self.ax.plot([], 'r.-', mew=2, label='\'r\' Red on', zorder=LEGENDRED)
         self.ax.plot([], 'ko', mew=5, label='\'d\' Dots on', zorder=SCATTER)
-        self.ax.plot([], 'wo', mew=2, label='\' Options off', zorder=OPTIONS)
+        self.ax.plot([], 'w.', label='\'o\' Options off', zorder=OPTIONS)
         self.ax.legend()
         handles, labels = self.ax.get_legend_handles_labels()
 
@@ -246,8 +246,22 @@ class PickPoints:
                 print
 
                 if self.options == True:
+
+                    Parameters = ( 1, \
+                        self.plotObject.sec2hms(TS / freq, None), \
+                        self.plotObject.offs[ TS ], \
+                        self.plotObject.directionDic[ TS ], \
+                        self.plotObject.svmFlagsDic[ TS ], \
+                        self.plotObject.probsDic[ TS ][0], \
+                        self.plotObject.probsDic[ TS ][1], \
+                        self.plotObject.distsDic[ TS ][0], \
+                        self.plotObject.distsDic[ TS ][1], \
+                        self.plotObject.distsDic[ TS ][2], \
+                    )
+
                     self.plotObject.dialogIPI.setMainText("Blue IPI")
-                    self.plotObject.dialogIPI.setParameterText("Parameters")
+                    parText = self.plotObject.dialogIPI.generateParameterText(Parameters)
+                    self.plotObject.dialogIPI.setParameterText(parText)
                     self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
                     self.plotObject.dialogIPI.setOpt(1, "Option 1")
                     self.plotObject.dialogIPI.setOpt(2, "Option 2")
@@ -263,8 +277,21 @@ class PickPoints:
                 print
 
                 if self.options == True:
+                    Parameters = ( -1, \
+                        self.plotObject.sec2hms(TS / freq, None), \
+                        self.plotObject.offs[ TS ], \
+                        self.plotObject.directionDic[ TS ], \
+                        self.plotObject.svmFlagsDic[ TS ], \
+                        self.plotObject.probsDic[ TS ][0], \
+                        self.plotObject.probsDic[ TS ][1], \
+                        self.plotObject.distsDic[ TS ][0], \
+                        self.plotObject.distsDic[ TS ][1], \
+                        self.plotObject.distsDic[ TS ][2], \
+                    )
+
                     self.plotObject.dialogIPI.setMainText("Red IPI")
-                    self.plotObject.dialogIPI.setParameterText("Parameters")
+                    parText = self.plotObject.dialogIPI.generateParameterText(Parameters)
+                    self.plotObject.dialogIPI.setParameterText(parText)
                     self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
                     self.plotObject.dialogIPI.setOpt(1, "Option 1")
                     self.plotObject.dialogIPI.setOpt(2, "Option 2")
@@ -506,14 +533,6 @@ class PlotData(QtGui.QDialog):
         IdxSVM1 = np.intersect1d(IdxP1, SVMDec)
         IdxSVM2 = np.intersect1d(IdxP2, SVMDec)
 
-        self.SVMDic = {}
-        for i in IdxSVM1:
-            self.SVMDic.update({ ( 1, int(round(TS[1][i]))): int(round(self.svmPair[i])) })
-            self.SVMDic.update({ (-1, int(round(self.svmPair[i]))): int(round(TS[1][i])) })
-        for i in IdxSVM2:
-            self.SVMDic.update({ (-1, int(round(TS[1][i]))): int(round(self.svmPair[i])) })
-            self.SVMDic.update({ ( 1, int(round(self.svmPair[i]))): int(round(TS[1][i])) })
-
         SVM1 = TS[1][IdxSVM1] / freq
         SVM1 = np.append(SVM1, self.svmPair[IdxSVM2] / freq)
 
@@ -531,21 +550,33 @@ class PlotData(QtGui.QDialog):
         ProbP2 = [ (TS[5][i], TS[6][i]) for i in IdxP2]
 
         self.probs = (ProbP1, ProbP2)
-        self.probsDic = {}
-        for i in IdxP1:
-            self.probsDic[ TS[1][i] ] = (TS[5][i], TS[6][i])
-        for i in IdxP2:
-            self.probsDic[ TS[1][i] ] = (TS[5][i], TS[6][i])
 
         distP1 = [ (TS[7][i], TS[8][i], TS[9][i])  for i in IdxP1 ]
         distP2 = [ (TS[7][i], TS[8][i], TS[9][i])  for i in IdxP2 ]
 
         self.dists = (distP1, distP2)
+
+        # Dictionaries indexed by Timestamp in samples
         self.distsDic = {}
+        self.probsDic = {}
+        self.svmFlagsDic = {}
+        self.SVMDic = {}
+        self.directionDic = {}
         for i in IdxP1:
             self.distsDic[ TS[1][i] ] = (TS[7][i], TS[8][i], TS[9][i])
+            self.probsDic[ TS[1][i] ] = (TS[5][i], TS[6][i])
+            self.svmFlagsDic[ TS[1][i] ] = SVMFlags[i]
+            self.SVMDic.update({ ( 1, int(round(TS[1][i]))): int(round(self.svmPair[i])) })
+            self.SVMDic.update({ (-1, int(round(self.svmPair[i]))): int(round(TS[1][i])) })
+            self.directionDic[ TS[1][i] ] = TS[3][i]
         for i in IdxP2:
             self.distsDic[ TS[1][i] ] = (TS[7][i], TS[8][i], TS[9][i])
+            self.probsDic[ TS[1][i] ] = (TS[5][i], TS[6][i])
+            self.svmFlagsDic[ TS[1][i] ] = SVMFlags[i]
+            self.SVMDic[(-1, int(round(TS[1][i])))] =  int(round(self.svmPair[i]))
+            self.SVMDic[( 1, int(round(self.svmPair[i])))] =  int(round(TS[1][i]))
+            self.directionDic[ TS[1][i] ] = TS[3][i]
+
 
         self.SVM2Plot = []
         self.SVM2Plot.append( self.SVM[0].repeat(3) )

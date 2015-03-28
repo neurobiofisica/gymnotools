@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'IPIClick_interface.ui'
 #
-# Created: Sat Mar 28 17:15:05 2015
+# Created: Sat Mar 28 18:44:48 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,15 +26,16 @@ except AttributeError:
 class Ui_IPIClick(object):
     def setupUi(self, IPIClick):
         IPIClick.setObjectName(_fromUtf8("IPIClick"))
-        IPIClick.resize(831, 338)
+        IPIClick.resize(803, 498)
         self.mainText = QtGui.QLabel(IPIClick)
-        self.mainText.setGeometry(QtCore.QRect(10, 10, 741, 51))
+        self.mainText.setGeometry(QtCore.QRect(10, 10, 291, 51))
         self.mainText.setObjectName(_fromUtf8("mainText"))
         self.parameters = QtGui.QLabel(IPIClick)
-        self.parameters.setGeometry(QtCore.QRect(10, 70, 741, 51))
+        self.parameters.setGeometry(QtCore.QRect(320, 10, 471, 481))
+        self.parameters.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.parameters.setObjectName(_fromUtf8("parameters"))
         self.groupBox = QtGui.QGroupBox(IPIClick)
-        self.groupBox.setGeometry(QtCore.QRect(140, 150, 120, 161))
+        self.groupBox.setGeometry(QtCore.QRect(10, 80, 301, 411))
         self.groupBox.setObjectName(_fromUtf8("groupBox"))
         self.opt1 = QtGui.QRadioButton(self.groupBox)
         self.opt1.setGeometry(QtCore.QRect(0, 20, 105, 20))
@@ -50,7 +51,7 @@ class Ui_IPIClick(object):
         QtCore.QMetaObject.connectSlotsByName(IPIClick)
 
     def retranslateUi(self, IPIClick):
-        IPIClick.setWindowTitle(_translate("IPIClick", "Form", None))
+        IPIClick.setWindowTitle(_translate("IPIClick", "spike info", None))
         self.mainText.setText(_translate("IPIClick", "TextLabel", None))
         self.parameters.setText(_translate("IPIClick", "TextLabel", None))
         self.groupBox.setTitle(_translate("IPIClick", "GroupBox", None))

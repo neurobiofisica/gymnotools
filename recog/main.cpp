@@ -353,7 +353,7 @@ public:
         // emit to db
         qint64 off = winfile.getEventOffset();
         db.insert(off, 0, 0., inf, inf, 0,
-                  problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                  's', problist[off].pairsvm, problist[off].probA, problist[off].probB,
                   0, fishlenA, fishvecA,
                   0, 0, NULL);
     }
@@ -369,7 +369,7 @@ public:
         // emit to db
         qint64 off = winfile.getEventOffset();
         db.insert(off, 0, inf, 0., inf, 0,
-                  problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                  's', problist[off].pairsvm, problist[off].probA, problist[off].probB,
                   0, 0, NULL,
                   0, fishlenB, fishvecB);
     }

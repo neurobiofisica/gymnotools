@@ -74,7 +74,7 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         if(distPrev > maxdist && distNext > maxdist) {
             prevWasSingle = false;
 
-            cause = 'm';
+            cause = 'd';
         }
 
         // Verify which channels can be used to feed the SVM
