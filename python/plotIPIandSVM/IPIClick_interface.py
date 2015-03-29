@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'IPIClick_interface.ui'
 #
-# Created: Sat Mar 28 22:43:19 2015
+# Created: Sat Mar 28 23:02:10 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -26,22 +26,33 @@ except AttributeError:
 class Ui_IPIClick(object):
     def setupUi(self, IPIClick):
         IPIClick.setObjectName(_fromUtf8("IPIClick"))
-        IPIClick.resize(803, 498)
+        IPIClick.resize(803, 400)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(IPIClick.sizePolicy().hasHeightForWidth())
+        IPIClick.setSizePolicy(sizePolicy)
+        IPIClick.setMinimumSize(QtCore.QSize(803, 400))
+        IPIClick.setMaximumSize(QtCore.QSize(803, 400))
         self.mainText = QtGui.QLabel(IPIClick)
         self.mainText.setGeometry(QtCore.QRect(10, 10, 291, 51))
         self.mainText.setObjectName(_fromUtf8("mainText"))
         self.parameters = QtGui.QLabel(IPIClick)
-        self.parameters.setGeometry(QtCore.QRect(320, 10, 471, 481))
+        self.parameters.setGeometry(QtCore.QRect(320, 10, 470, 380))
+        font = QtGui.QFont()
+        font.setFamily(_fromUtf8("Arial"))
+        font.setPointSize(8)
+        self.parameters.setFont(font)
         self.parameters.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.parameters.setObjectName(_fromUtf8("parameters"))
         self.gridLayoutWidget = QtGui.QWidget(IPIClick)
-        self.gridLayoutWidget.setGeometry(QtCore.QRect(10, 70, 291, 371))
+        self.gridLayoutWidget.setGeometry(QtCore.QRect(10, 70, 291, 291))
         self.gridLayoutWidget.setObjectName(_fromUtf8("gridLayoutWidget"))
         self.gridLayout = QtGui.QGridLayout(self.gridLayoutWidget)
         self.gridLayout.setMargin(0)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.widget = QtGui.QWidget(IPIClick)
-        self.widget.setGeometry(QtCore.QRect(10, 450, 291, 29))
+        self.widget.setGeometry(QtCore.QRect(10, 360, 291, 29))
         self.widget.setObjectName(_fromUtf8("widget"))
         self.horizontalLayout = QtGui.QHBoxLayout(self.widget)
         self.horizontalLayout.setMargin(0)

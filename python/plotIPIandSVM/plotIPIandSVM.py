@@ -155,6 +155,14 @@ class PickPoints:
         if event.mouseevent.button != 1:
             return
 
+        try:
+            self.pltsvmstrongB.pop(0).remove()
+        except:
+            pass
+        try:
+            self.pltsvmstrongR.pop(0).remove()
+        except:
+            pass
 
         zorder = event.artist.zorder
         if self.svm == True and (zorder == SVMDATABLUE or zorder == SVMDATARED):
@@ -162,14 +170,6 @@ class PickPoints:
             sample = (event.artist.get_xdata()[event.ind] * freq)[0]
 
             if zorder == SVMDATABLUE and self.b == True:
-                try:
-                    self.pltsvmstrongB.pop(0).remove()
-                except:
-                    pass
-                try:
-                    self.pltsvmstrongR.pop(0).remove()
-                except:
-                    pass
 
                 print (event.ind[0] / 3) + 1
                 print (event.artist.get_xdata()[event.ind] * freq * 4 * NChan)[0]
@@ -194,14 +194,6 @@ class PickPoints:
                     self.plotObject.dialogIPI.exec_()
 
             if zorder == SVMDATARED and self.r == True:
-                try:
-                    self.pltsvmstrongB.pop(0).remove()
-                except:
-                    pass
-                try:
-                    self.pltsvmstrongR.pop(0).remove()
-                except:
-                    pass
 
                 print (event.ind[0] / 3) + 1
                 print (event.artist.get_xdata()[event.ind] * freq * 4 * NChan)[0]
@@ -231,19 +223,26 @@ class PickPoints:
                 (zorder == IPIDATARED and self.r == True)):
 
             ind = event.ind[0]
+
             if self.plotObject.isScatter == False:
                 xdata = event.artist.get_xdata()
             else:
                 data = event.artist.get_offsets()
                 xdata = [x for x,y in data]
 
+            TS = xdata[ind]*freq
+            sample = TS
+
             if zorder == IPIDATABLUE:
                 color = 'b'
                 TS = int(round(xdata[ind] * freq))
-                print 'off:\t' + str(self.plotObject.offs[ TS ])
-                print 'dists:\t' + str(self.plotObject.distsDic[ TS ])
-                print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
-                print
+
+                # Draw a SVM pair line
+                if self.plotObject.svmFlagsDic[ TS ] == 's':
+                    sample2 = self.plotObject.SVMDic[(1,int(round(sample)))]
+                    self.pltsvmstrongR = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'r-')
+                # Draw a line over the point
+                self.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'b-')
 
                 Parameters = ( 1, \
                     self.plotObject.sec2hms(TS / freq, None), \
@@ -260,10 +259,13 @@ class PickPoints:
             elif zorder == IPIDATARED:
                 color = 'r'
                 TS = int(round(xdata[ind] * freq))
-                print 'off:\t:' + str(self.plotObject.offs[ TS ])
-                print 'dists:\t' + str(self.plotObject.distsDic[ TS ])
-                print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
-                print
+
+                # Plots SVM Pair line
+                if self.plotObject.svmFlagsDic[ TS ] == 's':
+                    sample2 = self.plotObject.SVMDic[(-1,int(round(sample)))]
+                    self.pltsvmstrongB = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'b-')
+                # Draw a line over the point
+                self.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'r-')
 
                 Parameters = ( -1, \
                     self.plotObject.sec2hms(TS / freq, None), \
@@ -277,6 +279,7 @@ class PickPoints:
                     self.plotObject.distsDic[ TS ][2], \
                 )
 
+            self.fig.canvas.draw() # To make SVM lines bold
             central = (xdata[ind], color)
             self.plotObject.plotSigData(central)
             if self.options == True:

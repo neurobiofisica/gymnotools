@@ -25,6 +25,8 @@ class IPIWindow(QtGui.QDialog):
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
 
+        self.move(0,0)
+
         self.options = []
 
     def createGroupBox(self,text):
