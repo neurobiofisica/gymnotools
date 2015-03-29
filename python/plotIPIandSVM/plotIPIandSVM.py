@@ -83,7 +83,7 @@ class PickPoints:
         self.ax = plotObject.ax
 
         # Auxiliary plots for legend
-        self.ax.plot([], 'k-.', lw=2, label='\'s\' SVM on', zorder=LEGENDSVM)
+        self.ax.plot([], 'k-.', lw=2, label='\'s\' SVM off', zorder=LEGENDSVM)
         self.ax.plot([], 'k-', lw=2, label='\'i\' IPI on', zorder=LEGENDIPI)
         self.ax.plot([], 'b.-', mew=2, label='\'b\' Blue on', zorder=LEGENDBLUE)
         self.ax.plot([], 'r.-', mew=2, label='\'r\' Red on', zorder=LEGENDRED)
@@ -101,7 +101,7 @@ class PickPoints:
 
         self.b = True
         self.r = True
-        self.svm = True
+        self.svm = False
         self.ipi = True
         self.options = False
         #self.plotObject.scatterFlag = True # Ja inicializado na classe PlotData
@@ -184,7 +184,7 @@ class PickPoints:
 
                 self.plotObject.plotSigData( (sample/freq, 'b') )
 
-                if self.options == True:
+                if (self.options == True) and False:
                     self.plotObject.dialogIPI.setMainText("Blue SVM")
                     self.plotObject.dialogIPI.setParameterText("Parameters")
                     self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
@@ -216,7 +216,7 @@ class PickPoints:
 
                 self.plotObject.plotSigData( (sample/freq, 'r') )
 
-                if self.options == True:
+                if (self.options == True) and False:
                     self.plotObject.dialogIPI.setMainText("Red SVM")
                     self.plotObject.dialogIPI.setParameterText("Parameters")
                     self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
@@ -245,28 +245,17 @@ class PickPoints:
                 print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
                 print
 
-                if self.options == True:
-
-                    Parameters = ( 1, \
-                        self.plotObject.sec2hms(TS / freq, None), \
-                        self.plotObject.offs[ TS ], \
-                        self.plotObject.directionDic[ TS ], \
-                        self.plotObject.svmFlagsDic[ TS ], \
-                        self.plotObject.probsDic[ TS ][0], \
-                        self.plotObject.probsDic[ TS ][1], \
-                        self.plotObject.distsDic[ TS ][0], \
-                        self.plotObject.distsDic[ TS ][1], \
-                        self.plotObject.distsDic[ TS ][2], \
-                    )
-
-                    self.plotObject.dialogIPI.setMainText("Blue IPI")
-                    parText = self.plotObject.dialogIPI.generateParameterText(Parameters)
-                    self.plotObject.dialogIPI.setParameterText(parText)
-                    self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
-                    self.plotObject.dialogIPI.setOpt(1, "Option 1")
-                    self.plotObject.dialogIPI.setOpt(2, "Option 2")
-                    self.plotObject.dialogIPI.setOpt(3, "Option 3")
-                    self.plotObject.dialogIPI.exec_()
+                Parameters = ( 1, \
+                    self.plotObject.sec2hms(TS / freq, None), \
+                    self.plotObject.offs[ TS ], \
+                    self.plotObject.directionDic[ TS ], \
+                    self.plotObject.svmFlagsDic[ TS ], \
+                    self.plotObject.probsDic[ TS ][0], \
+                    self.plotObject.probsDic[ TS ][1], \
+                    self.plotObject.distsDic[ TS ][0], \
+                    self.plotObject.distsDic[ TS ][1], \
+                    self.plotObject.distsDic[ TS ][2], \
+                )
 
             elif zorder == IPIDATARED:
                 color = 'r'
@@ -276,30 +265,23 @@ class PickPoints:
                 print 'probs:\t' + str(self.plotObject.probsDic[ TS ])
                 print
 
-                if self.options == True:
-                    Parameters = ( -1, \
-                        self.plotObject.sec2hms(TS / freq, None), \
-                        self.plotObject.offs[ TS ], \
-                        self.plotObject.directionDic[ TS ], \
-                        self.plotObject.svmFlagsDic[ TS ], \
-                        self.plotObject.probsDic[ TS ][0], \
-                        self.plotObject.probsDic[ TS ][1], \
-                        self.plotObject.distsDic[ TS ][0], \
-                        self.plotObject.distsDic[ TS ][1], \
-                        self.plotObject.distsDic[ TS ][2], \
-                    )
-
-                    self.plotObject.dialogIPI.setMainText("Red IPI")
-                    parText = self.plotObject.dialogIPI.generateParameterText(Parameters)
-                    self.plotObject.dialogIPI.setParameterText(parText)
-                    self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
-                    self.plotObject.dialogIPI.setOpt(1, "Option 1")
-                    self.plotObject.dialogIPI.setOpt(2, "Option 2")
-                    self.plotObject.dialogIPI.setOpt(3, "Option 3")
-                    self.plotObject.dialogIPI.exec_()
+                Parameters = ( -1, \
+                    self.plotObject.sec2hms(TS / freq, None), \
+                    self.plotObject.offs[ TS ], \
+                    self.plotObject.directionDic[ TS ], \
+                    self.plotObject.svmFlagsDic[ TS ], \
+                    self.plotObject.probsDic[ TS ][0], \
+                    self.plotObject.probsDic[ TS ][1], \
+                    self.plotObject.distsDic[ TS ][0], \
+                    self.plotObject.distsDic[ TS ][1], \
+                    self.plotObject.distsDic[ TS ][2], \
+                )
 
             central = (xdata[ind], color)
             self.plotObject.plotSigData(central)
+            if self.options == True:
+                self.plotObject.dialogIPI.fillIPISelection(Parameters)
+                self.plotObject.dialogIPI.exec_()
 
     def press(self,event):
         key = event.key
@@ -750,8 +732,8 @@ class PlotData(QtGui.QDialog):
             svmIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] == 0)
             svmIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] == 0)
 
-            self.scatter1s = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][svmIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[svmIdx1], c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=3, zorder=IPIDATABLUE)
-            self.scatter2s = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][svmIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[svmIdx2], c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=3, zorder=IPIDATARED)
+            self.scatter1s = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][svmIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[svmIdx1], c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=1, zorder=IPIDATABLUE)
+            self.scatter2s = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][svmIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[svmIdx2], c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=1, zorder=IPIDATARED)
 
         else:
             self.isScatter = False

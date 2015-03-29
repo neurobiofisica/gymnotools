@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'IPIClick_interface.ui'
 #
-# Created: Sat Mar 28 18:44:48 2015
+# Created: Sat Mar 28 22:43:19 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -34,18 +34,24 @@ class Ui_IPIClick(object):
         self.parameters.setGeometry(QtCore.QRect(320, 10, 471, 481))
         self.parameters.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.parameters.setObjectName(_fromUtf8("parameters"))
-        self.groupBox = QtGui.QGroupBox(IPIClick)
-        self.groupBox.setGeometry(QtCore.QRect(10, 80, 301, 411))
-        self.groupBox.setObjectName(_fromUtf8("groupBox"))
-        self.opt1 = QtGui.QRadioButton(self.groupBox)
-        self.opt1.setGeometry(QtCore.QRect(0, 20, 105, 20))
-        self.opt1.setObjectName(_fromUtf8("opt1"))
-        self.opt2 = QtGui.QRadioButton(self.groupBox)
-        self.opt2.setGeometry(QtCore.QRect(0, 40, 105, 20))
-        self.opt2.setObjectName(_fromUtf8("opt2"))
-        self.opt3 = QtGui.QRadioButton(self.groupBox)
-        self.opt3.setGeometry(QtCore.QRect(0, 60, 105, 20))
-        self.opt3.setObjectName(_fromUtf8("opt3"))
+        self.gridLayoutWidget = QtGui.QWidget(IPIClick)
+        self.gridLayoutWidget.setGeometry(QtCore.QRect(10, 70, 291, 371))
+        self.gridLayoutWidget.setObjectName(_fromUtf8("gridLayoutWidget"))
+        self.gridLayout = QtGui.QGridLayout(self.gridLayoutWidget)
+        self.gridLayout.setMargin(0)
+        self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
+        self.widget = QtGui.QWidget(IPIClick)
+        self.widget.setGeometry(QtCore.QRect(10, 450, 291, 29))
+        self.widget.setObjectName(_fromUtf8("widget"))
+        self.horizontalLayout = QtGui.QHBoxLayout(self.widget)
+        self.horizontalLayout.setMargin(0)
+        self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
+        self.pushButton_3 = QtGui.QPushButton(self.widget)
+        self.pushButton_3.setObjectName(_fromUtf8("pushButton_3"))
+        self.horizontalLayout.addWidget(self.pushButton_3)
+        self.pushButton_2 = QtGui.QPushButton(self.widget)
+        self.pushButton_2.setObjectName(_fromUtf8("pushButton_2"))
+        self.horizontalLayout.addWidget(self.pushButton_2)
 
         self.retranslateUi(IPIClick)
         QtCore.QMetaObject.connectSlotsByName(IPIClick)
@@ -54,8 +60,6 @@ class Ui_IPIClick(object):
         IPIClick.setWindowTitle(_translate("IPIClick", "spike info", None))
         self.mainText.setText(_translate("IPIClick", "TextLabel", None))
         self.parameters.setText(_translate("IPIClick", "TextLabel", None))
-        self.groupBox.setTitle(_translate("IPIClick", "GroupBox", None))
-        self.opt1.setText(_translate("IPIClick", "RadioButton", None))
-        self.opt2.setText(_translate("IPIClick", "RadioButton", None))
-        self.opt3.setText(_translate("IPIClick", "RadioButton", None))
+        self.pushButton_3.setText(_translate("IPIClick", "Ok", None))
+        self.pushButton_2.setText(_translate("IPIClick", "Cancel", None))
 

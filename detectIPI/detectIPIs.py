@@ -96,7 +96,7 @@ for rec in db.iteritems():
         allOffs[offraw] = out
 
         pair = 0
-        if svm == 's':
+        if svm == 's' and pairsvm != 0: ###### Mudar para escrever no DB
             pair = allOffs[pairsvm]
 
         f.write( '%d\t%d\n'%(flag[PIdx],out) )

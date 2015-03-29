@@ -2,6 +2,12 @@ from PyQt4 import QtCore, QtGui
 from IPIClick_interface import *
 
 try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
+
+try:
     _encoding = QtGui.QApplication.UnicodeUTF8
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
@@ -12,10 +18,55 @@ except AttributeError:
 
 
 class IPIWindow(QtGui.QDialog):
+    RButSize = 20
+
     def __init__(self):
         QtGui.QWidget.__init__(self)
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
+
+        self.options = []
+
+    def createGroupBox(self,text):
+        self.uiObject.groupBox = QtGui.QGroupBox(self.uiObject.gridLayoutWidget)
+        self.uiObject.groupBox.setObjectName(_fromUtf8("groupBox"))
+        self.uiObject.gridLayout.addWidget(self.uiObject.groupBox, 0, 0, 1, 1)
+        self.uiObject.groupBox.deleteLater()
+        self.setGroupBoxTitle(text)
+
+    def fillIPISelection(self, Parameters):
+        parText = self.generateParameterText(Parameters)
+        self.setParameterText(parText)
+        self.createGroupBox('Options: ')
+
+        for i in self.options:
+            try:
+                del i
+            except:
+                pass
+
+        if (Parameters[4] != 's'):
+            self.setMainText('non-SVM spike selected')
+
+            self.options = []
+            for i in xrange(2):
+                self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
+                self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
+                self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
+
+            self.setOpt(0, 'Invert fish classification')
+            self.setOpt(1, 'Create SVM Pair')
+
+        else:
+            self.setMainText('SVM spike selected')
+
+            self.options = []
+            for i in xrange(3):
+                self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
+                self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
+                self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
+
+                self.setOpt(i, 'Option %d'%i)
 
     def parseSVMFlag(self,svmFlag):
         if svmFlag == 'a':
@@ -71,10 +122,4 @@ class IPIWindow(QtGui.QDialog):
         self.uiObject.groupBox.setTitle(_translate("IPIClick", text, None))
 
     def setOpt(self, num, text):
-        if num==1:
-            self.uiObject.opt1.setText(_translate("IPIClick", text, None))
-        if num==2:
-            self.uiObject.opt2.setText(_translate("IPIClick", text, None))
-        if num==3:
-            self.uiObject.opt3.setText(_translate("IPIClick", text, None))
-
+        self.options[num].setText(_translate("IPIClick", text, None))
