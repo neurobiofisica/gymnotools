@@ -15,16 +15,13 @@ from graphicalInterface import Ui_Dialog
 from IPIWindow import IPIWindow
 
 # Defines (zorder -> used of selecting picker)
-SVMDATABLUE = 0
-SVMDATARED = 1
-IPIDATABLUE = 200 # The dots will be on top of every other plot
-IPIDATARED = 300
-LEGENDSVM = 4
-LEGENDIPI = 5
-LEGENDBLUE = 6
-LEGENDRED = 7
-SCATTER = 8
-OPTIONS = 9
+IPIDATABLUE = 100 # The dots will be on top of every other plot
+IPIDATARED = 200
+LEGENDIPI = 3
+LEGENDBLUE = 4
+LEGENDRED = 5
+SCATTER = 6
+OPTIONS = 7
 
 FIGIPI = 1
 FIGSIG = 2
@@ -32,6 +29,9 @@ FIGSIG = 2
 # Constants
 freq = 45454.545454
 NChan = 11
+
+#TODO: LIMPAR VARIAVEIS INUTEIS!
+# PS.: Na versao que le direto do DB isso pode ser simplificado!
 
 ###### Auxiliary funcs ####
 
@@ -83,7 +83,6 @@ class PickPoints:
         self.ax = plotObject.ax
 
         # Auxiliary plots for legend
-        self.ax.plot([], 'k-.', lw=2, label='\'s\' SVM off', zorder=LEGENDSVM)
         self.ax.plot([], 'k-', lw=2, label='\'i\' IPI on', zorder=LEGENDIPI)
         self.ax.plot([], 'b.-', mew=2, label='\'b\' Blue on', zorder=LEGENDBLUE)
         self.ax.plot([], 'r.-', mew=2, label='\'r\' Red on', zorder=LEGENDRED)
@@ -118,8 +117,6 @@ class PickPoints:
                 self.dicHandles.update( {'r':h} )
             elif h.zorder == LEGENDIPI:
                 self.dicHandles.update( {'IPI':h} )
-            elif h.zorder == LEGENDSVM:
-                self.dicHandles.update( {'SVM':h} )
             elif h.zorder == SCATTER:
                 self.dicHandles.update( {'Dots':h} )
             elif h.zorder == OPTIONS:
@@ -165,59 +162,6 @@ class PickPoints:
             pass
 
         zorder = event.artist.zorder
-        if self.svm == True and (zorder == SVMDATABLUE or zorder == SVMDATARED):
-
-            sample = (event.artist.get_xdata()[event.ind] * freq)[0]
-
-            if zorder == SVMDATABLUE and self.b == True:
-
-                print (event.ind[0] / 3) + 1
-                print (event.artist.get_xdata()[event.ind] * freq * 4 * NChan)[0]
-                print (event.artist.get_xdata()[event.ind] * freq)[0]
-                print self.plotObject.offs[ int(round(event.artist.get_xdata()[event.ind][0] * freq)) ]
-                print ''
-
-                sample2 = self.plotObject.SVMDic[(1,int(round(sample)))]
-
-                self.pltsvmstrongR = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'r-')
-                self.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'b-')
-
-                self.plotObject.plotSigData( (sample/freq, 'b') )
-
-                if (self.options == True) and False:
-                    self.plotObject.dialogIPI.setMainText("Blue SVM")
-                    self.plotObject.dialogIPI.setParameterText("Parameters")
-                    self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
-                    self.plotObject.dialogIPI.setOpt(1, "Option 1")
-                    self.plotObject.dialogIPI.setOpt(2, "Option 2")
-                    self.plotObject.dialogIPI.setOpt(3, "Option 3")
-                    self.plotObject.dialogIPI.exec_()
-
-            if zorder == SVMDATARED and self.r == True:
-
-                print (event.ind[0] / 3) + 1
-                print (event.artist.get_xdata()[event.ind] * freq * 4 * NChan)[0]
-                print (event.artist.get_xdata()[event.ind] * freq)[0]
-                print self.plotObject.offs[ int(round(event.artist.get_xdata()[event.ind][0] * freq)) ]
-                print ''
-
-                sample2 = self.plotObject.SVMDic[(-1,int(round(sample)))]
-
-                self.pltsvmstrongB = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'b-')
-                self.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'r-')
-
-                self.plotObject.plotSigData( (sample/freq, 'r') )
-
-                if (self.options == True) and False:
-                    self.plotObject.dialogIPI.setMainText("Red SVM")
-                    self.plotObject.dialogIPI.setParameterText("Parameters")
-                    self.plotObject.dialogIPI.setGroupBoxTitle("Options: ")
-                    self.plotObject.dialogIPI.setOpt(1, "Option 1")
-                    self.plotObject.dialogIPI.setOpt(2, "Option 2")
-                    self.plotObject.dialogIPI.setOpt(3, "Option 3")
-                    self.plotObject.dialogIPI.exec_()
-
-            self.fig.canvas.draw()
         if self.ipi == True and (\
                 (zorder == IPIDATABLUE and self.b == True) or \
                 (zorder == IPIDATARED and self.r == True)):
@@ -665,8 +609,8 @@ class PlotData(QtGui.QDialog):
         # Only plot once
         if self.plotted == False:
             # Plot SVM Lines
-            self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATABLUE)
-            self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2, picker=5, zorder=SVMDATARED)
+            self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2)
+            self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2)
 
             # Lines and dots are plotter separately for picker act only on dots
             self.ax.plot(self.TS[1][1:], np.diff(self.TS[1]), 'r-')
@@ -723,20 +667,20 @@ class PlotData(QtGui.QDialog):
             directIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] > 0)
             directIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] > 0)
 
-            self.scatter1d = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][directIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[directIdx1], c=color1, marker='>', linewidths=0, s=50+np.pi*size1, picker=1, zorder=IPIDATABLUE)
-            self.scatter2d = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][directIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[directIdx2], c=color2, marker='>', linewidths=0, s=50+np.pi*size2, picker=1, zorder=IPIDATARED)
+            self.scatter1d = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][directIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[directIdx1], c=color1, marker='>', linewidths=0, s=50+np.pi*size1, picker=3, zorder=IPIDATABLUE)
+            self.scatter2d = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][directIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[directIdx2], c=color2, marker='>', linewidths=0, s=50+np.pi*size2, picker=3, zorder=IPIDATARED)
 
             reverseIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] < 0)
             reverseIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] < 0)
 
-            self.scatter1r = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][reverseIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[reverseIdx1], c=color1, marker='<', linewidths=0, s=50+np.pi*size1, picker=1, zorder=IPIDATABLUE)
-            self.scatter2r = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][reverseIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[reverseIdx2], c=color2, marker='<', linewidths=0, s=50+np.pi*size2, picker=1, zorder=IPIDATARED)
+            self.scatter1r = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][reverseIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[reverseIdx1], c=color1, marker='<', linewidths=0, s=50+np.pi*size1, picker=3, zorder=IPIDATABLUE)
+            self.scatter2r = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][reverseIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[reverseIdx2], c=color2, marker='<', linewidths=0, s=50+np.pi*size2, picker=3, zorder=IPIDATARED)
 
             svmIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] == 0)
             svmIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] == 0)
 
-            self.scatter1s = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][svmIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[svmIdx1], c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=1, zorder=IPIDATABLUE)
-            self.scatter2s = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][svmIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[svmIdx2], c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=1, zorder=IPIDATARED)
+            self.scatter1s = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][svmIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[svmIdx1], c=color1, marker='o', linewidths=0, s=20+np.pi*size1, picker=3, zorder=IPIDATABLUE)
+            self.scatter2s = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][svmIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[svmIdx2], c=color2, marker='o', linewidths=0, s=20+np.pi*size2, picker=3, zorder=IPIDATARED)
 
         else:
             self.isScatter = False

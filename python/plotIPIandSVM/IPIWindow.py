@@ -48,7 +48,7 @@ class IPIWindow(QtGui.QDialog):
                 pass
 
         if (Parameters[4] != 's'):
-            self.setMainText('non-SVM spike selected')
+            self.setMainText('Continuity spike selected')
 
             self.options = []
             for i in xrange(2):
