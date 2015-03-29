@@ -283,7 +283,7 @@ class PickPoints:
             central = (xdata[ind], color)
             self.plotObject.plotSigData(central)
             if self.options == True:
-                self.plotObject.dialogIPI.fillIPISelection(Parameters)
+                self.plotObject.dialogIPI.fillTextBoxes(Parameters)
                 self.plotObject.dialogIPI.exec_()
 
     def press(self,event):

@@ -36,7 +36,7 @@ class IPIWindow(QtGui.QDialog):
         self.uiObject.groupBox.deleteLater()
         self.setGroupBoxTitle(text)
 
-    def fillIPISelection(self, Parameters):
+    def fillTextBoxes(self, Parameters):
         parText = self.generateParameterText(Parameters)
         self.setParameterText(parText)
         self.createGroupBox('Options: ')
@@ -63,12 +63,13 @@ class IPIWindow(QtGui.QDialog):
             self.setMainText('SVM spike selected')
 
             self.options = []
-            for i in xrange(3):
+            for i in xrange(2):
                 self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
                 self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
                 self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
-                self.setOpt(i, 'Option %d'%i)
+            self.setOpt(0, 'Invert SVM classification')
+            self.setOpt(1, 'Remove SVM classification')
 
     def parseSVMFlag(self,svmFlag):
         if svmFlag == 'a':
