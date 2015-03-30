@@ -1,4 +1,5 @@
-import bsddb3, sys, os
+#import bsddb3
+import sys, os
 import recogdb # Lembrar de colocar essa biblioteca junto
 import numpy as np
 
@@ -20,7 +21,8 @@ if not os.path.isfile(sys.argv[1]):
     usage()
 
 print sys.argv[1]
-db = bsddb3.btopen(sys.argv[1],'r')
+#db = bsddb3.btopen(sys.argv[1],'r')
+db = recogdb.openDB(sys.argv[1],'r')
 f = open(sys.argv[2],'w')
 f2 = open(sys.argv[3], 'w')
 

@@ -39,7 +39,7 @@ static int recogdb_compare(DB *dbp, const DBT *a, const DBT *b)
 // XXX Not very portable, doesn't deal correctly with alignment issues
 // Record layout:
 // { presentFish, direction, distA, distB, distAB, saturationFlags,
-//   svm, pairsvn, probA, probB,
+//   correctedPos, svm, pairsvn, probA, probB,
 //   [{offA, sizeA, {Ach0, Ach1, ...}}],
 //   [{offB, sizeB, {Bch0, Bch1, ...}}] }
 class RecogDB
@@ -130,30 +130,34 @@ public:
         const quint32 *p = (const quint32 *)data.data;
         return p[5];
     }
+    qint64 correctedPos() const{ // 64 bit field
+        const qint64 *p = (const qint64 *)data.data;
+        return p[6];
+    }
     qint32 svm() const {
         const qint32 *p = (const qint32 *)data.data;
-        return p[6];
+        return p[8];
     }
     qint64 pairsvm() const {
         const qint64 *p = (const qint64 *)data.data;
-        return p[7];
+        return p[9];
     }
     float probA() const {
         const float *p = (const float *)data.data;
-        return p[9];
+        return p[11];
     }
     float probB() const {
         const float *p = (const float *)data.data;
-        return p[10];
+        return p[12];
     }
     qint32 spikeData(int n, qint32 &off, SignalBuffer &buf) const {
         assert(n==1 || n==2);
-        assert(data.size > 12*sizeof(qint32));
+        assert(data.size > 14*sizeof(qint32));
         const qint32 *p = (const qint32 *)data.data;
-        p = &p[11];
+        p = &p[13];
         if(n==2) {
             qint32 firstSize = p[1];
-            assert(data.size > (15 + NumChannels*firstSize)*sizeof(qint32));
+            assert(data.size > (17 + NumChannels*firstSize)*sizeof(qint32));
             p = &p[2 + NumChannels*firstSize];
         }
         off = p[0];
@@ -168,7 +172,7 @@ public:
     }
 
     void insert(qint64 k, qint32 direction, float distA, float distB, float distAB, quint32 saturationFlags,
-                qint32 svm, qint64 pairsvm, float probA, float probB,
+                qint64 correctedPos, qint32 svm, qint64 pairsvm, float probA, float probB,
                 qint32 offA, qint32 sizeA, const float *const* dataA,
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
@@ -187,14 +191,16 @@ public:
         recbuff[3] = distB;
         recbuff[4] = distAB;
         recbufi[5] = saturationFlags;
-        recbufi[6] = svm;
-        recbufi[7] = pairsvm; //64-bit field
-        recbufi[8] = (qint32)(pairsvm>>32); //64-bit field
-        recbuff[9] = probA;
-        recbuff[10] = probB;
+        recbufi[6] = correctedPos;
+        recbufi[7] = (qint32)(correctedPos>>32);
+        recbufi[8] = svm;
+        recbufi[9] = pairsvm; //64-bit field
+        recbufi[10] = (qint32)(pairsvm>>32); //64-bit field
+        recbuff[11] = probA;
+        recbuff[12] = probB;
 
-        recbuff = &recbuff[11];
-        recbufi = &recbufi[11];
+        recbuff = &recbuff[13];
+        recbufi = &recbufi[13];
 
         if(dataA != NULL && sizeA)
             copybuf(recbuff, recbufi, offA, sizeA, dataA);
@@ -353,7 +359,7 @@ public:
         // emit to db
         qint64 off = winfile.getEventOffset();
         db.insert(off, 0, 0., inf, inf, 0,
-                  's', problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                  -1,'s', problist[off].pairsvm, problist[off].probA, problist[off].probB,
                   0, fishlenA, fishvecA,
                   0, 0, NULL);
     }
@@ -369,7 +375,7 @@ public:
         // emit to db
         qint64 off = winfile.getEventOffset();
         db.insert(off, 0, inf, 0., inf, 0,
-                  's', problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                  -1,'s', problist[off].pairsvm, problist[off].probA, problist[off].probB,
                   0, 0, NULL,
                   0, fishlenB, fishvecB);
     }
@@ -590,7 +596,7 @@ public:
             // emit to db
             if(distA < curBestDist || forceSub)
                 db.insert(off, direction, distA, distB, distAB, satFlag,
-                          problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                          -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           copystart - firstpos, fishlenA, fishvecA,
                           0, 0, NULL);
         }
@@ -626,7 +632,7 @@ public:
             // emit to db
             if(distB < curBestDist || forceSub)
                 db.insert(off, direction, distA, distB, distAB, satFlag,
-                          problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                          -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           0, 0, NULL,
                           copystart - firstpos, fishlenB, fishvecB);
         }
@@ -659,7 +665,7 @@ public:
 
                 // emit to db
                 db.insert(off, direction, distA, distB, distAB, satFlag,
-                          problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                          -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
                           posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
             }
