@@ -58,40 +58,45 @@ class IPIWindow(QtGui.QDialog):
         self.svm = Parameters[4]
 
         self.options = []
+
+        # single continuity spike
         if self.svm != 's':
             if self.fish != 3:
                 self.setMainText('Continuity spike selected')
 
                 for i in xrange(3):
                     self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
-                    self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
+                    self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
                     self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
                 self.setOpt(0, 'Invert fish classification')
                 self.setOpt(1, 'Convert to overlapping spike')
                 self.setOpt(2, 'Create SVM Pair')
 
+            # Overlapping spike
             else:
                 self.setMainText('Overlapping spikes selected')
 
                 for i in xrange(2):
                     self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
-                    self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
+                    self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
                     self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
                 self.setOpt(0, 'Convert to single A spike')
                 self.setOpt(1, 'Convert to single B spike')
 
+        # SVM spike
         else:
             self.setMainText('SVM spike selected')
 
-            for i in xrange(2):
+            for i in xrange(3):
                 self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
-                self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
+                self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
                 self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
             self.setOpt(0, 'Invert SVM classification')
             self.setOpt(1, 'Remove SVM classification')
+            self.setOpt(2, 'Recalculate continuity from this SVM')
 
     def parseSVMFlag(self,svmFlag):
         if svmFlag == 'a':
