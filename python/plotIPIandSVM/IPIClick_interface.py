@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'IPIClick_interface.ui'
 #
-# Created: Sat Mar 28 23:02:10 2015
+# Created: Tue Mar 31 13:29:50 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -51,18 +51,18 @@ class Ui_IPIClick(object):
         self.gridLayout = QtGui.QGridLayout(self.gridLayoutWidget)
         self.gridLayout.setMargin(0)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
-        self.widget = QtGui.QWidget(IPIClick)
-        self.widget.setGeometry(QtCore.QRect(10, 360, 291, 29))
-        self.widget.setObjectName(_fromUtf8("widget"))
-        self.horizontalLayout = QtGui.QHBoxLayout(self.widget)
+        self.layoutWidget = QtGui.QWidget(IPIClick)
+        self.layoutWidget.setGeometry(QtCore.QRect(10, 360, 291, 29))
+        self.layoutWidget.setObjectName(_fromUtf8("layoutWidget"))
+        self.horizontalLayout = QtGui.QHBoxLayout(self.layoutWidget)
         self.horizontalLayout.setMargin(0)
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.pushButton_3 = QtGui.QPushButton(self.widget)
-        self.pushButton_3.setObjectName(_fromUtf8("pushButton_3"))
-        self.horizontalLayout.addWidget(self.pushButton_3)
-        self.pushButton_2 = QtGui.QPushButton(self.widget)
-        self.pushButton_2.setObjectName(_fromUtf8("pushButton_2"))
-        self.horizontalLayout.addWidget(self.pushButton_2)
+        self.okButton = QtGui.QPushButton(self.layoutWidget)
+        self.okButton.setObjectName(_fromUtf8("okButton"))
+        self.horizontalLayout.addWidget(self.okButton)
+        self.cancelButton = QtGui.QPushButton(self.layoutWidget)
+        self.cancelButton.setObjectName(_fromUtf8("cancelButton"))
+        self.horizontalLayout.addWidget(self.cancelButton)
 
         self.retranslateUi(IPIClick)
         QtCore.QMetaObject.connectSlotsByName(IPIClick)
@@ -71,6 +71,6 @@ class Ui_IPIClick(object):
         IPIClick.setWindowTitle(_translate("IPIClick", "spike info", None))
         self.mainText.setText(_translate("IPIClick", "TextLabel", None))
         self.parameters.setText(_translate("IPIClick", "TextLabel", None))
-        self.pushButton_3.setText(_translate("IPIClick", "Ok", None))
-        self.pushButton_2.setText(_translate("IPIClick", "Cancel", None))
+        self.okButton.setText(_translate("IPIClick", "Ok", None))
+        self.cancelButton.setText(_translate("IPIClick", "Cancel", None))
 

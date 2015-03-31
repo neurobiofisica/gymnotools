@@ -25,9 +25,17 @@ class IPIWindow(QtGui.QDialog):
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
 
+        QtCore.QObject.connect(self.uiObject.okButton, QtCore.SIGNAL('clicked()'), self.okClicked)
+        QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.close)
+
         self.move(0,0)
 
         self.options = []
+
+    def okClicked(self):
+        for n,opt in enumerate(self.options):
+            if opt.isChecked() == True:
+                print (self.svm,n)
 
     def createGroupBox(self,text):
         self.uiObject.groupBox = QtGui.QGroupBox(self.uiObject.gridLayoutWidget)
@@ -47,7 +55,9 @@ class IPIWindow(QtGui.QDialog):
             except:
                 pass
 
-        if (Parameters[4] != 's'):
+        self.svm = Parameters[4]
+
+        if (self.svm != 's'):
             self.setMainText('Continuity spike selected')
 
             self.options = []
@@ -101,7 +111,7 @@ class IPIWindow(QtGui.QDialog):
             str(Par[2]) + '\n\n' + \
             'direction: ' + '\n' + \
             str(Par[3]) + '\n\n' + \
-            'SVM cause: ' + '\n' + \
+            'SVM status: ' + '\n' + \
             str(self.parseSVMFlag(Par[4])) + '\n\n' + \
             'Probability for A: ' + '\n' + \
             str(Par[5]) + '\n\n' + \
