@@ -18,7 +18,7 @@ except AttributeError:
 
 
 class IPIWindow(QtGui.QDialog):
-    RButSize = 20
+    RButSize = 30
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -57,22 +57,34 @@ class IPIWindow(QtGui.QDialog):
 
         self.svm = Parameters[4]
 
-        if (self.svm != 's'):
-            self.setMainText('Continuity spike selected')
+        self.options = []
+        if self.svm != 's':
+            if self.fish != 3:
+                self.setMainText('Continuity spike selected')
 
-            self.options = []
-            for i in xrange(2):
-                self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
-                self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
-                self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
+                for i in xrange(3):
+                    self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
+                    self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
+                    self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
-            self.setOpt(0, 'Invert fish classification')
-            self.setOpt(1, 'Create SVM Pair')
+                self.setOpt(0, 'Invert fish classification')
+                self.setOpt(1, 'Convert to overlapping spike')
+                self.setOpt(2, 'Create SVM Pair')
+
+            else:
+                self.setMainText('Overlapping spikes selected')
+
+                for i in xrange(2):
+                    self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
+                    self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
+                    self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
+
+                self.setOpt(0, 'Convert to single A spike')
+                self.setOpt(1, 'Convert to single B spike')
 
         else:
             self.setMainText('SVM spike selected')
 
-            self.options = []
             for i in xrange(2):
                 self.options.append( QtGui.QRadioButton(self.uiObject.groupBox) )
                 self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, 20))
@@ -102,9 +114,16 @@ class IPIWindow(QtGui.QDialog):
             return 'Previous spike was not ready for SVM classification'
 
     def generateParameterText(self,Par):
+        self.fish = Par[0]
+        if self.fish == 1:
+            fishtxt = 'Fish A'
+        elif self.fish == 2:
+            fishtxt = 'Fish B'
+        elif self.fish == 3:
+            fishtxt = 'Both A + B'
         text = '' + \
             'fish: ' + '\n' + \
-            str(Par[0]) + '\n\n' + \
+            str(fishtxt) + '\n\n' + \
             'Timestamp: ' + '\n' + \
             str(Par[1]) + '\n\n' + \
             'offset on .memmapf32 file (bytes): ' + '\n' + \

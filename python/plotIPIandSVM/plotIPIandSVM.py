@@ -200,7 +200,7 @@ class PickPoints:
                 # Draw a line over the point
                 self.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'r-')
 
-
+            
             Parameters = ( data[ recogdb.dicFields['presentFish'] ], \
                 self.plotObject.sec2hms(sample / freq, None), \
                 off, \
