@@ -1,11 +1,8 @@
-#import bsddb3
 import sys, os
-import recogdb # Lembrar de colocar essa biblioteca junto
 import numpy as np
 
-amostra = 24557
-Peixe = 'A'
-
+sys.path.append( os.path.realpath('../python/') )
+import recogdb
 
 NumChannels = 11 #importar isso do arquivo C?
 
@@ -14,7 +11,7 @@ def usage():
     sys.exit(-1)
 
 
-if len(sys.argv) != 4:
+if len(sys.argv) != 3:
     usage()
 
 if not os.path.isfile(sys.argv[1]):
@@ -22,9 +19,8 @@ if not os.path.isfile(sys.argv[1]):
 
 print sys.argv[1]
 #db = bsddb3.btopen(sys.argv[1],'r')
-db = recogdb.openDB(sys.argv[1],'r')
+db = recogdb.openDB(sys.argv[1],'w')
 f = open(sys.argv[2],'w')
-f2 = open(sys.argv[3], 'w')
 
 # Variables for each fish
 SpikesLidos = { 'A':0, 
@@ -49,6 +45,7 @@ prob = {    'A': 0.,
             'B': 0.,
        }
 allOffs = {}
+OffsRaw = {}
 
 for rec in db.iteritems():
     offraw, direction, distA, distB, distAB, SaturationFlag, svm, pairsvm, prob['A'], prob['B'], fishwins = recogdb.fishrec(rec)
@@ -96,14 +93,17 @@ for rec in db.iteritems():
 
         out = int(round(off + offset + MediaCentro[PIdx]))
         allOffs[offraw] = out
+        OffsRaw[out] = offraw
 
-        pair = 0
-        if svm == 's' and pairsvm != 0: ###### Mudar para escrever no DB
-            pair = allOffs[pairsvm]
+        assert ( (flag[PIdx] == 1) or (flag[PIdx] == -1) )
 
         f.write( '%d\t%d\n'%(flag[PIdx],out) )
-        f2.write( '%d\t%d\t%d\t%d\t%c\t%d\t%f\t%f\t%f\t%f\t%f\n'%(flag[PIdx],out,offraw,direction,svm,pair,prob['A'], prob['B'], distA, distB, distAB ) )
+        if flag[PIdx] == 1:
+            recogdb.updateHeaderEntry(db, offraw, 'correctedPosA', out, change_svm=False, sync=False)
+        else:
+            recogdb.updateHeaderEntry(db, offraw, 'correctedPosB', out, change_svm=False, sync=False)
+
+db.sync()
 
 f.close()
-f2.close()
 db.close()

@@ -4,8 +4,26 @@ from bsddb3 import _DBWithCursor
 import struct
 import numpy as np
 
+###############
+# CUIDADO!!! Quando adicionar campo no DB, deve-se alterar o dicionario dicFields E a funcao binarizeDBHeader (struct.pack nao aceita tuplas!)
+
+
 # TODO: read from external file
 NumChannels = 11
+
+dicFields = {'presentFish': 0,
+        'direction': 1,
+        'distA': 2,
+        'distB': 3,
+        'distAB': 4,
+        'flags': 5,
+        'correctedPosA': 6,
+        'correctedPosB': 7,
+        'svm': 8,
+        'pairsvm': 9,
+        'probA': 10,
+        'probB': 11,
+}
 
 def compare_fcn(a, b):
     if a and b:
@@ -63,24 +81,28 @@ def openDB(filename, mode):
     flags |= bsd.DB_THREAD
 
     env = bsd.DBEnv()
+    env.set_lk_detect(bsd.DB_LOCK_DEFAULT)
     env.open('.', bsd.DB_PRIVATE | bsd.DB_CREATE | bsd.DB_THREAD | bsd.DB_INIT_LOCK | bsd.DB_INIT_MPOOL)
 
     db = bsd.DB(env)
     db.set_bt_compare(compare_fcn)
-    db.open(filename, bsd.DB_BTREE, flags, 0)
+    db.open(filename, bsd.DB_BTREE, flags, 0666)
 
     return _DBWithCursor(db)
 
-def parseDBHeader(copy):
-    bindata = copy
-    presentFish, direction, distA, distB, distAB, flags, correctedPos, svm, pairsvm, probA, probB = struct.unpack('=iifffiqiqff', bindata[:52])
-    svm = chr(svm)
-    return (presentFish, direction, distA, distB, distAB, flags, correctedPos, svm, pairsvm, probA, probB, bindata[:52])
+def parseDBHeader(bindata):
+    size = struct.calcsize('=iifffiqqiqff')
+
+    read_data = list(struct.unpack('=iifffiqqiqff', bindata[:size]))
+    read_data[ dicFields['svm'] ] = chr( read_data[ dicFields['svm'] ])
+    read_data.append(bindata[size:])
+    read_data = tuple(read_data)
+    return read_data
 
 def binarizeDBHeader(tup):
-    presentFish, direction, distA, distB, distAB, flags, correctedPos, svm, pairsvm, probA, probB = tup
+    presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB = tup
     svm = ord(svm)
-    return struct.pack('=iifffiqiqff',presentFish, direction, distA, distB, distAB, flags, correctedPos, svm, pairsvm, probA, probB)
+    return struct.pack('=iifffiqqiqff',presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB)
 
 def fishwin(bindata):
     off, size = struct.unpack('ii', bindata[:8])
@@ -95,14 +117,27 @@ def fishwin(bindata):
 def fishrec(tup):
     off, bindata = tup
     off, = struct.unpack('q', off)
-    presentFish, direction, distA, distB, distAB, flags, correctedPos, svm, pairsvm, probA, probB, spkdata = parseDBHeader(bindata)
+    read_data = parseDBHeader(bindata)
+    spkdata = read_data[-1]
+    presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = parseDBHeader(bindata)
     #print '%d\t%d\t%f\t%f\t%f\t%d\t%c\t%d\t%f\t%f\n'%(off,presentFish,distA,distB,distAB,flags,svm,pairsvm,probA,probB)
     fishwins = {}
     if presentFish & 1:
         fishwins['A'], spkdata = fishwin(spkdata)
     if presentFish & 2:
         fishwins['B'], spkdata = fishwin(spkdata)
-    return off, direction, distA, distB, distAB, flags, svm, pairsvm, probA, probB, fishwins
+    return off, \
+            read_data[ dicFields['direction'] ], \
+            read_data[ dicFields['distA'] ], \
+            read_data[ dicFields['distB'] ], \
+            read_data[ dicFields['distAB'] ], \
+            read_data[ dicFields['flags'] ], \
+            read_data[ dicFields['svm'] ], \
+            read_data[ dicFields['pairsvm'] ], \
+            read_data[ dicFields['probA'] ], \
+            read_data[ dicFields['probB'] ], \
+            fishwins
+
 
 def readHeaderEntry(db,k):
     key = verifyKey(db,k)
@@ -118,45 +153,40 @@ def readHeaderEntry(db,k):
     
     off, bindata = tup
     off = struct.unpack('q',off)
-    presentFish, direction, distA, distB, distAB, flags, correctedPos, svm, pairsvm, probA, probB, spkdata = parseDBHeader(bindata)
+    read_data = parseDBHeader(bindata)
+    spkdata = read_data[-1]
+    read_data = read_data[:-1]
 
-    return (off, (presentFish, direction, distA, distB, distAB, flags, correctedPos, svm, pairsvm, probA, probB))
+    return (off, read_data, spkdata)
 
-def updateHeaderEntry(db, k, field, data):
+
+
+def updateHeaderEntry(db, k, field, data, change_svm=True, sync=True):
     key = verifyKey(db,k)
     if key is None:
         return None
 
-    svmPos = 7
-
-    # it is not possible to modify channel flags or svm cause (will be modified to 'm')
-    dic = {'presentFish': 0,
-            'direction': 1,
-            'distA': 2,
-            'distB': 3,
-            'distAB': 4,
-            'correctedPos': 6,
-            'pairsvm': 8,
-            'probA': 9,
-            'probB': 10,
-        }
+    # It is not possible to modify the flags field
+    dic = dicFields.copy()
+    dic.pop('flags')
     if field not in dic.keys():
         print 'You can only modify one of the fields: ' + str(dic.keys()) + '\n'
         return None
     
-
     raw = readHeaderEntry(db,key)
     if raw is None:
         return None
 
-    off, old_data = raw
+    off, old_data, spkdata = raw
     new_data = list(old_data)
 
     new_data[ dic[field] ] = data
     #Change svm to 'm'
-    new_data[ svmPos ] = 'm'
+    if change_svm == True and field != 'svm':
+        new_data[ svmPos ] = 'm'
 
-    new_data = binarizeDBHeader(new_data)
+    new_data = binarizeDBHeader(new_data) + spkdata
 
     db.update( [(key, new_data), ] )
-    db.sync()
+    if sync == True:
+        db.sync()

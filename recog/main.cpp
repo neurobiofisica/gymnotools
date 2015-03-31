@@ -37,9 +37,9 @@ static int recogdb_compare(DB *dbp, const DBT *a, const DBT *b)
 }
 
 // XXX Not very portable, doesn't deal correctly with alignment issues
-// Record layout:
+// Record layout (* = 64bit field):
 // { presentFish, direction, distA, distB, distAB, saturationFlags,
-//   correctedPos, svm, pairsvn, probA, probB,
+//   correctedPosA*, correctedPosB*, svm, pairsvm*, probA, probB,
 //   [{offA, sizeA, {Ach0, Ach1, ...}}],
 //   [{offB, sizeB, {Bch0, Bch1, ...}}] }
 class RecogDB
@@ -130,34 +130,38 @@ public:
         const quint32 *p = (const quint32 *)data.data;
         return p[5];
     }
-    qint64 correctedPos() const{ // 64 bit field
+    qint64 correctedPosA() const{ // 64 bit field
         const qint64 *p = (const qint64 *)data.data;
         return p[6];
     }
+    qint64 correctedPosB() const{ // 64 bit field
+        const qint64 *p = (const qint64 *)data.data;
+        return p[8];
+    }
     qint32 svm() const {
         const qint32 *p = (const qint32 *)data.data;
-        return p[8];
+        return p[10];
     }
     qint64 pairsvm() const {
         const qint64 *p = (const qint64 *)data.data;
-        return p[9];
+        return p[11];
     }
     float probA() const {
         const float *p = (const float *)data.data;
-        return p[11];
+        return p[13];
     }
     float probB() const {
         const float *p = (const float *)data.data;
-        return p[12];
+        return p[14];
     }
     qint32 spikeData(int n, qint32 &off, SignalBuffer &buf) const {
         assert(n==1 || n==2);
-        assert(data.size > 14*sizeof(qint32));
+        assert(data.size > 16*sizeof(qint32));
         const qint32 *p = (const qint32 *)data.data;
-        p = &p[13];
+        p = &p[15];
         if(n==2) {
             qint32 firstSize = p[1];
-            assert(data.size > (17 + NumChannels*firstSize)*sizeof(qint32));
+            assert(data.size > (19 + NumChannels*firstSize)*sizeof(qint32));
             p = &p[2 + NumChannels*firstSize];
         }
         off = p[0];
@@ -172,7 +176,7 @@ public:
     }
 
     void insert(qint64 k, qint32 direction, float distA, float distB, float distAB, quint32 saturationFlags,
-                qint64 correctedPos, qint32 svm, qint64 pairsvm, float probA, float probB,
+                qint64 correctedPosA, qint64 correctedPosB, qint32 svm, qint64 pairsvm, float probA, float probB,
                 qint32 offA, qint32 sizeA, const float *const* dataA,
                 qint32 offB, qint32 sizeB, const float *const *dataB)
     {
@@ -191,16 +195,18 @@ public:
         recbuff[3] = distB;
         recbuff[4] = distAB;
         recbufi[5] = saturationFlags;
-        recbufi[6] = correctedPos;
-        recbufi[7] = (qint32)(correctedPos>>32);
-        recbufi[8] = svm;
-        recbufi[9] = pairsvm; //64-bit field
-        recbufi[10] = (qint32)(pairsvm>>32); //64-bit field
-        recbuff[11] = probA;
-        recbuff[12] = probB;
+        recbufi[6] = correctedPosA;
+        recbufi[7] = (qint32)(correctedPosA>>32);
+        recbufi[8] = correctedPosB;
+        recbufi[9] = (qint32)(correctedPosB>>32);
+        recbufi[10] = svm;
+        recbufi[11] = pairsvm; //64-bit field
+        recbufi[12] = (qint32)(pairsvm>>32); //64-bit field
+        recbuff[13] = probA;
+        recbuff[14] = probB;
 
-        recbuff = &recbuff[13];
-        recbufi = &recbufi[13];
+        recbuff = &recbuff[15];
+        recbufi = &recbufi[15];
 
         if(dataA != NULL && sizeA)
             copybuf(recbuff, recbufi, offA, sizeA, dataA);
@@ -347,7 +353,7 @@ public:
         delete[] fishvecB;
     }
 
-    void emitSingleA()
+    void emitSingleA(qint64 pair)
     {
         // copy spike
         fishlenA = winfile.getEventSamples();
@@ -359,11 +365,11 @@ public:
         // emit to db
         qint64 off = winfile.getEventOffset();
         db.insert(off, 0, 0., inf, inf, 0,
-                  -1,'s', problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                  -1, -1,'s', pair, problist[off].probA, problist[off].probB,
                   0, fishlenA, fishvecA,
                   0, 0, NULL);
     }
-    void emitSingleB()
+    void emitSingleB(qint64 pair)
     {
         // copy spike
         fishlenB = winfile.getEventSamples();
@@ -375,7 +381,7 @@ public:
         // emit to db
         qint64 off = winfile.getEventOffset();
         db.insert(off, 0, inf, 0., inf, 0,
-                  -1,'s', problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                  -1, -1,'s', pair, problist[off].probA, problist[off].probB,
                   0, 0, NULL,
                   0, fishlenB, fishvecB);
     }
@@ -596,7 +602,7 @@ public:
             // emit to db
             if(distA < curBestDist || forceSub)
                 db.insert(off, direction, distA, distB, distAB, satFlag,
-                          -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                          -1, -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           copystart - firstpos, fishlenA, fishvecA,
                           0, 0, NULL);
         }
@@ -632,7 +638,7 @@ public:
             // emit to db
             if(distB < curBestDist || forceSub)
                 db.insert(off, direction, distA, distB, distAB, satFlag,
-                          -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                          -1, -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           0, 0, NULL,
                           copystart - firstpos, fishlenB, fishvecB);
         }
@@ -665,7 +671,7 @@ public:
 
                 // emit to db
                 db.insert(off, direction, distA, distB, distAB, satFlag,
-                          -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
+                          -1, -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
                           posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
             }
@@ -790,18 +796,18 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
             if(off == lookFor) {
                 foundFirst = true;
                 if(off == curpair.first) {
-                    worker.emitSingleA();
+                    worker.emitSingleA(curpair.second);
                     bool hasPrevious = winfile.prevEvent();
                     assert(hasPrevious);
                     assert(winfile.getEventOffset() == curpair.second);
-                    worker.emitSingleB();
+                    worker.emitSingleB(curpair.first);
                 }
                 else {
-                    worker.emitSingleB();
+                    worker.emitSingleB(curpair.first);
                     bool hasPrevious = winfile.prevEvent();
                     assert(hasPrevious);
                     assert(winfile.getEventOffset() == curpair.first);
-                    worker.emitSingleA();
+                    worker.emitSingleA(curpair.second);
                 }
                 if(it.hasPrevious())
                     curpair = it.previous();
@@ -828,18 +834,18 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
             if(off == lookFor) {
                 foundFirst = true;
                 if(off == curpair.first) {
-                    worker.emitSingleA();
+                    worker.emitSingleA(curpair.second);
                     bool hasNext = winfile.nextEvent();
                     assert(hasNext);
                     assert(winfile.getEventOffset() == curpair.second);
-                    worker.emitSingleB();
+                    worker.emitSingleB(curpair.first);
                 }
                 else {
-                    worker.emitSingleB();
+                    worker.emitSingleB(curpair.first);
                     bool hasNext = winfile.nextEvent();
                     assert(hasNext);
                     assert(winfile.getEventOffset() == curpair.first);
-                    worker.emitSingleA();
+                    worker.emitSingleA(curpair.second);
                 }
                 if(it.hasNext())
                     curpair = it.next();

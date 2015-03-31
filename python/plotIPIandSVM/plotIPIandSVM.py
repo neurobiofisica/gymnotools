@@ -1,3 +1,6 @@
+import struct, sys, os
+import argparse
+
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -6,13 +9,12 @@ from matplotlib.ticker import FuncFormatter
 from matplotlib.widgets import Button
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 
-import argparse
-import sys
-import time
-
 from PyQt4 import QtCore, QtGui
 from graphicalInterface import Ui_Dialog
 from IPIWindow import IPIWindow
+
+sys.path.append( os.path.realpath('../') )
+import recogdb
 
 # Defines (zorder -> used of selecting picker)
 IPIDATABLUE = 100 # The dots will be on top of every other plot
@@ -29,9 +31,6 @@ FIGSIG = 2
 # Constants
 freq = 45454.545454
 NChan = 11
-
-#TODO: LIMPAR VARIAVEIS INUTEIS!
-# PS.: Na versao que le direto do DB isso pode ser simplificado!
 
 ###### Auxiliary funcs ####
 
@@ -174,54 +173,45 @@ class PickPoints:
                 data = event.artist.get_offsets()
                 xdata = [x for x,y in data]
 
-            TS = xdata[ind]*freq
-            sample = TS
+            sample = int(round(xdata[ind]*freq))
+            key = self.plotObject.offsDic[sample]
+            off, data, spkwin = recogdb.readHeaderEntry(self.plotObject.db,key)
+            off = off[0]
 
             if zorder == IPIDATABLUE:
                 color = 'b'
-                TS = int(round(xdata[ind] * freq))
 
                 # Draw a SVM pair line
-                if self.plotObject.svmFlagsDic[ TS ] == 's':
-                    sample2 = self.plotObject.SVMDic[(1,int(round(sample)))]
+                if data[ recogdb.dicFields['svm'] ] == 's':
+                    off2 = data[ recogdb.dicFields['pairsvm'] ]
+                    sample2 = self.plotObject.correctedPosDic[off2]
                     self.pltsvmstrongR = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'r-')
                 # Draw a line over the point
                 self.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'b-')
 
-                Parameters = ( 1, \
-                    self.plotObject.sec2hms(TS / freq, None), \
-                    self.plotObject.offs[ TS ], \
-                    self.plotObject.directionDic[ TS ], \
-                    self.plotObject.svmFlagsDic[ TS ], \
-                    self.plotObject.probsDic[ TS ][0], \
-                    self.plotObject.probsDic[ TS ][1], \
-                    self.plotObject.distsDic[ TS ][0], \
-                    self.plotObject.distsDic[ TS ][1], \
-                    self.plotObject.distsDic[ TS ][2], \
-                )
-
             elif zorder == IPIDATARED:
                 color = 'r'
-                TS = int(round(xdata[ind] * freq))
 
                 # Plots SVM Pair line
-                if self.plotObject.svmFlagsDic[ TS ] == 's':
-                    sample2 = self.plotObject.SVMDic[(-1,int(round(sample)))]
+                if data[ recogdb.dicFields['svm'] ] == 's':
+                    off2 = data[ recogdb.dicFields['pairsvm'] ]
+                    sample2 = self.plotObject.correctedPosDic[off2]
                     self.pltsvmstrongB = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'b-')
                 # Draw a line over the point
                 self.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'r-')
 
-                Parameters = ( -1, \
-                    self.plotObject.sec2hms(TS / freq, None), \
-                    self.plotObject.offs[ TS ], \
-                    self.plotObject.directionDic[ TS ], \
-                    self.plotObject.svmFlagsDic[ TS ], \
-                    self.plotObject.probsDic[ TS ][0], \
-                    self.plotObject.probsDic[ TS ][1], \
-                    self.plotObject.distsDic[ TS ][0], \
-                    self.plotObject.distsDic[ TS ][1], \
-                    self.plotObject.distsDic[ TS ][2], \
-                )
+
+            Parameters = ( data[ recogdb.dicFields['presentFish'] ], \
+                self.plotObject.sec2hms(sample / freq, None), \
+                off, \
+                data[ recogdb.dicFields['direction'] ], \
+                data[ recogdb.dicFields['svm'] ], \
+                data[ recogdb.dicFields['probA'] ], \
+                data[ recogdb.dicFields['probB'] ], \
+                data[ recogdb.dicFields['distA'] ], \
+                data[ recogdb.dicFields['distB'] ], \
+                data[ recogdb.dicFields['distAB'] ], \
+            )
 
             self.fig.canvas.draw() # To make SVM lines bold
             central = (xdata[ind], color)
@@ -419,7 +409,7 @@ class PickPoints:
 class PlotData(QtGui.QDialog):
     DPI = 80
 
-    def __init__(self, TS, SVMFlags, datafile, parent=None):
+    def __init__(self, db, datafile, parent=None):
         QtGui.QWidget.__init__(self)
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
@@ -436,77 +426,16 @@ class PlotData(QtGui.QDialog):
         self.ax.yaxis.grid()
         self.sigfig = self.ui.graphwave.canvas.fig
         self.sigaxes = self.ui.graphwave.canvas.sigaxes
-
+        
         self.scatterFlag = True
 
-        IdxP1 = find(TS[0] == 1)
-        IdxP2 = find(TS[0] == -1)
-
-        P1 = TS[1][ IdxP1 ] / freq
-        P2 = TS[1][ IdxP2 ] / freq
-
-        self.TS = (P1, P2)
-        self.offs = {}
-        for i in xrange(TS[1].size):
-            self.offs[ int(round(TS[1][i])) ] = int(round(TS[2][i]))
-
-        direction0 = TS[3][ IdxP1 ]
-        direction1 = TS[3][ IdxP2 ]
-
-        self.direction = (direction0, direction1)
-
-        self.svmPair = TS[4]
-
-        SVMDec = find(SVMFlags == 's')
-
-        IdxSVM1 = np.intersect1d(IdxP1, SVMDec)
-        IdxSVM2 = np.intersect1d(IdxP2, SVMDec)
-
-        SVM1 = TS[1][IdxSVM1] / freq
-        SVM1 = np.append(SVM1, self.svmPair[IdxSVM2] / freq)
-
-        SVM2 = TS[1][IdxSVM2] / freq
-        SVM2 = np.append(SVM2, self.svmPair[IdxSVM1] / freq)
-
-        self.SVM = np.array([np.sort(SVM1), np.sort(SVM2)])
-        self.Tam = self.SVM[0].size
-
-        svmFlag1 = SVMFlags[ IdxP1 ]
-        svmFlag2 = SVMFlags[ IdxP2 ]
-        self.svmFlags = (svmFlag1, svmFlag2)
-
-        ProbP1 = [ (TS[5][i], TS[6][i]) for i in IdxP1]
-        ProbP2 = [ (TS[5][i], TS[6][i]) for i in IdxP2]
-
-        self.probs = (ProbP1, ProbP2)
-
-        distP1 = [ (TS[7][i], TS[8][i], TS[9][i])  for i in IdxP1 ]
-        distP2 = [ (TS[7][i], TS[8][i], TS[9][i])  for i in IdxP2 ]
-
-        self.dists = (distP1, distP2)
-
-        # Dictionaries indexed by Timestamp in samples
-        self.distsDic = {}
-        self.probsDic = {}
-        self.svmFlagsDic = {}
-        self.SVMDic = {}
-        self.directionDic = {}
-        for i in IdxP1:
-            self.distsDic[ TS[1][i] ] = (TS[7][i], TS[8][i], TS[9][i])
-            self.probsDic[ TS[1][i] ] = (TS[5][i], TS[6][i])
-            self.svmFlagsDic[ TS[1][i] ] = SVMFlags[i]
-            self.SVMDic.update({ ( 1, int(round(TS[1][i]))): int(round(self.svmPair[i])) })
-            self.SVMDic.update({ (-1, int(round(self.svmPair[i]))): int(round(TS[1][i])) })
-            self.directionDic[ TS[1][i] ] = TS[3][i]
-        for i in IdxP2:
-            self.distsDic[ TS[1][i] ] = (TS[7][i], TS[8][i], TS[9][i])
-            self.probsDic[ TS[1][i] ] = (TS[5][i], TS[6][i])
-            self.svmFlagsDic[ TS[1][i] ] = SVMFlags[i]
-            self.SVMDic[(-1, int(round(TS[1][i])))] =  int(round(self.svmPair[i]))
-            self.SVMDic[( 1, int(round(self.svmPair[i])))] =  int(round(TS[1][i]))
-            self.directionDic[ TS[1][i] ] = TS[3][i]
-
-
+        self.db = db
+       
+        # Loads on memory variables necessary for plotting
+        # And dictionary from correctedSample to db off key
+        # Runs the whole DB
+        self.loadDataFromDB()
+        
         self.SVM2Plot = []
         self.SVM2Plot.append( self.SVM[0].repeat(3) )
         self.SVM2Plot.append( self.SVM[1].repeat(3) )
@@ -524,6 +453,77 @@ class PlotData(QtGui.QDialog):
 
         self.datafile = datafile
         self.TS = self.TS
+        
+    def __exit__(self):
+        self.db.close()
+        
+    def loadDataFromDB(self):
+        self.offsDic = {}
+        self.correctedPosDic = {}
+        
+        P1 = []
+        direction1 = []
+        SVM1 = []
+        probs1 = []
+        dists1 = []
+        
+        P2 = []
+        direction2 = []
+        SVM2 = []
+        probs2 = []
+        dists2 = []
+        
+        for rec in self.db.iteritems():
+            key, bindata = rec
+            off, = struct.unpack('q',key)
+            presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = recogdb.parseDBHeader(bindata)
+            
+            if correctedPosA != -1:
+                self.offsDic[correctedPosA] = off
+                self.correctedPosDic[off] = correctedPosA
+            if correctedPosB != -1:
+                self.offsDic[correctedPosB] = off
+                self.correctedPosDic[off] = correctedPosB
+            
+            assert ( (presentFish == 1) or (presentFish ==  2) or (presentFish == 3) )
+            
+            if presentFish == 1:
+                P1.append(correctedPosA)
+                direction1.append(direction)
+                probs1.append( (probA, probB) )
+                dists1.append( (distA, distB, distAB) )
+                if svm == 's':
+                    SVM1.append(correctedPosA)
+                
+            elif presentFish == 2:
+                P2.append(correctedPosB)
+                direction2.append(direction)
+                probs2.append( (probA, probB) )
+                dists2.append( (distA, distB, distAB) )
+                if svm == 's':
+                    SVM2.append(correctedPosB)
+                
+            else:
+                P1.append(correctedPosA)
+                direction1.append(direction)
+                probs1.append( (probA, probB) )
+                dists1.append( (distA, distB, distAB) )
+                # 2 fish on same window is never a SVM classification
+                
+                P2.append(correctedPosB)
+                direction2.append(direction)
+                probs2.append( (probA,probB) )
+                dists2.append( (distA, distB, distAB) )
+                # 2 fish on same window is never a SVM classification
+                
+        
+        self.TS = ( np.array(P1)/freq, np.array(P2)/freq )
+        self.direction = ( np.array(direction1), np.array(direction2) )
+        self.SVM = ( np.array(SVM1)/freq, np.array(SVM2)/freq )
+        self.Tam = self.SVM[0].size
+        self.probs = (probs1, probs2)
+        self.dists = (dists1, dists2)
+        
 
     def onResize(self,event):
         self.ui.formLayoutWidget.setGeometry(0,0,self.size().width(),self.size().height())
@@ -582,8 +582,6 @@ class PlotData(QtGui.QDialog):
 
     def plotData(self, minX, maxX):
 
-        # Will plot 3 windows, and rearange axes to only show 1
-        # This is for navigation
         L = maxX - minX
         MIN = minX
         MAX = maxX
@@ -617,7 +615,7 @@ class PlotData(QtGui.QDialog):
             self.ax.plot(self.TS[0][1:], np.diff(self.TS[0]), 'b-')
             
             self.plotted = True
-
+        
         try:
             self.scatter1d.remove()
         except:
@@ -718,25 +716,25 @@ if __name__ == '__main__':
     description = 'Browse the IPI of the generated time series and provides tools for manual correction'
     parser = MyParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('timestamps_file', type=file, help='Location of the timestamps generated file')
+    parser.add_argument('db_file', type=str, help='Databank generated file')
     parser.add_argument('timeseries_file', type=file, help='Location of the timeseries (I32) file')
     parser.add_argument('--stepSize', type=float, default=90., help='Step size for moving on the IPI time series. Default = 90s')
     parser.add_argument('--winSize', type=float, default=120., help='Window size for plotting the IPI time series. Default = 120s')
 
     args = parser.parse_args()
-    timestampsf = args.timestamps_file
+    dbf = args.db_file
     datafile = args.timeseries_file
     stepSize = args.stepSize
     winSize = args.winSize
 
+    if os.path.isfile(dbf) == False:
+        print 'DB file not found'
+
     app = QtGui.QApplication(sys.argv)
 
-    TS = np.loadtxt(timestampsf,unpack=True,usecols=(0,1,2,3,5,6,7,8,9,10))
-    timestampsf.seek(0)
-    svmFlags = np.array(parseSVMFlags(timestampsf))
-    timestampsf.close()
+    db = recogdb.openDB(dbf,'r')
 
-    myapp = PlotData(TS, svmFlags, datafile)
+    myapp = PlotData(db, datafile)
 
     Pick = PickPoints(myapp)
 
