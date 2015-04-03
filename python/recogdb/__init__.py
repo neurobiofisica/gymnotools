@@ -183,7 +183,7 @@ def updateHeaderEntry(db, k, field, data, change_svm=True, sync=True):
     new_data[ dic[field] ] = data
     #Change svm to 'm'
     if change_svm == True and field != 'svm':
-        new_data[ svmPos ] = 'm'
+        new_data[ dicFields['svm'] ] = 'm'
 
     new_data = binarizeDBHeader(new_data) + spkdata
 

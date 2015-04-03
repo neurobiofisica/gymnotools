@@ -1,4 +1,4 @@
-import struct, sys, os
+import struct, sys, os, time
 import argparse
 
 import numpy as np
@@ -152,11 +152,11 @@ class PickPoints:
             return
 
         try:
-            self.pltsvmstrongB.pop(0).remove()
+            self.plotObject.pltsvmstrongB.pop(0).remove()
         except:
             pass
         try:
-            self.pltsvmstrongR.pop(0).remove()
+            self.plotObject.pltsvmstrongR.pop(0).remove()
         except:
             pass
 
@@ -185,9 +185,9 @@ class PickPoints:
                 if data[ recogdb.dicFields['svm'] ] == 's':
                     off2 = data[ recogdb.dicFields['pairsvm'] ]
                     sample2 = self.plotObject.correctedPosDic[off2]
-                    self.pltsvmstrongR = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'r-')
+                    self.plotObject.pltsvmstrongR = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'r-')
                 # Draw a line over the point
-                self.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'b-')
+                self.plotObject.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'b-')
 
             elif zorder == IPIDATARED:
                 color = 'r'
@@ -196,9 +196,9 @@ class PickPoints:
                 if data[ recogdb.dicFields['svm'] ] == 's':
                     off2 = data[ recogdb.dicFields['pairsvm'] ]
                     sample2 = self.plotObject.correctedPosDic[off2]
-                    self.pltsvmstrongB = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'b-')
+                    self.plotObject.pltsvmstrongB = self.ax.plot([sample2/freq,sample2/freq],self.plotObject.SVMY[:2],'b-')
                 # Draw a line over the point
-                self.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'r-')
+                self.plotObject.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY[:2],'r-')
 
             
             Parameters = ( data[ recogdb.dicFields['presentFish'] ], \
@@ -215,10 +215,14 @@ class PickPoints:
 
             self.fig.canvas.draw() # To make SVM lines bold
             central = (xdata[ind], color)
-            self.plotObject.plotSigData(central)
+            self.plotObject.selectedIPI = central
+            self.plotObject.plotSigData()
             if self.options == True:
                 self.plotObject.dialogIPI.fillTextBoxes(Parameters)
                 self.plotObject.dialogIPI.exec_()
+                if self.plotObject.dialogIPI.replot == True:
+                    self.plotObject.replotData()
+                    self.plotObject.dialogIPI.replot = False
 
     def press(self,event):
         key = event.key
@@ -409,14 +413,14 @@ class PickPoints:
 class PlotData(QtGui.QDialog):
     DPI = 80
 
-    def __init__(self, db, datafile, parent=None):
+    def __init__(self, app, dbf, datafile, undoFilename, folder, parent=None):
+        self.app = app
+        
         QtGui.QWidget.__init__(self)
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self.ui.graphIPI.canvas.setFocusPolicy( QtCore.Qt.ClickFocus )
         self.ui.graphIPI.canvas.setFocus()
-
-        self.dialogIPI = IPIWindow()
 
         self.resizeEvent = self.onResize
         self.showMaximized()
@@ -429,10 +433,13 @@ class PlotData(QtGui.QDialog):
         
         self.scatterFlag = True
 
-        self.db = db
+        self.db = recogdb.openDB(dbf,'w')
+        
+        self.dialogIPI = IPIWindow(self.db, undoFilename, folder)
        
         # Loads on memory variables necessary for plotting
-        # And dictionary from correctedSample to db off key
+        # and dictionary from correctedSample to db off key
+        #
         # Runs the whole DB
         self.loadDataFromDB()
         
@@ -447,8 +454,7 @@ class PlotData(QtGui.QDialog):
         self.formatterX = FuncFormatter(self.sec2hms)
         self.formatterY = FuncFormatter(self.sec2msus)
 
-        self.plotted = False
-        self.plotData(0, winSize) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
+        self.plotData(0, winSize, plotIPI=True) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
         self.createSigFig() # Creates self.sigfig, self.ui.graphwave.canvas.sigaxes attributes
 
         self.datafile = datafile
@@ -473,6 +479,8 @@ class PlotData(QtGui.QDialog):
         probs2 = []
         dists2 = []
         
+        Tam1 = 0
+        Tam2 = 0
         for rec in self.db.iteritems():
             key, bindata = rec
             off, = struct.unpack('q',key)
@@ -488,6 +496,7 @@ class PlotData(QtGui.QDialog):
             assert ( (presentFish == 1) or (presentFish ==  2) or (presentFish == 3) )
             
             if presentFish == 1:
+                Tam1 += 1
                 P1.append(correctedPosA)
                 direction1.append(direction)
                 probs1.append( (probA, probB) )
@@ -496,6 +505,7 @@ class PlotData(QtGui.QDialog):
                     SVM1.append(correctedPosA)
                 
             elif presentFish == 2:
+                Tam2 += 1
                 P2.append(correctedPosB)
                 direction2.append(direction)
                 probs2.append( (probA, probB) )
@@ -504,25 +514,47 @@ class PlotData(QtGui.QDialog):
                     SVM2.append(correctedPosB)
                 
             else:
+                Tam1 += 1
                 P1.append(correctedPosA)
                 direction1.append(direction)
                 probs1.append( (probA, probB) )
                 dists1.append( (distA, distB, distAB) )
                 # 2 fish on same window is never a SVM classification
                 
+                Tam2 += 1
                 P2.append(correctedPosB)
                 direction2.append(direction)
                 probs2.append( (probA,probB) )
                 dists2.append( (distA, distB, distAB) )
                 # 2 fish on same window is never a SVM classification
-                
         
-        self.TS = ( np.array(P1)/freq, np.array(P2)/freq )
+        self.TS = ( np.sort(np.array(P1))/freq, np.sort(np.array(P2))/freq )
         self.direction = ( np.array(direction1), np.array(direction2) )
-        self.SVM = ( np.array(SVM1)/freq, np.array(SVM2)/freq )
+        self.SVM = ( np.sort(SVM1)/freq, np.sort(SVM2)/freq )
         self.Tam = self.SVM[0].size
         self.probs = (probs1, probs2)
         self.dists = (dists1, dists2)
+        
+    def replotData(self):
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        Xlimits = self.ax.get_xlim()
+        Ylimits = self.ax.get_ylim()
+        
+        self.removeIPIplots()
+        self.fig.canvas.draw()
+        
+        self.removeWaveplots()
+        self.sigfig.canvas.draw()        
+        
+        # Reload new Data
+        self.loadDataFromDB()
+        
+        self.plotData(Xlimits[0],Xlimits[1], plotIPI=True)
+        self.ax.set_ylim(Ylimits)
+        self.fig.canvas.draw()
+        
+        self.app.restoreOverrideCursor()
         
 
     def onResize(self,event):
@@ -544,11 +576,11 @@ class PlotData(QtGui.QDialog):
 
         self.lines = []
 
-    def plotSigData(self, central, spksurroudings=25*128):
+    def plotSigData(self, spksurroudings=25*128):
         while len(self.lines) != 0:
             self.lines.pop().remove()
-
-        centralts, color = central
+         
+        centralts, color = self.selectedIPI
         nextP1 = next(n for n,spk in enumerate(self.TS[0]) if spk >= centralts)
         surrP1 = self.TS[0][nextP1-10:nextP1+10]
 
@@ -579,8 +611,82 @@ class PlotData(QtGui.QDialog):
             self.lines.append(ax.axvline(centralts,color=color,lw=2,alpha=1))
         
         self.sigfig.canvas.draw()
+    
+    def removeWaveplots(self):
+        while len(self.lines) != 0:
+            self.lines.pop().remove()
+        for i in xrange(NChan):
+            self.sigaxes[i].clear()
+        self.createSigFig()
+    
+    def removeIPIplots(self):
+        # Remove SVM Lines
+        try:
+            self.SVMplotB.remove()
+        except:
+            pass
+        try:
+            self.SVMplotR.remove()
+        except:
+            pass
+        
+        # Remove IPI Lines
+        try:
+            self.IPIplotB.pop(0).remove()
+        except:
+            pass
+        try:
+            self.IPIplotR.pop(0).remove()
+        except:
+            pass
+            
+        # Remove IPI scatter dots
+        try:
+            self.scatter1d.remove()
+        except:
+            pass
+        try:
+            self.scatter2d.remove()
+        except:
+            pass
+        try:
+            self.scatter1r.remove()
+        except:
+            pass
+        try:
+            self.scatter2r.remove()
+        except:
+            pass
+        try:
+            self.scatter1s.remove()
+        except:
+            pass
+        try:
+            self.scatter2s.remove()
+        except:
+            pass
+        
+        # Remove IPI dots
+        try:
+            self.plot1.pop(0).remove()
+        except:
+            pass
+        try:
+            self.plot2.pop(0).remove()
+        except:
+            pass
+       
+        # Remove strong SVM pair line
+        try:
+            self.pltsvmstrongR.pop(0).remove()
+        except:
+            pass
+        try:
+            self.pltsvmstrongB.pop(0).remove()
+        except:
+            pass
 
-    def plotData(self, minX, maxX):
+    def plotData(self, minX, maxX, plotIPI = False):
 
         L = maxX - minX
         MIN = minX
@@ -605,17 +711,32 @@ class PlotData(QtGui.QDialog):
             maxIdxX2 = self.TS[1].size-1
 
         # Only plot once
-        if self.plotted == False:
+        if plotIPI == True:
+            try:
+                self.SVMplotB.remove()
+            except:
+                pass
+            try:
+                self.SVMplotR.remove()
+            except:
+                pass
+            try:
+                self.IPIplotB.pop(0).remove()
+            except:
+                pass
+            try:
+                self.IPIplotR.pop(0).remove()
+            except:
+                pass
+            
             # Plot SVM Lines
-            self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2)
-            self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2)
+            self.SVMplotB = self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2)
+            self.SVMplotR = self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2)
 
             # Lines and dots are plotter separately for picker act only on dots
-            self.ax.plot(self.TS[1][1:], np.diff(self.TS[1]), 'r-')
-            self.ax.plot(self.TS[0][1:], np.diff(self.TS[0]), 'b-')
+            self.IPIplotR = self.ax.plot(self.TS[1][1:], np.diff(self.TS[1]), 'r-')
+            self.IPIplotB = self.ax.plot(self.TS[0][1:], np.diff(self.TS[0]), 'b-')
             
-            self.plotted = True
-        
         try:
             self.scatter1d.remove()
         except:
@@ -729,12 +850,25 @@ if __name__ == '__main__':
 
     if os.path.isfile(dbf) == False:
         print 'DB file not found'
+        
+    # Create folder to save DB modifications
+    # /home/datafile.memmapf32 -> datafilename == datafile
+    # Pattern:
+    # datafilename/
+    #           DBname_undo.keys
+    #           key1.undo
+    #           key2.undo
+    #           key3.undo
+    #           ...
+    datafilename = datafile.name.split('/')[-1].split('.')[0]
+    if os.path.isdir(datafilename) == False:
+        os.makedirs(datafilename)
+    dbname = dbf.split('/')[-1].split('.')[0] + '_undo.keys'
+    undoFilename = datafilename + '/' + dbname
 
     app = QtGui.QApplication(sys.argv)
 
-    db = recogdb.openDB(dbf,'r')
-
-    myapp = PlotData(db, datafile)
+    myapp = PlotData(app, dbf, datafile, undoFilename, datafilename)
 
     Pick = PickPoints(myapp)
 
