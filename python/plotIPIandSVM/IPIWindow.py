@@ -26,6 +26,20 @@ INVERTION = 0
 dicUndo = {INVERTION: 'Continuity invertion',
 }
 
+dicFields = {'presentFish': 'int',
+        'direction': 'int',
+        'distA': 'float',
+        'distB': 'float',
+        'distAB': 'float',
+        'flags': 'int',
+        'correctedPosA': 'int',
+        'correctedPosB': 'int',
+        'svm': 'char',
+        'pairsvm': 'int',
+        'probA': 'float',
+        'probB': 'float',
+}
+
 class ModifySelector:
     def __init__(self, db, undoFilename, folder):
         self.db = db
@@ -74,7 +88,38 @@ class ModifySelector:
            
         # Append last action 
         undoList.append( (ActionNow, dicActions) ) 
-        return undoList
+        # List is from the newest to the oldest modification
+        return undoList[::-1]
+    
+    def regenUndoFile(self, key, modListInv):
+        # File is generated on chronological order
+        modList = modListInv[::-1]
+        
+        # Remove from undokeys list if is the oldest alteration
+        if len(modList) == 0:
+            undoFile = open(self.undoFilename, 'r')
+            lines = undoFile.readlines()
+            undoFile.close()
+            
+            undoFile = open(self.undoFilename, 'w')
+            for l in lines:
+                if l != str(key)+'\n':
+                    undoFile.write(l)
+            undoFile.close()
+        
+        keyundofile = open(self.folder + '/' + str(key) + '.undo', 'w')
+        for action, dicAction in modList:
+            keyundofile.write("%s\n"%(action))
+            for field in dicAction.keys():
+                assert dicFields[field] in ('int', 'float', 'char')
+                dataold, datanew = dicAction[field]
+                if dicFields[field] == 'float':
+                    keyundofile.write("\t%s\t%f\t%f\n"%(field, float(dataold), float(datanew)))
+                elif dicFields[field] == 'int':
+                    keyundofile.write("\t%s\t%d\t%d\n"%(field, int(dataold), int(datanew)))
+                elif dicFields[field] == 'char':
+                    keyundofile.write("\t%s\t%c\t%c\n"%(field, dataold, datanew))
+        keyundofile.close()
 
     def invertIPI(self, key):
         if key not in self.undoKeys:
@@ -153,6 +198,21 @@ class ModifySelector:
         keyundofile.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB, newDistAB) )
         
         keyundofile.close()
+    
+    def undo(self, modList, selected, key):
+        action, dicActions = modList[selected]
+        for field in dicActions.keys():
+            assert dicFields[field] in ('int', 'float', 'char')
+            if dicFields[field] == 'int':
+                data = int(dicActions[field][0])
+            elif dicFields[field] == 'float':
+                data = float(dicActions[field][0])
+            else:
+                data = dicActions[field][0]
+            recogdb.updateHeaderEntry(self.db, key, field, data, sync=False)
+        self.db.sync()
+        newModList = modList[selected+1:]
+        self.regenUndoFile(key,newModList)
 
 
 class IPIWindow(QtGui.QDialog):
@@ -169,6 +229,7 @@ class IPIWindow(QtGui.QDialog):
 
         QtCore.QObject.connect(self.uiObject.okButton, QtCore.SIGNAL('clicked()'), self.okClicked)
         QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.close)
+        QtCore.QObject.connect(self.uiObject.undoButton, QtCore.SIGNAL('clicked()'), self.undoClicked)
         
         self.replot=False
 
@@ -179,9 +240,13 @@ class IPIWindow(QtGui.QDialog):
         self.undoOptions = []
 
     def okClicked(self):
+        option = -1
         for n,opt in enumerate(self.options):
             if opt.isChecked() == True:
                 option = n
+                break
+        if option == -1:
+            self.close()
         
         if self.windowType == 'continuity':
             # Invert fish
@@ -216,6 +281,21 @@ class IPIWindow(QtGui.QDialog):
         
         self.close()
     
+    def undoClicked(self):
+        option = -1
+        for n,opt in enumerate(self.undoOptions):
+            but, label = opt
+            if but.isChecked() == True:
+                option = n
+                break
+        if option == -1:
+            self.close()
+            return
+        
+        self.modify.undo(self.modList, option, self.off)
+        self.replot = True
+        self.close()
+    
     def createMainOptions(self,text):
         self.uiObject.mainOptionsBox = QtGui.QGroupBox(self.uiObject.gridLayoutWidget)
         self.uiObject.mainOptionsBox.setObjectName(_fromUtf8("MainOptionsBox"))
@@ -231,8 +311,8 @@ class IPIWindow(QtGui.QDialog):
         self.createMainOptions('Options: ')
         self.fillMainOptions(Parameters)
         
-        modList = self.modify.parseModifications(self.off)
-        self.fillUndoOptions(modList)
+        self.modList = self.modify.parseModifications(self.off)
+        self.fillUndoOptions(self.modList)
 
     def fillUndoOptions(self, modList):
         if modList is None:
