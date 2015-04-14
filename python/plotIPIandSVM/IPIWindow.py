@@ -227,10 +227,12 @@ class IPIWindow(QtGui.QDialog):
         self.fillMainOptions(Parameters)
         
         modList = self.modify.parseModifications(self.off)
-        if modList is not None:
-            self.fillUndoOptions(modList)
+        self.fillUndoOptions(modList)
 
     def fillUndoOptions(self, modList):
+        if modList is None:
+            return
+        
         self.undoOptions = []
         i = 0
         for action, dicActions in modList:
@@ -238,11 +240,13 @@ class IPIWindow(QtGui.QDialog):
             RadioBut.setObjectName(_fromUtf8('undo' + str(i)))
             RadioBut.setMinimumHeight(self.RButSize)
             self.uiObject.verticalLayout.addWidget(RadioBut)
+            RadioBut.deleteLater()
             
             Label = QtGui.QLabel(self.uiObject.scrollAreaWidgetContents)
             Label.setObjectName(_fromUtf8('undolabel' + str(i)))
             Label.setMinimumHeight(self.RUndoLabelSize)
             self.uiObject.verticalLayout.addWidget(Label)
+            Label.deleteLater()
             
             font = QtGui.QFont()
             font.setFamily(_fromUtf8('Arial'))
