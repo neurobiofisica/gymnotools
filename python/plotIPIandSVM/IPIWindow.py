@@ -23,7 +23,7 @@ except AttributeError:
 
 INVERTION = 0
 
-dicUndo = {INVERTION: 'Continuity invertion\n',
+dicUndo = {INVERTION: 'Continuity invertion',
 }
 
 class ModifySelector:
@@ -34,7 +34,7 @@ class ModifySelector:
         
         # if to avoid warning of loadtxt from empty file
         if os.stat(undoFilename).st_size != 0:
-            self.undoKeys = set(np.loadtxt(undoFilename, unpack=True))
+            self.undoKeys = set(np.loadtxt(undoFilename, unpack=True, ndmin=1))
         else:
             self.undoKeys = set()
         
@@ -141,7 +141,7 @@ class ModifySelector:
         newDistAB = new_data[ recogdb.dicFields['distAB'] ]
         
         # Action identifier
-        keyundofile.write( dicUndo[INVERTION] )
+        keyundofile.write( '%s\n'%(dicUndo[INVERTION]) )
         
         # Modified fields
         keyundofile.write( '\t%s\t%c\t%c\n'%('svm', oldSVM, newSVM) )
