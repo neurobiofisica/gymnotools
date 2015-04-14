@@ -31,7 +31,12 @@ class ModifySelector:
         self.db = db
         self.undoFilename = undoFilename
         self.folder = folder
-        self.undoKeys = set(np.loadtxt(undoFilename, unpack=True))
+        
+        # if to avoid warning of loadtxt from empty file
+        if os.stat(undoFilename).st_size != 0:
+            self.undoKeys = set(np.loadtxt(undoFilename, unpack=True))
+        else:
+            self.undoKeys = set()
         
         self.replot = False
 
@@ -53,7 +58,7 @@ class ModifySelector:
                 if len(dicActions.keys()) != 0:
                     undoList.append( (ActionNow, dicActions) ) 
                     
-                ActionNow = Columns[0]
+                ActionNow = Columns[0].strip() # remove last '\n'
                 assert ( ActionNow in dicUndo.values() )
                 dicActions = {}
                 continue
@@ -129,11 +134,11 @@ class ModifySelector:
         
         newSVM = new_data[ recogdb.dicFields['svm'] ]
         newFish = new_data[ recogdb.dicFields['presentFish'] ]
-        newCorrectedPosA = read_data[ recogdb.dicFields['correctedPosA'] ]
-        newCorrectedPosB = read_data[ recogdb.dicFields['correctedPosB'] ]
-        newDistA = read_data[ recogdb.dicFields['distA'] ]
-        newDistB = read_data[ recogdb.dicFields['distB'] ]
-        newDistAB = read_data[ recogdb.dicFields['distAB'] ]
+        newCorrectedPosA = new_data[ recogdb.dicFields['correctedPosA'] ]
+        newCorrectedPosB = new_data[ recogdb.dicFields['correctedPosB'] ]
+        newDistA = new_data[ recogdb.dicFields['distA'] ]
+        newDistB = new_data[ recogdb.dicFields['distB'] ]
+        newDistAB = new_data[ recogdb.dicFields['distAB'] ]
         
         # Action identifier
         keyundofile.write( dicUndo[INVERTION] )

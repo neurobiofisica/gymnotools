@@ -864,7 +864,11 @@ if __name__ == '__main__':
     if os.path.isdir(datafilename) == False:
         os.makedirs(datafilename)
     dbname = dbf.split('/')[-1].split('.')[0] + '_undo.keys'
+    
     undoFilename = datafilename + '/' + dbname
+    
+    # Create undo file if it does not exists (a for append -> do not erase any data)
+    open(undoFilename,'a').close()
 
     app = QtGui.QApplication(sys.argv)
 
