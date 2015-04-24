@@ -1,5 +1,6 @@
 from PyQt4 import QtCore, QtGui
 from IPIClick_interface import *
+from single2overlap import single2overlap
 
 import numpy as np
 
@@ -22,6 +23,7 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 INVERTION = 0
+NChan = 11
 
 dicUndo = {INVERTION: 'Continuity invertion',
 }
@@ -41,10 +43,12 @@ dicFields = {'presentFish': 'int',
 }
 
 class ModifySelector:
-    def __init__(self, db, undoFilename, folder):
+    def __init__(self, db, undoFilename, folder, datafile):
         self.db = db
         self.undoFilename = undoFilename
         self.folder = folder
+        
+        self.single2overlapWindow = single2overlap(NChan, datafile)
         
         # if to avoid warning of loadtxt from empty file
         if os.stat(undoFilename).st_size != 0:
@@ -199,6 +203,24 @@ class ModifySelector:
         
         keyundofile.close()
     
+    def convert2overlap(self,key):
+        prevB, data_pB = recogdb.getNearest(self.db, -1, key, 1, overlap=True)
+        prevR, data_pR = recogdb.getNearest(self.db, -1, key, 2, overlap=True)
+
+        off_now, data_now = recogdb.get_location(self.db, key)
+        
+        nextB, data_nB = recogdb.getNearest(self.db,  1, key, 1, overlap=True)
+        nextR, data_nR = recogdb.getNearest(self.db,  1, key, 2, overlap=True)
+        
+        data = ((prevB, data_pB), \
+                (prevR, data_pR), \
+                (off_now, data_now), \
+                (nextB, data_nB), \
+                (nextR, data_nR))
+        
+        self.single2overlapWindow.plotSignals(data, channel=0)
+        self.single2overlapWindow.exec_()
+    
     def undo(self, modList, selected, key):
         action, dicActions = modList[selected]
         for field in dicActions.keys():
@@ -220,12 +242,12 @@ class IPIWindow(QtGui.QDialog):
     RUndoLabelSize = 100
     RUndoStep = 140
 
-    def __init__(self, db, undoFilename, folder):
+    def __init__(self, db, undoFilename, folder, datafile):
         QtGui.QWidget.__init__(self)
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
         
-        self.modify = ModifySelector(db, undoFilename, folder)
+        self.modify = ModifySelector(db, undoFilename, folder, datafile)
 
         QtCore.QObject.connect(self.uiObject.okButton, QtCore.SIGNAL('clicked()'), self.okClicked)
         QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.close)
@@ -255,7 +277,10 @@ class IPIWindow(QtGui.QDialog):
                 self.replot = True
             # Convert to overlap
             elif option == 1:
-                pass
+                self.modify.convert2overlap(self.off)
+                if self.modify.single2overlapWindow.replot == True:
+                    self.replot = True
+                    self.modify.single2overlapWindow.replot = False
             # Create SVM Pair
             elif option == 2:
                 pass

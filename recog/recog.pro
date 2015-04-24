@@ -12,7 +12,7 @@ HEADERS +=
 CONFIG += console
 INCLUDEPATH += ..
 LIBS += -L../common -lcommon
-LIBS += -ldb-5.3
+LIBS += -ldb-5.1
 
 QMAKE_CXXFLAGS += -fopenmp
 QMAKE_LFLAGS += -fopenmp

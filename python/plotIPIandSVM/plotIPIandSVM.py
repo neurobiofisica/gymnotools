@@ -434,8 +434,6 @@ class PlotData(QtGui.QDialog):
         self.scatterFlag = True
 
         self.db = recogdb.openDB(dbf,'w')
-        
-        self.dialogIPI = IPIWindow(self.db, undoFilename, folder)
        
         # Loads on memory variables necessary for plotting
         # and dictionary from correctedSample to db off key
@@ -459,6 +457,8 @@ class PlotData(QtGui.QDialog):
 
         self.datafile = datafile
         self.TS = self.TS
+        
+        self.dialogIPI = IPIWindow(self.db, undoFilename, folder, self.datafile)
         
     def __exit__(self):
         self.db.close()
@@ -485,7 +485,7 @@ class PlotData(QtGui.QDialog):
             key, bindata = rec
             off, = struct.unpack('q',key)
             presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = recogdb.parseDBHeader(bindata)
-            
+
             if correctedPosA != -1:
                 self.offsDic[correctedPosA] = off
                 self.correctedPosDic[off] = correctedPosA
@@ -534,7 +534,7 @@ class PlotData(QtGui.QDialog):
         self.Tam = self.SVM[0].size
         self.probs = (probs1, probs2)
         self.dists = (dists1, dists2)
-        
+
     def replotData(self):
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
@@ -542,7 +542,6 @@ class PlotData(QtGui.QDialog):
         Ylimits = self.ax.get_ylim()
         
         self.removeIPIplots()
-        self.fig.canvas.draw()
         
         self.removeWaveplots()
         self.sigfig.canvas.draw()        

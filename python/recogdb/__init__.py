@@ -159,7 +159,42 @@ def readHeaderEntry(db,k):
 
     return (off, read_data, spkdata)
 
+def get_location(db,k):
+    off, bindata = db.set_location(struct.pack('=q',k))
+    off, = struct.unpack('=q', off)
+    read_data = parseDBHeader(bindata)
+    
+    return (off, read_data)
 
+def readOff(tup):
+    return struct.unpack('=q', tup[0])[0]
+
+def getNearest(db, direction, k, fish, overlap=True):
+    key = struct.pack('=q',k)
+    if not db.has_key(key):
+        return None
+    if direction not in [-1, 1]:
+        return None
+    if fish not in [1, 2]:
+        return None
+    
+    if overlap == True:
+        values = [fish, 3]
+    else:
+        values = [fish]
+    
+    db.set_location(key)
+    fishNow = -1
+    while fishNow not in values:
+        if direction == -1:
+            off, bindata = db.previous()
+        else:
+            off, bindata = db.next()
+        read_data = parseDBHeader(bindata)
+        fishNow = read_data[ dicFields['presentFish'] ]
+    
+    off = struct.unpack('=q', off)[0]
+    return (off, read_data)
 
 def updateHeaderEntry(db, k, field, data, change_svm=True, sync=True):
     key = verifyKey(db,k)
