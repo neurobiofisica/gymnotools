@@ -22,10 +22,13 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
-INVERTION = 0
 NChan = 11
 
+INVERTION = 0
+SINGLE2OVERLAP = 1
+
 dicUndo = {INVERTION: 'Continuity invertion',
+           SINGLE2OVERLAP: 'Single spike converted to overlap'
 }
 
 dicFields = {'presentFish': 'int',
@@ -220,6 +223,83 @@ class ModifySelector:
         
         self.single2overlapWindow.plotSignals(data, channel=0)
         self.single2overlapWindow.exec_()
+        if (self.single2overlapWindow.posA != None) and \
+           (self.single2overlapWindow.posB != None):
+            self.convert2overlapOnDB(key, \
+                                     self.single2overlapWindow.posA, \
+                                     self.single2overlapWindow.posB)
+    
+    # TODO: simplificar com funcao invertIPI ->
+    # -> Muito codigo repetido!
+    def convert2overlapOnDB(self, key, posA, posB):
+        if key not in self.undoKeys:
+            undoFile = open(self.undoFilename, 'a')
+            undoFile.write('%d\n'%key)
+            undoFile.flush()
+            undoFile.close()
+        
+        keyundofile = open(self.folder + '/' + str(key) + '.undo', 'a')
+        
+        off, read_data, spkdata = recogdb.readHeaderEntry(self.db, key)
+        
+        # Store old SVM data on DB (it will change to 'm' - Manually)
+        oldSVM = read_data[ recogdb.dicFields['svm'] ]
+        
+        # Store old 'presentFish' data
+        oldFish = read_data[ recogdb.dicFields['presentFish'] ]
+        if oldFish not in (1,2):
+            print 'only single spikes can be converted to overlap'
+            return None
+        newFish = 3
+        
+        # Store old correctedPos data
+        oldCorrectedPosA = read_data[ recogdb.dicFields['correctedPosA'] ]
+        oldCorrectedPosB = read_data[ recogdb.dicFields['correctedPosB'] ]
+        
+        newCorrectedPosA = posA
+        newCorrectedPosB = posB
+        
+        # Store the old dists fields - They are put to a minimum acording the the fish
+        # So the continuity will no overwrite them
+        oldDistA = read_data[ recogdb.dicFields['distA'] ]
+        oldDistB = read_data[ recogdb.dicFields['distB'] ]
+        oldDistAB = read_data[ recogdb.dicFields['distAB'] ]
+        
+        newDistA = float('Inf')
+        newDistB = float('Inf')
+        newDistAB = 0.
+        
+        # Update DB
+        recogdb.updateHeaderEntry(self.db, key, 'presentFish', newFish, sync=False)
+        recogdb.updateHeaderEntry(self.db, key, 'correctedPosA', newCorrectedPosA, sync=False)
+        recogdb.updateHeaderEntry(self.db, key, 'correctedPosB', newCorrectedPosB, sync=False)
+        recogdb.updateHeaderEntry(self.db, key, 'distA', newDistA, sync=False)
+        recogdb.updateHeaderEntry(self.db, key, 'distB', newDistB, sync=False)
+        recogdb.updateHeaderEntry(self.db, key, 'distAB', newDistAB, sync=True)
+        
+        off, new_data, spkdata = recogdb.readHeaderEntry(self.db, key)
+        
+        newSVM = new_data[ recogdb.dicFields['svm'] ]
+        newFish = new_data[ recogdb.dicFields['presentFish'] ]
+        newCorrectedPosA = new_data[ recogdb.dicFields['correctedPosA'] ]
+        newCorrectedPosB = new_data[ recogdb.dicFields['correctedPosB'] ]
+        newDistA = new_data[ recogdb.dicFields['distA'] ]
+        newDistB = new_data[ recogdb.dicFields['distB'] ]
+        newDistAB = new_data[ recogdb.dicFields['distAB'] ]
+        
+        # Action identifier
+        keyundofile.write( '%s\n'%(dicUndo[SINGLE2OVERLAP]) )
+        
+        # Modified fields
+        keyundofile.write( '\t%s\t%c\t%c\n'%('svm', oldSVM, newSVM) )
+        keyundofile.write( '\t%s\t%d\t%d\n'%('presentFish', oldFish, newFish) )
+        keyundofile.write( '\t%s\t%d\t%d\n'%('correctedPosA', oldCorrectedPosA, newCorrectedPosA) )
+        keyundofile.write( '\t%s\t%d\t%d\n'%('correctedPosB', oldCorrectedPosB, newCorrectedPosB) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distA', oldDistA, newDistA) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distB', oldDistB, newDistB) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB, newDistAB) )
+        
+        keyundofile.close()
     
     def undo(self, modList, selected, key):
         action, dicActions = modList[selected]
@@ -277,10 +357,12 @@ class IPIWindow(QtGui.QDialog):
                 self.replot = True
             # Convert to overlap
             elif option == 1:
+                self.hide()
                 self.modify.convert2overlap(self.off)
                 if self.modify.single2overlapWindow.replot == True:
                     self.replot = True
                     self.modify.single2overlapWindow.replot = False
+                self.show()
             # Create SVM Pair
             elif option == 2:
                 pass

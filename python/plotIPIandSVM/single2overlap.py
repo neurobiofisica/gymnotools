@@ -105,11 +105,18 @@ class single2overlap(QtGui.QDialog):
         pos = 1000*np.round((event.xdata/1000.)*freq) / freq
         self.drawSpikePos(pos)
         if self.uiObject.fishAButton.isChecked() == True:
-            self.posA = pos
+            # correctedPos -> position in SAMPLES from the beginning of the file
+            correctedPos = pos*freq/1000. + self.off_now/4/self.NChan
+            self.posA = int(np.round(correctedPos))
             self.uiObject.fishBButton.setChecked(True)
         elif self.uiObject.fishBButton.isChecked() == True:
-            self.posB = pos
+            # correctedPos -> position in SAMPLES from the beginning of the file
+            correctedPos = pos*freq/1000. + self.off_now/4/self.NChan
+            self.posB = int(np.round(correctedPos))
             self.uiObject.fishAButton.setChecked(True)
+        print self.posA
+        print self.posB
+        print '--'
         
     
     def drawSpikePos(self, pos):
@@ -153,11 +160,11 @@ class single2overlap(QtGui.QDialog):
     def plotSignals(self, data, channel=0):
         f = self.datafile
         
-        off_pB, entry_pB = data[0]
-        off_pR, entry_pR = data[1]
-        off_now, entry_now = data[2]
-        off_nB, entry_nB = data[3]
-        off_nR, entry_nR = data[4]
+        self.off_pB, entry_pB = data[0]
+        self.off_pR, entry_pR = data[1]
+        self.off_now, entry_now = data[2]
+        self.off_nB, entry_nB = data[3]
+        self.off_nR, entry_nR = data[4]
         
         correctedPos_pB = entry_pB[ dicFields['correctedPosA'] ]
         correctedPos_pR = entry_pR[ dicFields['correctedPosB'] ]
@@ -167,17 +174,17 @@ class single2overlap(QtGui.QDialog):
         correctedPos_nR = entry_nR[ dicFields['correctedPosB'] ]
         
         # 1000 is to plot in ms
-        sample2plot_pB = 1000.*(correctedPos_pB - off_pB/self.NChan/4.) / freq
-        sample2plot_pR = 1000.*(correctedPos_pR - off_pR/self.NChan/4.) / freq
-        sample2plot_nowB = 1000.*(correctedPos_nowB - off_now/self.NChan/4.) / freq
-        sample2plot_nowR = 1000.*(correctedPos_nowR - off_now/self.NChan/4.) / freq
-        sample2plot_nB = 1000.*(correctedPos_nB - off_nB/self.NChan/4.) / freq
-        sample2plot_nR = 1000.*(correctedPos_nR - off_nR/self.NChan/4.) / freq
+        sample2plot_pB = 1000.*(correctedPos_pB - self.off_pB/self.NChan/4.) / freq
+        sample2plot_pR = 1000.*(correctedPos_pR - self.off_pR/self.NChan/4.) / freq
+        sample2plot_nowB = 1000.*(correctedPos_nowB - self.off_now/self.NChan/4.) / freq
+        sample2plot_nowR = 1000.*(correctedPos_nowR - self.off_now/self.NChan/4.) / freq
+        sample2plot_nB = 1000.*(correctedPos_nB - self.off_nB/self.NChan/4.) / freq
+        sample2plot_nR = 1000.*(correctedPos_nR - self.off_nR/self.NChan/4.) / freq
         
         t = 1000. * np.arange(spkSize) / freq
         
         # Previous blue plot
-        f.seek(off_pB)
+        f.seek(self.off_pB)
         self.data_pB = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
         self.axPrev1.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
@@ -188,7 +195,7 @@ class single2overlap(QtGui.QDialog):
         self.axPrev1.set_xlim( (t.min(), t.max()) )
 
         # Previous red plot
-        f.seek(off_pR)
+        f.seek(self.off_pR)
         self.data_pR = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
         self.axPrev2.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
@@ -199,7 +206,7 @@ class single2overlap(QtGui.QDialog):
         self.axPrev2.set_xlim( (t.min(), t.max()) )
 
         # Selected spike plot
-        f.seek(off_now)
+        f.seek(self.off_now)
         self.data_now = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
         self.axSpike.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
@@ -211,7 +218,7 @@ class single2overlap(QtGui.QDialog):
         self.axSpike.set_xlim( (t.min(), t.max()) )
 
         # Next blue plot
-        f.seek(off_nB)
+        f.seek(self.off_nB)
         self.data_nB = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
         self.axNext1.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
@@ -222,7 +229,7 @@ class single2overlap(QtGui.QDialog):
         self.axNext1.set_xlim( (t.min(), t.max()) )
 
         # Next red plot
-        f.seek(off_nR)
+        f.seek(self.off_nR)
         self.data_nR = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
         self.axNext2.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
