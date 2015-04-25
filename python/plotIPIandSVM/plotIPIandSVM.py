@@ -417,9 +417,12 @@ class PlotData(QtGui.QDialog):
         self.app = app
         
         QtGui.QWidget.__init__(self)
+        self.setFocusPolicy( QtCore.Qt.StrongFocus )
+        self.setFocus()
+        
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
-        self.ui.graphIPI.canvas.setFocusPolicy( QtCore.Qt.ClickFocus )
+        self.ui.graphIPI.canvas.setFocusPolicy( QtCore.Qt.StrongFocus )
         self.ui.graphIPI.canvas.setFocus()
 
         self.resizeEvent = self.onResize

@@ -42,6 +42,9 @@ class single2overlap(QtGui.QDialog):
         self.uiObject = Ui_single2overlap()
         self.uiObject.setupUi(self)
         
+        self.resizeEvent = self.onResize
+        self.setWindowState(QtCore.Qt.WindowMaximized)
+        
         self.datafile = datafile
         
         self.uiObject.fishAButton.setChecked(True)
@@ -54,7 +57,6 @@ class single2overlap(QtGui.QDialog):
         QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.close)
         QtCore.QObject.connect(self.uiObject.okButton, QtCore.SIGNAL('clicked()'), self.okClick)
         QtCore.QObject.connect(self.uiObject.channelSelector, QtCore.SIGNAL('valueChanged(int)'), self.movingChannels)
-        QtCore.QObject.connect(self.uiObject.channelSelector, QtCore.SIGNAL('sliderReleased()'), self.changeChannel)
 
         self.NChan = NChan
         self.replot = False
@@ -76,6 +78,9 @@ class single2overlap(QtGui.QDialog):
         self.posA = None
         self.posB = None
     
+    def onResize(self,event):
+        self.uiObject.mainLayout.setGeometry( QtCore.QRect(0,0,self.size().width(),self.size().height()) )
+    
     def okClick(self):
         if (self.posA == None) or (self.posB == None):
             QtGui.QMessageBox.warning(self, "Warning", \
@@ -88,19 +93,22 @@ class single2overlap(QtGui.QDialog):
             self.close()
     
     def spikeClick(self,event):
-        self.drawSpikePos(event.xdata)
+        pos = 1000*np.round((event.xdata/1000.)*freq) / freq
+        self.drawSpikePos(pos)
     
     def spikeMove(self,event):
         if event.button == 1:
-            self.drawSpikePos(event.xdata)
+            pos = 1000*np.round((event.xdata/1000.)*freq) / freq
+            self.drawSpikePos(pos)
     
     def spikeRelease(self,event):
-        self.drawSpikePos(event.xdata)
+        pos = 1000*np.round((event.xdata/1000.)*freq) / freq
+        self.drawSpikePos(pos)
         if self.uiObject.fishAButton.isChecked() == True:
-            self.posA = event.xdata
+            self.posA = pos
             self.uiObject.fishBButton.setChecked(True)
         elif self.uiObject.fishBButton.isChecked() == True:
-            self.posB = event.xdata
+            self.posB = pos
             self.uiObject.fishAButton.setChecked(True)
         
     
@@ -121,30 +129,26 @@ class single2overlap(QtGui.QDialog):
         self.uiObject.channelNumber.setText(_translate("single2overlap", str(position), None))
         self.replotSignals(position)
     
-    def changeChannel(self):
-        position = self.uiObject.channelSelector.sliderPosition()
-        #self.replotSignals(position)
-    
     def createFigures(self):
         self.axPrev1.set_title('Previous fish A EOD')
-        self.plotPrev1, = self.axPrev1.plot( [], [], 'b-')
+        self.plotPrev1, = self.axPrev1.plot( [], [], 'b.-')
         
         self.axPrev2.set_title('Previous fish B EOD')
-        self.plotPrev2, = self.axPrev2.plot( [], [], 'r-')
+        self.plotPrev2, = self.axPrev2.plot( [], [], 'r.-')
         
         self.axSpike.set_title('Selected EOD to convert to overlapping spike')
-        self.plotSpike, = self.axSpike.plot( [], [], 'k-')
+        self.plotSpike, = self.axSpike.plot( [], [], 'k.-')
         lineSpikePosB, = self.axSpike.plot( [], [], 'b-')
         lineSpikePosR, = self.axSpike.plot( [], [], 'r-')
         self.lineDic = {'b': lineSpikePosB, \
-                        'r': lineSpikePosR, 
+                        'r': lineSpikePosR, \
                         }
         
         self.axNext1.set_title('Next fish A EOD')
-        self.plotNext1, = self.axNext1.plot( [], [], 'b-')
+        self.plotNext1, = self.axNext1.plot( [], [], 'b.-')
         
         self.axNext2.set_title('Next fish B EOD')
-        self.plotNext2, = self.axNext2.plot( [], [], 'r-')
+        self.plotNext2, = self.axNext2.plot( [], [], 'r.-')
     
     def plotSignals(self, data, channel=0):
         f = self.datafile
@@ -199,8 +203,8 @@ class single2overlap(QtGui.QDialog):
         self.data_now = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
         self.axSpike.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
-        self.axSpike.plot( (sample2plot_nowB, sample2plot_nowB), (saturationLow, saturationHigh), 'k-')
-        self.axSpike.plot( (sample2plot_nowR, sample2plot_nowR), (saturationLow, saturationHigh), 'k-')
+        self.axSpike.plot( (sample2plot_nowB, sample2plot_nowB), (saturationLow, saturationHigh), 'k-.')
+        self.axSpike.plot( (sample2plot_nowR, sample2plot_nowR), (saturationLow, saturationHigh), 'k-.')
         self.plotSpike.set_xdata(t)
         self.plotSpike.set_ydata(self.data_now[channel::self.NChan])
         
