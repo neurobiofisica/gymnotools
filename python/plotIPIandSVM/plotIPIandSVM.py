@@ -176,7 +176,6 @@ class PickPoints:
             sample = int(round(xdata[ind]*freq))
             key = self.plotObject.offsDic[sample]
             off, data, spkwin = recogdb.readHeaderEntry(self.plotObject.db,key)
-            off = off[0]
 
             if zorder == IPIDATABLUE:
                 color = 'b'

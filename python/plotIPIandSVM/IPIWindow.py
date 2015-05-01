@@ -229,8 +229,6 @@ class ModifySelector:
                                      self.single2overlapWindow.posA, \
                                      self.single2overlapWindow.posB)
     
-    # TODO: simplificar com funcao invertIPI ->
-    # -> Muito codigo repetido!
     def convert2overlapOnDB(self, key, posA, posB):
         if key not in self.undoKeys:
             undoFile = open(self.undoFilename, 'a')
@@ -301,6 +299,64 @@ class ModifySelector:
         
         keyundofile.close()
     
+    def createSVMPair(self, key):
+        off, read_data, spkdata = recogdb.readHeaderEntry(self.db, key)
+        fish = read_data[ recogdb.dicFields['presentFish'] ]
+        assert fish in [1,2]
+        other_fish = ( set([1,2]) - set([fish]) ).pop()
+        
+        offN, dataN = recogdb.getNearest(self.db, 1, key, other_fish, overlap=True)
+        fishN = dataN[ recogdb.dicFields['presentFish'] ]
+        svmN = dataN[ recogdb.dicFields['svm'] ]
+        Next = (fishN != 3) and (svmN != 's') # False if overlap or svm
+    
+        offP, dataP = recogdb.getNearest(self.db, -1, key, other_fish, overlap=True)
+        fishP = dataP[ recogdb.dicFields['presentFish'] ]
+        svmP = dataP[ recogdb.dicFields['svm'] ]
+        Prev = (fishP != 3) and (svmP != 's') # False if overlap or svm
+        
+        if Next == True:
+            NextBut = QtGui.QPushButton('Next')
+        else:
+            NextBut = QtGui.QMessageBox.NoButton
+        
+        if Prev == True:
+            PrevBut = QtGui.QPushButton('Prev')
+        else:
+            PrevBut = QtGui.QMessageBox.NoButton
+        
+        msgbox = QtGui.QMessageBox()
+        msgbox.setText('Create SVM with the next or with the previous? (Only non-SVM single spikes can be used)')
+
+        returnValues = []
+        
+        if Prev == True:
+            msgbox.addButton(QtGui.QPushButton('Prev'), QtGui.QMessageBox.NoRole)
+            returnValues.append(offP)
+        else:
+            msgbox.addButton(QtGui.QMessageBox.NoButton)
+            
+        msgbox.addButton(QtGui.QMessageBox.Cancel)
+        
+        if Next == True:
+            msgbox.addButton(QtGui.QPushButton('Next'), QtGui.QMessageBox.YesRole)
+            returnValues.append(offN)
+        else:
+            msgbox.addButton(QtGui.QMessageBox.NoButton)
+            
+        ret = msgbox.exec_()
+        
+        if ret == QtGui.QMessageBox.Cancel:
+            return None
+        
+        self.createSVMPairOnDB(off, returnValues[ret])
+        
+    def createSVMPairOnDB(self, off1, off2):
+        print fish1
+        print '--'
+        print fish2
+        print ''
+        
     def undo(self, modList, selected, key):
         action, dicActions = modList[selected]
         for field in dicActions.keys():
@@ -365,7 +421,10 @@ class IPIWindow(QtGui.QDialog):
                 self.show()
             # Create SVM Pair
             elif option == 2:
-                pass
+                self.hide()
+                self.modify.createSVMPair(self.off)
+                
+                self.show()
             
         elif self.windowType == 'overlap':
             # Convert to single A

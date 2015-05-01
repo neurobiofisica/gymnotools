@@ -152,7 +152,7 @@ def readHeaderEntry(db,k):
 
     
     off, bindata = tup
-    off = struct.unpack('q',off)
+    off, = struct.unpack('q',off)
     read_data = parseDBHeader(bindata)
     spkdata = read_data[-1]
     read_data = read_data[:-1]
