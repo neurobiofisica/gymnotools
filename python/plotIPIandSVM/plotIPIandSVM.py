@@ -220,8 +220,9 @@ class PickPoints:
                 self.plotObject.dialogIPI.fillTextBoxes(Parameters)
                 self.plotObject.dialogIPI.exec_()
                 if self.plotObject.dialogIPI.replot == True:
-                    self.plotObject.replotData()
+                    self.plotObject.replotData(replotSVM=self.plotObject.dialogIPI.replotSVM)
                     self.plotObject.dialogIPI.replot = False
+                    self.plotObject.dialogIPI.replotSVM = False
 
     def press(self,event):
         key = event.key
@@ -443,18 +444,12 @@ class PlotData(QtGui.QDialog):
         # Runs the whole DB
         self.loadDataFromDB()
         
-        self.SVM2Plot = []
-        self.SVM2Plot.append( self.SVM[0].repeat(3) )
-        self.SVM2Plot.append( self.SVM[1].repeat(3) )
-
-        Min = -0.1
-        Max = max( np.diff(self.TS[0]).max(), np.diff(self.TS[1]).max() )
-        self.SVMY = np.array( self.Tam * [Min,Max,Min] )
-
+        self.formatSVM2Plot()
+        
         self.formatterX = FuncFormatter(self.sec2hms)
         self.formatterY = FuncFormatter(self.sec2msus)
 
-        self.plotData(0, winSize, plotIPI=True) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
+        self.plotData(0, winSize, plotSVM=True) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
         self.createSigFig() # Creates self.sigfig, self.ui.graphwave.canvas.sigaxes attributes
 
         self.datafile = datafile
@@ -503,7 +498,7 @@ class PlotData(QtGui.QDialog):
                 direction1.append(direction)
                 probs1.append( (probA, probB) )
                 dists1.append( (distA, distB, distAB) )
-                if svm == 's':
+                if (svm == 's') or (svm == 'v'): # SVM or manual SVM
                     SVM1.append(correctedPosA)
                 
             elif presentFish == 2:
@@ -512,7 +507,7 @@ class PlotData(QtGui.QDialog):
                 direction2.append(direction)
                 probs2.append( (probA, probB) )
                 dists2.append( (distA, distB, distAB) )
-                if svm == 's':
+                if (svm == 's') or (svm == 'v'):
                     SVM2.append(correctedPosB)
                 
             else:
@@ -536,22 +531,35 @@ class PlotData(QtGui.QDialog):
         self.Tam = self.SVM[0].size
         self.probs = (probs1, probs2)
         self.dists = (dists1, dists2)
+        
+    def formatSVM2Plot(self):
+        
+        self.SVM2Plot = []
+        self.SVM2Plot.append( self.SVM[0].repeat(3) )
+        self.SVM2Plot.append( self.SVM[1].repeat(3) )
+        
+        Min = -0.1
+        Max = max( np.diff(self.TS[0]).max(), np.diff(self.TS[1]).max() )
+        self.SVMY = np.array( self.Tam * [Min,Max,Min] )
 
-    def replotData(self):
+    def replotData(self, replotSVM):
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
         Xlimits = self.ax.get_xlim()
         Ylimits = self.ax.get_ylim()
         
         self.removeIPIplots()
+        self.fig.canvas.draw()
         
         self.removeWaveplots()
         self.sigfig.canvas.draw()        
         
         # Reload new Data
         self.loadDataFromDB()
+        if replotSVM == True:
+            self.formatSVM2Plot()
         
-        self.plotData(Xlimits[0],Xlimits[1], plotIPI=True)
+        self.plotData(Xlimits[0],Xlimits[1], plotSVM=replotSVM)
         self.ax.set_ylim(Ylimits)
         self.fig.canvas.draw()
         
@@ -687,7 +695,7 @@ class PlotData(QtGui.QDialog):
         except:
             pass
 
-    def plotData(self, minX, maxX, plotIPI = False):
+    def plotData(self, minX, maxX, plotSVM = False):
 
         L = maxX - minX
         MIN = minX
@@ -712,7 +720,7 @@ class PlotData(QtGui.QDialog):
             maxIdxX2 = self.TS[1].size-1
 
         # Only plot once
-        if plotIPI == True:
+        if plotSVM == True:
             try:
                 self.SVMplotB.remove()
             except:

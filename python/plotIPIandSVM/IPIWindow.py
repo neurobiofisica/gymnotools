@@ -26,9 +26,11 @@ NChan = 11
 
 INVERTION = 0
 SINGLE2OVERLAP = 1
+CREATESVM = 2
 
 dicUndo = {INVERTION: 'Continuity invertion',
-           SINGLE2OVERLAP: 'Single spike converted to overlap'
+           SINGLE2OVERLAP: 'Single spike converted to overlap',
+           CREATESVM: 'SVM pair created',
 }
 
 dicFields = {'presentFish': 'int',
@@ -315,23 +317,13 @@ class ModifySelector:
         svmP = dataP[ recogdb.dicFields['svm'] ]
         Prev = (fishP != 3) and (svmP != 's') # False if overlap or svm
         
-        if Next == True:
-            NextBut = QtGui.QPushButton('Next')
-        else:
-            NextBut = QtGui.QMessageBox.NoButton
-        
-        if Prev == True:
-            PrevBut = QtGui.QPushButton('Prev')
-        else:
-            PrevBut = QtGui.QMessageBox.NoButton
-        
         msgbox = QtGui.QMessageBox()
         msgbox.setText('Create SVM with the next or with the previous? (Only non-SVM single spikes can be used)')
 
         returnValues = []
         
         if Prev == True:
-            msgbox.addButton(QtGui.QPushButton('Prev'), QtGui.QMessageBox.NoRole)
+            msgbox.addButton(QtGui.QPushButton('Previous'), QtGui.QMessageBox.NoRole)
             returnValues.append(offP)
         else:
             msgbox.addButton(QtGui.QMessageBox.NoButton)
@@ -350,12 +342,55 @@ class ModifySelector:
             return None
         
         self.createSVMPairOnDB(off, returnValues[ret])
+        self.replot = True
         
-    def createSVMPairOnDB(self, off1, off2):
-        print fish1
-        print '--'
-        print fish2
-        print ''
+    def createSVMPairOnDB(self, key1, key2):
+        if key1 not in self.undoKeys:
+            undoFile = open(self.undoFilename, 'a')
+            undoFile.write('%d\n'%key1)
+            undoFile.flush()
+            undoFile.close()
+        if key2 not in self.undoKeys:
+            undoFile = open(self.undoFilename, 'a')
+            undoFile.write('%d\n'%key2)
+            undoFile.flush()
+            undoFile.close()
+        
+        keyundofile1 = open(self.folder + '/' + str(key1) + '.undo', 'a')
+        keyundofile2 = open(self.folder + '/' + str(key2) + '.undo', 'a')
+        
+        # Read old data
+        off1, read_data1, spkdata1 = recogdb.readHeaderEntry(self.db, key1)
+        off2, read_data2, spkdata2 = recogdb.readHeaderEntry(self.db, key2)
+        
+        oldSVM1 = read_data1[ recogdb.dicFields['svm'] ]
+        oldSVM2 = read_data2[ recogdb.dicFields['svm'] ]
+        
+        # Manually modified SVM
+        newSVM1 = 'v'
+        newSVM2 = 'v'
+        
+        # Update DB
+        recogdb.updateHeaderEntry(self.db, key1, 'svm', newSVM1, sync=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'svm', newSVM2, sync=True)
+        
+        # Read new data
+        off1, new_data1, spkdata1 = recogdb.readHeaderEntry(self.db, key1)
+        off2, new_data2, spkdata2 = recogdb.readHeaderEntry(self.db, key2)
+        
+        newSVM1 = new_data1[ recogdb.dicFields['svm'] ]
+        newSVM2 = new_data2[ recogdb.dicFields['svm'] ]
+        
+        # Action identifier
+        keyundofile1.write( '%s\n'%(dicUndo[CREATESVM]) )
+        keyundofile2.write( '%s\n'%(dicUndo[CREATESVM]) )
+        
+        # Modified Fields
+        keyundofile1.write( '\t%s\t%c\t%c\n'%('svm', oldSVM1, newSVM1) )
+        keyundofile2.write( '\t%s\t%c\t%c\n'%('svm', oldSVM2, newSVM2) )
+        
+        keyundofile1.close()
+        keyundofile2.close()
         
     def undo(self, modList, selected, key):
         action, dicActions = modList[selected]
@@ -390,6 +425,7 @@ class IPIWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.uiObject.undoButton, QtCore.SIGNAL('clicked()'), self.undoClicked)
         
         self.replot=False
+        self.replotSVM = False
 
         self.move(0,0)
 
@@ -423,7 +459,9 @@ class IPIWindow(QtGui.QDialog):
             elif option == 2:
                 self.hide()
                 self.modify.createSVMPair(self.off)
-                
+                if self.modify.replot == True:
+                    self.replot = True
+                    self.replotSVM = True
                 self.show()
             
         elif self.windowType == 'overlap':
@@ -579,6 +617,8 @@ class IPIWindow(QtGui.QDialog):
             return 'No pair detected'
         elif svmFlag == 's':
             return 'SVM Classified'
+        elif svmFlag == 'v':
+            return 'Manually inserted SVM'
         elif svmFlag == 'c':
             return 'Previous spike was not ready for SVM classification'
 
