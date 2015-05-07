@@ -685,7 +685,7 @@ float WinWorker::fishA[NumChannels][EODSamples] ALIGN(16);
 float WinWorker::fishB[NumChannels][EODSamples] ALIGN(16);
 
 static void iterate_from(RecogDB &db, WindowFile &winfile, SFishPair curpairBeg, SFishPair curpairEnd, QMap<qint64, probs> &problist,
-                    float saturationLow, float saturationHigh, qint32 direction)
+                    float saturationLow, float saturationHigh, qint32 direction, bool force)
 {
     WinWorker worker(db, winfile, problist, saturationLow, saturationHigh);
     if (direction < 0) {
@@ -722,7 +722,7 @@ static void iterate_from(RecogDB &db, WindowFile &winfile, SFishPair curpairBeg,
         // Apply recog on the next spikes
         off = winfile.getEventOffset();
         while (off != curpairEnd.first && off != curpairEnd.second) {
-            worker.recog(direction, true);
+            worker.recog(direction, force);
             winfile.prevEvent();
             off = winfile.getEventOffset();
         }
@@ -762,7 +762,7 @@ static void iterate_from(RecogDB &db, WindowFile &winfile, SFishPair curpairBeg,
         // Apply recog on the next spikes
         off = winfile.getEventOffset();
         while (off != curpairEnd.first && off != curpairEnd.second) {
-            worker.recog(direction, true);
+            worker.recog(direction, force);
             winfile.nextEvent();
             off = winfile.getEventOffset();
         }
@@ -1156,6 +1156,7 @@ int main(int argc, char **argv)
         float saturationLow = defaultSaturationLow;
         float saturationHigh = defaultSaturationHigh;
         int direction = 1;
+        bool force = false;
 
         while(1) {
             int option_index = 0;
@@ -1163,10 +1164,11 @@ int main(int argc, char **argv)
                 { "saturation", required_argument, 0, 'z' },
                 { "direction",  required_argument, 0, 'd' },
                 { "from",       required_argument, 0, 'f' },
+                { "force",      required_argument, 0, 'r' },
                 { 0, 0, 0, 0 }
             };
 
-            int c = getopt_long(argc, argv, "z:d:f", long_options, &option_index);
+            int c = getopt_long(argc, argv, "z:d:f:r", long_options, &option_index);
             if(c == -1)
                 break;
 
@@ -1184,6 +1186,9 @@ int main(int argc, char **argv)
                 break;
             case 'f':
                 from = QString(optarg).toLongLong();
+                break;
+            case 'r':
+                force = (bool)QString(optarg).toInt() > 0 ? 1 : 0;
                 break;
             default:
                 return usage(progname);
@@ -1245,7 +1250,7 @@ int main(int argc, char **argv)
         QMap<qint64, probs> problist = parseProbs(probfile);
         probfile.close();
 
-        iterate_from(db, winfile, curpairBeg, curpairEnd, problist, saturationLow, saturationHigh, direction);
+        iterate_from(db, winfile, curpairBeg, curpairEnd, problist, saturationLow, saturationHigh, direction, force);
         winfile.close();
     }
     else if(!strcmp(argv[1], "export")) {

@@ -61,6 +61,7 @@ class ModifySelector:
         else:
             self.undoKeys = set()
         
+        self.undoSVM = False
         self.replot = False
 
     # undoList = [ ( Action, {Fields: (Old, New)} ), ( Action, {Fields: (Old, New)} ), ... ]
@@ -366,13 +367,59 @@ class ModifySelector:
         oldSVM1 = read_data1[ recogdb.dicFields['svm'] ]
         oldSVM2 = read_data2[ recogdb.dicFields['svm'] ]
         
+        oldPair1 = read_data1[ recogdb.dicFields['pairsvm'] ]
+        oldPair2 = read_data2[ recogdb.dicFields['pairsvm'] ]
+        
+        presentFish1 = read_data1[ recogdb.dicFields['presentFish'] ]
+        presentFish2 = read_data2[ recogdb.dicFields['presentFish'] ]
+        
+        oldDistA1 = read_data1[ recogdb.dicFields['distA'] ]
+        oldDistB1 = read_data1[ recogdb.dicFields['distB'] ]
+        oldDistAB1 = read_data1[ recogdb.dicFields['distAB'] ]
+        
+        oldDistA2 = read_data2[ recogdb.dicFields['distA'] ]
+        oldDistB2 = read_data2[ recogdb.dicFields['distB'] ]
+        oldDistAB2 = read_data2[ recogdb.dicFields['distAB'] ]
+        
         # Manually modified SVM
         newSVM1 = 'v'
         newSVM2 = 'v'
         
+        newPair1 = off2
+        newPair2 = off1
+        
+        assert (presentFish1 in [1,2])
+        if presentFish1 == 1:
+            newDistA1 = 0.
+            newDistB1 = float('Inf')
+        else:
+            newDistA1 = float('Inf')
+            newDistB1 = 0.
+        newDistAB1 = float('Inf')
+        
+        assert (presentFish2 in [1,2])
+        if presentFish2 == 1:
+            newDistA2 = 0.
+            newDistB2 = float('Inf')
+        else:
+            newDistA2 = float('Inf')
+            newDistB2 = 0.
+        newDistAB2 = float('Inf')
+        
         # Update DB
         recogdb.updateHeaderEntry(self.db, key1, 'svm', newSVM1, sync=False)
-        recogdb.updateHeaderEntry(self.db, key2, 'svm', newSVM2, sync=True)
+        recogdb.updateHeaderEntry(self.db, key2, 'svm', newSVM2, sync=False)
+        
+        recogdb.updateHeaderEntry(self.db, key1, 'pairsvm', newPair1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'pairsvm', newPair2, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key1, 'distA', newDistA1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key1, 'distB', newDistB1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key1, 'distAB', newDistAB1, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key2, 'distA', newDistA2, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'distB', newDistB2, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'distAB', newDistAB2, sync=True, change_svm=False)
         
         # Read new data
         off1, new_data1, spkdata1 = recogdb.readHeaderEntry(self.db, key1)
@@ -380,6 +427,17 @@ class ModifySelector:
         
         newSVM1 = new_data1[ recogdb.dicFields['svm'] ]
         newSVM2 = new_data2[ recogdb.dicFields['svm'] ]
+        
+        newPair1 = new_data1[ recogdb.dicFields['pairsvm'] ]
+        newPair2 = new_data2[ recogdb.dicFields['pairsvm'] ]
+        
+        newDistA1 = new_data1[ recogdb.dicFields['distA'] ]
+        newDistB1 = new_data1[ recogdb.dicFields['distB'] ]
+        newDistAB1 = new_data1[ recogdb.dicFields['distAB'] ]
+        
+        newDistA2 = new_data2[ recogdb.dicFields['distA'] ]
+        newDistB2 = new_data2[ recogdb.dicFields['distB'] ]
+        newDistAB2 = new_data2[ recogdb.dicFields['distAB'] ]
         
         # Action identifier
         keyundofile1.write( '%s\n'%(dicUndo[CREATESVM]) )
@@ -389,12 +447,37 @@ class ModifySelector:
         keyundofile1.write( '\t%s\t%c\t%c\n'%('svm', oldSVM1, newSVM1) )
         keyundofile2.write( '\t%s\t%c\t%c\n'%('svm', oldSVM2, newSVM2) )
         
+        keyundofile1.write( '\t%s\t%d\t%d\n'%('pairsvm', oldPair1, newPair1) )
+        keyundofile2.write( '\t%s\t%d\t%d\n'%('pairsvm', oldPair2, newPair2) )
+        
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distA', oldDistA1, newDistA1) )
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distB', oldDistB1, newDistB1) )
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB1, newDistAB1) )
+        
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distA', oldDistA2, newDistA2) )
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distB', oldDistB2, newDistB2) )
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB2, newDistAB2) )
+        
         keyundofile1.close()
         keyundofile2.close()
-        
+    
     def undo(self, modList, selected, key):
-        action, dicActions = modList[selected]
+        if selected == 'svmcreation':
+            action = None
+            selected = -1
+            while action != dicUndo[CREATESVM]:
+                selected = selected + 1
+                action, dicActions = modList[selected]
+        else:
+            action, dicActions = modList[selected]
+
+        # Read to return if is a created SVM pair to be undone
+        off, data, spkwin = recogdb.readHeaderEntry(self.db,key)
+        pair_svm = data[ recogdb.dicFields['pairsvm'] ]
+        
         for field in dicActions.keys():
+            if field in ['correctedPosA', 'correctedPosB']:
+                print 'FUCK!'
             assert dicFields[field] in ('int', 'float', 'char')
             if dicFields[field] == 'int':
                 data = int(dicActions[field][0])
@@ -402,10 +485,19 @@ class ModifySelector:
                 data = float(dicActions[field][0])
             else:
                 data = dicActions[field][0]
-            recogdb.updateHeaderEntry(self.db, key, field, data, sync=False)
+            recogdb.updateHeaderEntry(self.db, key, field, data, sync=False, change_svm=False)
         self.db.sync()
         newModList = modList[selected+1:]
         self.regenUndoFile(key,newModList)
+        
+        offN = None
+        offP = None
+        if action == dicUndo[CREATESVM]:
+            self.undoSVM = True
+            offN, read_dataN = recogdb.getNearestSVM(self.db, 1, key)
+            offP, read_dataP = recogdb.getNearestSVM(self.db, -1, key)
+        
+        return (offP, offN, pair_svm)
 
 
 class IPIWindow(QtGui.QDialog):
@@ -425,13 +517,16 @@ class IPIWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.uiObject.undoButton, QtCore.SIGNAL('clicked()'), self.undoClicked)
         
         self.replot=False
-        self.replotSVM = False
+        self.iterate_from = []
 
         self.move(0,0)
 
         self.options = []
         
         self.undoOptions = []
+    
+    def pop_iterate_from(self):
+        return self.iterate_from.pop()
 
     def okClicked(self):
         option = -1
@@ -461,7 +556,8 @@ class IPIWindow(QtGui.QDialog):
                 self.modify.createSVMPair(self.off)
                 if self.modify.replot == True:
                     self.replot = True
-                    self.replotSVM = True
+                    self.iterate_from.append( (1, True, self.off) )
+                    self.iterate_from.append( (-1, True, self.off) )
                 self.show()
             
         elif self.windowType == 'overlap':
@@ -496,7 +592,15 @@ class IPIWindow(QtGui.QDialog):
             self.close()
             return
         
-        self.modify.undo(self.modList, option, self.off)
+        self.modify.undoSVM = False
+        offP, offN, pair_svm = self.modify.undo(self.modList, option, self.off)
+        if self.modify.undoSVM == True:
+            print self.off
+            print pair_svm
+            offP, offN, pair_svm = self.modify.undo(self.modList, 'svmcreation', pair_svm)
+        if (offN is not None) and (offP is not None):
+            self.iterate_from.append( (-1, False, offN) )
+            self.iterate_from.append( (1, True, offP) )
         self.replot = True
         self.close()
     
@@ -559,7 +663,7 @@ class IPIWindow(QtGui.QDialog):
         self.options = []
 
         # single continuity spike
-        if self.svm != 's':
+        if self.svm not in ['s', 'v']:
             if self.fish != 3:
                 self.windowType = 'continuity'
                 self.setMainText('Continuity spike selected')

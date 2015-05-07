@@ -2,6 +2,7 @@ import sys, os
 import numpy as np
 
 sys.path.append( os.path.realpath('../python/') )
+sys.path.append( os.path.realpath('../') )
 import recogdb
 
 NumChannels = 11 #importar isso do arquivo C?
@@ -17,8 +18,6 @@ if len(sys.argv) != 3:
 if not os.path.isfile(sys.argv[1]):
     usage()
 
-print sys.argv[1]
-#db = bsddb3.btopen(sys.argv[1],'r')
 db = recogdb.openDB(sys.argv[1],'w')
 f = open(sys.argv[2],'w')
 
@@ -48,6 +47,18 @@ allOffs = {}
 OffsRaw = {}
 
 for rec in db.iteritems():
+    # Gambi pra verificar se o spike ja foi classificado
+    off, bindata = rec
+    read_data = recogdb.parseDBHeader(bindata)
+    correctedPosA = read_data[ recogdb.dicFields['correctedPosA'] ]
+    correctedPosB = read_data[ recogdb.dicFields['correctedPosB'] ]
+    if (correctedPosA != -1):
+        f.write( '%d\t%d\n'%(1, correctedPosA) )
+        continue
+    elif (correctedPosB != -1):
+        f.write( '%d\t%d\n'%(-1, correctedPosB) )
+        continue
+
     offraw, direction, distA, distB, distAB, SaturationFlag, svm, pairsvm, prob['A'], prob['B'], fishwins = recogdb.fishrec(rec)
     off = offraw/4/NumChannels
 

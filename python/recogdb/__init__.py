@@ -196,6 +196,28 @@ def getNearest(db, direction, k, fish, overlap=True):
     off = struct.unpack('=q', off)[0]
     return (off, read_data)
 
+def getNearestSVM(db, direction, k):
+    key = struct.pack('=q',k)
+    if not db.has_key(key):
+        print 'key not found'
+        return None
+    if direction not in [-1, 1]:
+        print 'direction must be 1 or -1'
+        return None
+    
+    db.set_location(key)
+    svm = 'X'
+    while svm not in ['s','v']:
+        if direction == -1:
+            off, bindata = db.previous()
+        else:
+            off, bindata = db.next()
+        read_data = parseDBHeader(bindata)
+        svm = read_data[ dicFields['svm'] ]
+    
+    off = struct.unpack('=q', off)[0]
+    return (off, read_data)
+
 def updateHeaderEntry(db, k, field, data, change_svm=True, sync=True):
     key = verifyKey(db,k)
     if key is None:

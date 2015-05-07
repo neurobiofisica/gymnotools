@@ -1,4 +1,4 @@
-import struct, sys, os, time
+import struct, sys, os, subprocess
 import argparse
 
 import numpy as np
@@ -220,9 +220,44 @@ class PickPoints:
                 self.plotObject.dialogIPI.fillTextBoxes(Parameters)
                 self.plotObject.dialogIPI.exec_()
                 if self.plotObject.dialogIPI.replot == True:
-                    self.plotObject.replotData(replotSVM=self.plotObject.dialogIPI.replotSVM)
+                    
+                    self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+                    
+                    # This is for recreating the local singlefish and probs files
+                    self.plotObject.loadDataFromDB()
+                    
+                    while len(self.plotObject.dialogIPI.iterate_from) != 0:
+                        
+                        direction, force, key = self.plotObject.dialogIPI.pop_iterate_from()
+                        print 'direction %d %r'%(direction, force)
+                        ret = subprocess.call(['./../../recog/recog', 'iterate_from', \
+                                               '--from=%d'%key, \
+                                               '--direction=%d'%direction, \
+                                               '--force=%d'%force, \
+                                               self.plotObject.dbname, \
+                                               self.plotObject.spikesname, \
+                                               self.plotObject.singlefishfilename, \
+                                               self.plotObject.probsfilename])
+                        if ret != 0:
+                            print 'ret = %d'%ret
+                            assert ret == 0
+                        
+                        self.plotObject.db.sync()
+                       
+                    print 'detectIPI'
+                    ret = subprocess.call(['python', '../../detectIPI/detectIPI.py', self.plotObject.dbname, self.plotObject.ipifilename])
+                    if ret != 0:
+                        print 'ret = %d'%ret
+                        assert ret == 0
+                    
+                    self.plotObject.db.sync()
+                        
+                    self.plotObject.loadDataFromDB()
+                    self.plotObject.formatSVM2Plot()
+                    
+                    self.plotObject.replotData()
                     self.plotObject.dialogIPI.replot = False
-                    self.plotObject.dialogIPI.replotSVM = False
+                    self.plotObject.app.restoreOverrideCursor()
 
     def press(self,event):
         key = event.key
@@ -413,7 +448,7 @@ class PickPoints:
 class PlotData(QtGui.QDialog):
     DPI = 80
 
-    def __init__(self, app, dbf, datafile, undoFilename, folder, parent=None):
+    def __init__(self, app, dbf, spikesf, datafile, undoFilename, folder, parent=None):
         self.app = app
         
         QtGui.QWidget.__init__(self)
@@ -436,14 +471,16 @@ class PlotData(QtGui.QDialog):
         
         self.scatterFlag = True
 
-        self.db = recogdb.openDB(dbf,'w')
+        self.spikesname = spikesf.name
+
+        self.dbname = dbf
+        self.db = recogdb.openDB(self.dbname,'w')
        
         # Loads on memory variables necessary for plotting
         # and dictionary from correctedSample to db off key
         #
         # Runs the whole DB
         self.loadDataFromDB()
-        
         self.formatSVM2Plot()
         
         self.formatterX = FuncFormatter(self.sec2hms)
@@ -476,20 +513,28 @@ class PlotData(QtGui.QDialog):
         probs2 = []
         dists2 = []
         
+        probsdtype = [ ('svm', 'S1'), ('off1', np.int64), ('off2', np.int64), ('prob1', np.float32), ('prob2', np.float32) ]
+        probsdiclist = []
+        
+        singlefishdtype = [ ('off1', np.int64), ('off2', np.int64) ]
+        singlefishlist = []
+        
         Tam1 = 0
         Tam2 = 0
         for rec in self.db.iteritems():
             key, bindata = rec
             off, = struct.unpack('q',key)
             presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = recogdb.parseDBHeader(bindata)
+            probsdiclist.append( (svm, off, pairsvm, probA, probB) )
 
             if correctedPosA != -1:
                 self.offsDic[correctedPosA] = off
                 self.correctedPosDic[off] = correctedPosA
+                
             if correctedPosB != -1:
                 self.offsDic[correctedPosB] = off
                 self.correctedPosDic[off] = correctedPosB
-            
+                
             assert ( (presentFish == 1) or (presentFish ==  2) or (presentFish == 3) )
             
             if presentFish == 1:
@@ -500,6 +545,7 @@ class PlotData(QtGui.QDialog):
                 dists1.append( (distA, distB, distAB) )
                 if (svm == 's') or (svm == 'v'): # SVM or manual SVM
                     SVM1.append(correctedPosA)
+                    singlefishlist.append( (off, pairsvm) ) # It is only needed to write once
                 
             elif presentFish == 2:
                 Tam2 += 1
@@ -509,6 +555,7 @@ class PlotData(QtGui.QDialog):
                 dists2.append( (distA, distB, distAB) )
                 if (svm == 's') or (svm == 'v'):
                     SVM2.append(correctedPosB)
+                    ########################################## It is only needed to write once
                 
             else:
                 Tam1 += 1
@@ -528,11 +575,34 @@ class PlotData(QtGui.QDialog):
         self.TS = ( np.sort(np.array(P1))/freq, np.sort(np.array(P2))/freq )
         self.direction = ( np.array(direction1), np.array(direction2) )
         self.SVM = ( np.sort(SVM1)/freq, np.sort(SVM2)/freq )
-        self.Tam = self.SVM[0].size
         self.probs = (probs1, probs2)
         self.dists = (dists1, dists2)
+        self.probslist = np.array(probsdiclist, dtype=probsdtype)
+        self.probslist.sort(order='off1')
+        self.singlefishlist = np.array(singlefishlist, dtype=singlefishdtype)
+        self.singlefishlist.sort(order='off1')
         
+        self.createLocalFiles()
+        
+    def createLocalFiles(self):
+        self.probsfilename = datafilename + '/local.probs'
+        probsf = open(self.probsfilename, 'w')
+        for s in self.probslist:
+            probsf.write( '%s %d %d %f %f\n'%(s['svm'], s['off1'], s['off2'], s['prob1'], s['prob2']) )
+        probsf.close()
+        
+        self.singlefishfilename = datafilename + '/local.singlefish'
+        singlefishf = open(self.singlefishfilename, 'w')
+        for s in self.singlefishlist:
+            singlefishf.write( '%d %d\n'%(s['off1'], s['off2']) )
+        singlefishf.close()
+        
+        self.ipifilename = datafilename + '/local.ipi'
+        open(self.ipifilename, 'a').close()
+    
     def formatSVM2Plot(self):
+        
+        self.Tam = self.SVM[0].size
         
         self.SVM2Plot = []
         self.SVM2Plot.append( self.SVM[0].repeat(3) )
@@ -542,8 +612,7 @@ class PlotData(QtGui.QDialog):
         Max = max( np.diff(self.TS[0]).max(), np.diff(self.TS[1]).max() )
         self.SVMY = np.array( self.Tam * [Min,Max,Min] )
 
-    def replotData(self, replotSVM):
-        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+    def replotData(self):
         
         Xlimits = self.ax.get_xlim()
         Ylimits = self.ax.get_ylim()
@@ -554,16 +623,10 @@ class PlotData(QtGui.QDialog):
         self.removeWaveplots()
         self.sigfig.canvas.draw()        
         
-        # Reload new Data
-        self.loadDataFromDB()
-        if replotSVM == True:
-            self.formatSVM2Plot()
-        
-        self.plotData(Xlimits[0],Xlimits[1], plotSVM=replotSVM)
+        self.plotData(Xlimits[0],Xlimits[1], plotSVM=True)
         self.ax.set_ylim(Ylimits)
         self.fig.canvas.draw()
         
-        self.app.restoreOverrideCursor()
         
 
     def onResize(self,event):
@@ -722,17 +785,20 @@ class PlotData(QtGui.QDialog):
         # Only plot once
         if plotSVM == True:
             try:
-                self.SVMplotB.remove()
+                self.SVMplotB.pop(0).remove()
             except:
                 pass
+            
             try:
-                self.SVMplotR.remove()
+                self.SVMplotR.pop(0).remove()
             except:
                 pass
+            
             try:
                 self.IPIplotB.pop(0).remove()
             except:
                 pass
+            
             try:
                 self.IPIplotR.pop(0).remove()
             except:
@@ -848,11 +914,13 @@ if __name__ == '__main__':
 
     parser.add_argument('db_file', type=str, help='Databank generated file')
     parser.add_argument('timeseries_file', type=file, help='Location of the timeseries (I32) file')
+    parser.add_argument('spikes_file', type=file, help='Locateion of the file generated by the spikes tool')
     parser.add_argument('--stepSize', type=float, default=90., help='Step size for moving on the IPI time series. Default = 90s')
     parser.add_argument('--winSize', type=float, default=120., help='Window size for plotting the IPI time series. Default = 120s')
 
     args = parser.parse_args()
     dbf = args.db_file
+    spikesf = args.spikes_file
     datafile = args.timeseries_file
     stepSize = args.stepSize
     winSize = args.winSize
@@ -881,7 +949,7 @@ if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
 
-    myapp = PlotData(app, dbf, datafile, undoFilename, datafilename)
+    myapp = PlotData(app, dbf, spikesf, datafile, undoFilename, datafilename)
 
     Pick = PickPoints(myapp)
 
