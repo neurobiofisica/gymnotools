@@ -27,10 +27,14 @@ NChan = 11
 INVERTION = 0
 SINGLE2OVERLAP = 1
 CREATESVM = 2
+CONVERT2SINGLEA = 3
+CONVERT2SINGLEB = 4
 
 dicUndo = {INVERTION: 'Continuity invertion',
            SINGLE2OVERLAP: 'Single spike converted to overlap',
            CREATESVM: 'SVM pair created',
+           CONVERT2SINGLEA: 'Convert overlap to single A fish',
+           CONVERT2SINGLEB: 'Convert overlap to single B fish',
 }
 
 dicFields = {'presentFish': 'int',
@@ -461,6 +465,88 @@ class ModifySelector:
         keyundofile1.close()
         keyundofile2.close()
     
+    def overlap2single(self, key, fish):
+        if key not in self.undoKeys:
+            undoFile = open(self.undoFilename, 'a')
+            undoFile.write('%s\n'%key)
+            undoFile.flush()
+            undoFile.close()
+        
+        assert fish in ['A', 'B'] #TODO: usar fish
+        
+        keyundofile = open(self.folder + '/' + str(key) + '.undo', 'a')
+        
+        # Read old data
+        off, read_data, spkdata = recogdb.readHeaderEntry(self.db, key)
+        
+        oldPresentFish = read_data[ recogdb.dicFields['presentFish'] ]
+        
+        oldDistA = read_data[ recogdb.dicFields['distA'] ]
+        oldDistB = read_data[ recogdb.dicFields['distB'] ]
+        oldDistAB = read_data[ recogdb.dicFields['distAB'] ]
+        
+        oldCorrectedPosA = read_data[ recogdb.dicFields['correctedPosA'] ]
+        oldCorrectedPosB = read_data[ recogdb.dicFields['correctedPosB'] ]
+        
+        assert oldPresentFish == 3
+        
+        if fish == 'A':
+            newPresentFish = 1
+            
+            newDistA = 0.
+            newDistB = float('Inf')
+            newDistAB = float('Inf')
+        elif fish == 'B':
+            newPresentFish = 2
+            
+            newDistA = float('Inf')
+            newDistB = 0.
+            newDistAB = float('Inf')
+       
+        # Will pass dectectIPI again to select the better position
+        newCorrectedPosA = -1
+        newCorrectedPosB = -1
+        
+        # UpdateDB
+        recogdb.updateHeaderEntry(self.db, key, 'presentFish', newPresentFish, sync=False)
+        
+        recogdb.updateHeaderEntry(self.db, key, 'distA', newDistA, sync=False)
+        recogdb.updateHeaderEntry(self.db, key, 'distB', newDistB, sync=False)
+        recogdb.updateHeaderEntry(self.db, key, 'distAB', newDistAB, sync=False)
+        
+        recogdb.updateHeaderEntry(self.db, key, 'correctedPosA', newCorrectedPosA, sync=False)
+        recogdb.updateHeaderEntry(self.db, key, 'correctedPosB', newCorrectedPosB, sync=True)
+        
+        # Read new Data
+        off, new_data, spkdata = recogdb.readHeaderEntry(self.db, key)
+        
+        newPresentFish = new_data[ recogdb.dicFields['presentFish'] ]
+        
+        newDistA = new_data[ recogdb.dicFields['distA'] ]
+        newDistB = new_data[ recogdb.dicFields['distB'] ]
+        newDistAB = new_data[ recogdb.dicFields['distAB'] ]
+        
+        newCorrectedPosA = new_data[ recogdb.dicFields['correctedPosA'] ]
+        newCorrectedPosB = new_data[ recogdb.dicFields['correctedPosB'] ]
+        
+        # Action identifier
+        if fish == 'A':
+            keyundofile.write( '%s\n'%(dicUndo[CONVERT2SINGLEA]) )
+        elif fish == 'B':
+            keyundofile.write( '%s\n'%(dicUndo[CONVERT2SINGLEB]) )
+        
+        # Modified Fields
+        keyundofile.write( '\t%s\t%d\t%d\n'%('presentFish', oldPresentFish, newPresentFish) )
+    
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distA', oldDistA, newDistA) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distB', oldDistB, newDistB) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB, newDistAB) )
+        
+        keyundofile.write( '\t%s\t%d\t%d\n'%('correctedPosA', oldCorrectedPosA, newCorrectedPosA) )
+        keyundofile.write( '\t%s\t%d\t%d\n'%('correctedPosB', oldCorrectedPosB, newCorrectedPosB) )
+        
+        keyundofile.close()
+        
     def undo(self, modList, selected, key):
         if selected == 'svmcreation':
             action = None
@@ -476,8 +562,6 @@ class ModifySelector:
         pair_svm = data[ recogdb.dicFields['pairsvm'] ]
         
         for field in dicActions.keys():
-            if field in ['correctedPosA', 'correctedPosB']:
-                print 'FUCK!'
             assert dicFields[field] in ('int', 'float', 'char')
             if dicFields[field] == 'int':
                 data = int(dicActions[field][0])
@@ -563,10 +647,12 @@ class IPIWindow(QtGui.QDialog):
         elif self.windowType == 'overlap':
             # Convert to single A
             if option == 0:
-                pass
+                self.modify.overlap2single(self.off, 'A')
+                self.replot = True
             # Convert to single B
             elif option == 1:
-                pass
+                self.modify.overlap2single(self.off, 'B')
+                self.replot = True
             
         elif self.windowType == 'single':
             # Invert SVM
