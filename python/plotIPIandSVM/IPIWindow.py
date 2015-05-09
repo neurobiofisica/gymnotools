@@ -29,12 +29,14 @@ SINGLE2OVERLAP = 1
 CREATESVM = 2
 CONVERT2SINGLEA = 3
 CONVERT2SINGLEB = 4
+SVMINVERTION = 5
 
 dicUndo = {INVERTION: 'Continuity invertion',
            SINGLE2OVERLAP: 'Single spike converted to overlap',
            CREATESVM: 'SVM pair created',
            CONVERT2SINGLEA: 'Convert overlap to single A fish',
            CONVERT2SINGLEB: 'Convert overlap to single B fish',
+           SVMINVERTION: 'SVM Inverted',
 }
 
 dicFields = {'presentFish': 'int',
@@ -153,7 +155,7 @@ class ModifySelector:
         oldFish = read_data[ recogdb.dicFields['presentFish'] ]
         if oldFish not in (1,2):
             print 'only single spikes can be inverted'
-            return None
+            assert False
         newFish = 2 if oldFish == 1 else 1
         
         # Store old correctedPos data - The fields must be inverted
@@ -254,7 +256,7 @@ class ModifySelector:
         oldFish = read_data[ recogdb.dicFields['presentFish'] ]
         if oldFish not in (1,2):
             print 'only single spikes can be converted to overlap'
-            return None
+            assert False
         newFish = 3
         
         # Store old correctedPos data
@@ -472,7 +474,7 @@ class ModifySelector:
             undoFile.flush()
             undoFile.close()
         
-        assert fish in ['A', 'B'] #TODO: usar fish
+        assert fish in ['A', 'B']
         
         keyundofile = open(self.folder + '/' + str(key) + '.undo', 'a')
         
@@ -546,12 +548,213 @@ class ModifySelector:
         keyundofile.write( '\t%s\t%d\t%d\n'%('correctedPosB', oldCorrectedPosB, newCorrectedPosB) )
         
         keyundofile.close()
+    
+    def invertSVM(self, key):
+        
+        # Read pair keys
+        off1, read_data1, spk_data1 = recogdb.readHeaderEntry(self.db, key)
+        
+        key1 = off1
+        key2 = read_data1[ recogdb.dicFields['pairsvm'] ]
+        
+        off2, read_data2, spk_data2 = recogdb.readHeaderEntry(self.db, key2)
+        
+        # Open undo files
+        if key1 not in self.undoKeys:
+            undoFile1 = open(self.undoFilename, 'a')
+            undoFile1.write('%s\n'%key1)
+            undoFile1.flush()
+            undoFile1.close()
+        keyundofile1 = open(self.folder + '/' + str(key1) + '.undo', 'a')
+        
+        if key2 not in self.undoKeys:
+            undoFile2 = open(self.undoFilename, 'a')
+            undoFile2.write('%s\n'%key2)
+            undoFile2.flush()
+            undoFile2.close()
+        keyundofile2 = open(self.folder + '/' + str(key2) + '.undo', 'a')
+        
+        # Read old data
+        oldFish1 = read_data1[ recogdb.dicFields['presentFish'] ]
+        if oldFish1 not in (1,2):
+            print 'only single spikes can be inverted'
+            assert False
+        newFish1 = 2 if oldFish1 == 1 else 1
+        
+        oldFish2 = read_data2[ recogdb.dicFields['presentFish'] ]
+        if oldFish2 not in (1,2):
+            print 'only single spikes can be inverted'
+            assert False
+        newFish2 = 2 if oldFish2 == 1 else 1
+        
+        oldProbA1 = read_data1[ recogdb.dicFields['probA'] ]
+        oldProbB1 = read_data1[ recogdb.dicFields['probB'] ]
+        
+        oldProbA2 = read_data2[ recogdb.dicFields['probA'] ]
+        oldProbB2 = read_data2[ recogdb.dicFields['probB'] ]
+        
+        oldDistA1 = read_data1[ recogdb.dicFields['distA'] ]
+        oldDistB1 = read_data1[ recogdb.dicFields['distB'] ]
+        oldDistAB1 = read_data1[ recogdb.dicFields['distAB'] ]
+        
+        oldDistA2 = read_data2[ recogdb.dicFields['distA'] ]
+        oldDistB2 = read_data2[ recogdb.dicFields['distB'] ]
+        oldDistAB2 = read_data2[ recogdb.dicFields['distAB'] ]
+        
+        oldCorrectedPosA1 = read_data1[ recogdb.dicFields['correctedPosA'] ]
+        oldCorrectedPosB1 = read_data1[ recogdb.dicFields['correctedPosB'] ]
+        
+        oldCorrectedPosA2 = read_data2[ recogdb.dicFields['correctedPosA'] ]
+        oldCorrectedPosB2 = read_data2[ recogdb.dicFields['correctedPosB'] ]
+        
+        oldSVM1 = read_data1[ recogdb.dicFields['svm'] ]
+        oldSVM2 = read_data2[ recogdb.dicFields['svm'] ]
+        
+        if newFish1 == 1:
+            newProbA1 = 1.
+            newProbB1 = 0.
+            
+            newDistA1 = 0.
+            newDistB1 = float('Inf')
+        else:
+            newProbA1 = 0.
+            newProbB1 = 1.
+            
+            newDistA1 = float('Inf')
+            newDistB1 = 0.
+        
+        newDistAB1 = float('Inf')
+        
+        if newFish2 == 1:
+            newProbA2 = 1.
+            newProbB2 = 0.
+            
+            newDistA2 = 0.
+            newDistB2 = float('Inf')
+        else:
+            newProbA2 = 0.
+            newProbB2 = 1.
+            
+            newDistA2 = float('Inf')
+            newDistB2 = 0.
+        
+        newDistAB2 = float('Inf')
+        
+        newCorrectedPosA1 = oldCorrectedPosB1
+        newCorrectedPosB1 = oldCorrectedPosA1
+        
+        newCorrectedPosA2 = oldCorrectedPosB2
+        newCorrectedPosB2 = oldCorrectedPosA2
+        
+        newSVM1 = 'v'
+        newSVM2 = 'v'
+        
+        # Update DB
+        recogdb.updateHeaderEntry(self.db, key1, 'svm', newSVM1, sync=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'svm', newSVM2, sync=False)
+        
+        recogdb.updateHeaderEntry(self.db, key1, 'presentFish', newFish1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'presentFish', newFish2, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key1, 'correctedPosA', newCorrectedPosA1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key1, 'correctedPosB', newCorrectedPosB1, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key2, 'correctedPosA', newCorrectedPosA2, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'correctedPosB', newCorrectedPosB2, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key1, 'probA', newProbA1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key1, 'probB', newProbB1, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key2, 'probA', newProbA2, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'probB', newProbB2, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key1, 'distA', newDistA1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key1, 'distB', newDistB1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key1, 'distAB', newDistAB1, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key2, 'distA', newDistA2, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'distB', newDistB2, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'distAB', newDistAB2, sync=True, change_svm=False)
+        
+        # Read new data
+        off1, new_data1, spk_data1 = recogdb.readHeaderEntry(self.db, key1)
+        off2, new_data2, spk_data2 = recogdb.readHeaderEntry(self.db, key2)
+        
+        newFish1 = new_data1[ recogdb.dicFields['presentFish'] ]
+        newFish2 = new_data2[ recogdb.dicFields['presentFish'] ]
+        
+        newProbA1 = new_data1[ recogdb.dicFields['probA'] ]
+        newProbB1 = new_data1[ recogdb.dicFields['probB'] ]
+        
+        newProbA2 = new_data2[ recogdb.dicFields['probA'] ]
+        newProbB2 = new_data2[ recogdb.dicFields['probB'] ]
+        
+        newDistA1 = new_data1[ recogdb.dicFields['distA'] ]
+        newDistB1 = new_data1[ recogdb.dicFields['distB'] ]
+        newDistAB1 = new_data1[ recogdb.dicFields['distAB'] ]
+        
+        newDistA2 = new_data2[ recogdb.dicFields['distA'] ]
+        newDistB2 = new_data2[ recogdb.dicFields['distB'] ]
+        newDistAB2 = new_data2[ recogdb.dicFields['distAB'] ]
+        
+        newCorrectedPosA1 = new_data1[ recogdb.dicFields['correctedPosA'] ]
+        newCorrectedPosB1 = new_data1[ recogdb.dicFields['correctedPosB'] ]
+        
+        newCorrectedPosA2 = new_data2[ recogdb.dicFields['correctedPosA'] ]
+        newCorrectedPosB2 = new_data2[ recogdb.dicFields['correctedPosB'] ]
+        
+        newSVM1 = new_data1[ recogdb.dicFields['svm'] ]
+        newSVM2 = new_data2[ recogdb.dicFields['svm'] ]
+        
+        # Action identifier
+        keyundofile1.write( '%s\n'%(dicUndo[SVMINVERTION]) )
+        keyundofile2.write( '%s\n'%(dicUndo[SVMINVERTION]) )
+        
+        # Modified Fields
+        keyundofile1.write( '\t%s\t%c\t%c\n'%('svm', oldSVM1, newSVM1) )
+        keyundofile2.write( '\t%s\t%c\t%c\n'%('svm', oldSVM2, newSVM2) )
+        
+        keyundofile1.write( '\t%s\t%d\t%d\n'%('presentFish', oldFish1, newFish1) )
+        keyundofile2.write( '\t%s\t%d\t%d\n'%('presentFish', oldFish2, newFish2) )
+    
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('probA', oldProbA1, newProbA1) )
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('probB', oldProbB1, newProbB1) )
+        
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('probA', oldProbA2, newProbA2) )
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('probB', oldProbB2, newProbB2) )
+        
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distA', oldDistA1, newDistA1) )
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distB', oldDistB1, newDistB1) )
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB1, newDistAB1) )
+        
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distA', oldDistA2, newDistA2) )
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distB', oldDistB2, newDistB2) )
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB2, newDistAB2) )
+        
+        keyundofile1.write( '\t%s\t%d\t%d\n'%('correctedPosA', oldCorrectedPosA1, newCorrectedPosA1) )
+        keyundofile1.write( '\t%s\t%d\t%d\n'%('correctedPosB', oldCorrectedPosB1, newCorrectedPosB1) )
+        
+        keyundofile2.write( '\t%s\t%d\t%d\n'%('correctedPosA', oldCorrectedPosA2, newCorrectedPosA2) )
+        keyundofile2.write( '\t%s\t%d\t%d\n'%('correctedPosB', oldCorrectedPosB2, newCorrectedPosB2) )
+        
+        keyundofile1.close()
+        keyundofile2.close()
         
     def undo(self, modList, selected, key):
-        if selected == 'svmcreation':
+        # When the 'selected' is an action, he will look in the list for the first
+        # action that matches
+        # TODO: Implementar esquema de "hash"
+        
+        if selected == dicUndo[CREATESVM]:
             action = None
             selected = -1
             while action != dicUndo[CREATESVM]:
+                selected = selected + 1
+                action, dicActions = modList[selected]
+        elif selected == dicUndo[SVMINVERTION]:
+            action = None
+            selected = -1
+            while action != dicUndo[SVMINVERTION]:
                 selected = selected + 1
                 action, dicActions = modList[selected]
         else:
@@ -576,12 +779,11 @@ class ModifySelector:
         
         offN = None
         offP = None
-        if action == dicUndo[CREATESVM]:
-            self.undoSVM = True
+        if action in [ dicUndo[CREATESVM], dicUndo[SVMINVERTION] ]:
             offN, read_dataN = recogdb.getNearestSVM(self.db, 1, key)
             offP, read_dataP = recogdb.getNearestSVM(self.db, -1, key)
         
-        return (offP, offN, pair_svm)
+        return (action, offP, offN, pair_svm)
 
 
 class IPIWindow(QtGui.QDialog):
@@ -654,10 +856,13 @@ class IPIWindow(QtGui.QDialog):
                 self.modify.overlap2single(self.off, 'B')
                 self.replot = True
             
-        elif self.windowType == 'single':
+        elif self.windowType == 'svm':
             # Invert SVM
             if option == 0:
-                pass
+                self.modify.invertSVM(self.off)
+                self.replot=True
+                self.iterate_from.append( (1, True, self.off) )
+                self.iterate_from.append( (-1, True, self.off) )
             # Remove SVM
             elif option == 1:
                 pass
@@ -678,15 +883,30 @@ class IPIWindow(QtGui.QDialog):
             self.close()
             return
         
-        self.modify.undoSVM = False
-        offP, offN, pair_svm = self.modify.undo(self.modList, option, self.off)
-        if self.modify.undoSVM == True:
-            print self.off
-            print pair_svm
-            offP, offN, pair_svm = self.modify.undo(self.modList, 'svmcreation', pair_svm)
-        if (offN is not None) and (offP is not None):
-            self.iterate_from.append( (-1, False, offN) )
-            self.iterate_from.append( (1, True, offP) )
+        action, offP, offN, pair_svm = self.modify.undo(self.modList, option, self.off)
+        if action == dicUndo[CREATESVM]:
+            # When the option is an action, he will look in the list for the first
+            # action that matches
+            pairModList = self.modify.parseModifications(pair_svm)
+            action, offP, offN, pair_svm = self.modify.undo(pairModList, action, pair_svm)
+            if (offN is not None) and (offP is not None):
+                self.iterate_from.append( (-1, False, offN) )
+                self.iterate_from.append( (1, True, offP) )
+            else:
+                pass
+            
+        elif action == dicUndo[SVMINVERTION]:
+            pairModList = self.modify.parseModifications(pair_svm)
+            action, offP, offN, pair_svm = self.modify.undo(pairModList, action, pair_svm)
+            if (offN is not None) and (offP is not None):
+                self.iterate_from.append( (-1, False, offN) )
+                self.iterate_from.append( (1, True, self.off) )
+                
+                self.iterate_from.append( (-1, False, self.off) )
+                self.iterate_from.append( (1, True, offP) )
+            else:
+                pass
+            
         self.replot = True
         self.close()
     
@@ -808,7 +1028,7 @@ class IPIWindow(QtGui.QDialog):
         elif svmFlag == 's':
             return 'SVM Classified'
         elif svmFlag == 'v':
-            return 'Manually inserted SVM'
+            return 'Manually inserted or inverted SVM'
         elif svmFlag == 'c':
             return 'Previous spike was not ready for SVM classification'
 

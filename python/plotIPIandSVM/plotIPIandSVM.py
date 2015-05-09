@@ -401,7 +401,9 @@ class PickPoints:
         else:
             # deal with something that should never happen
             scale_factor = 1
+            print 'ERROR'
             print button
+            assert False
         # set new limits
         if self.zoomStatus == 'X':
             ylim = self.ax.get_ylim()
@@ -535,7 +537,7 @@ class PlotData(QtGui.QDialog):
                 self.offsDic[correctedPosB] = off
                 self.correctedPosDic[off] = correctedPosB
                 
-            assert ( (presentFish == 1) or (presentFish ==  2) or (presentFish == 3) )
+            assert ( presentFish in [1, 2, 3] )
             
             if presentFish == 1:
                 Tam1 += 1

@@ -206,6 +206,13 @@ def getNearestSVM(db, direction, k):
         return None
     
     db.set_location(key)
+    
+    # Walk twice on the first step
+    if direction == -1:
+        off, bindata = db.previous()
+    else:
+        off, bindata = db.next()
+        
     svm = 'X'
     while svm not in ['s','v']:
         if direction == -1:
