@@ -2,6 +2,8 @@ from PyQt4 import QtCore, QtGui
 from IPIClick_interface import *
 from single2overlap import single2overlap
 
+import random
+
 import numpy as np
 
 import sys, os
@@ -70,7 +72,7 @@ class ModifySelector:
         self.undoSVM = False
         self.replot = False
 
-    # undoList = [ ( Action, {Fields: (Old, New)} ), ( Action, {Fields: (Old, New)} ), ... ]
+    # undoList = [ ( Action, {Fields: (Old, New)}, hashUndo ), ( Action, {Fields: (Old, New)}, hashUndo ), ... ]
     def parseModifications(self, key):
         modFilename = self.folder + '/' + str(key) + '.undo'
         if not os.path.isfile(modFilename):
@@ -80,15 +82,17 @@ class ModifySelector:
         undoList = []
         ActionNow = ''
         dicActions = {}
+        hashUndo = 0
         for l in modFile.xreadlines():
             Columns = l.split('\t')
             
             # Action identifier
             if Columns[0] != '':
                 if len(dicActions.keys()) != 0:
-                    undoList.append( (ActionNow, dicActions) ) 
+                    undoList.append( (ActionNow, dicActions, hashUndo) ) 
                     
                 ActionNow = Columns[0].strip() # remove last '\n'
+                hashUndo = int(Columns[1].strip())
                 assert ( ActionNow in dicUndo.values() )
                 dicActions = {}
                 continue
@@ -103,7 +107,7 @@ class ModifySelector:
             dicActions[Field] = (OldValue, NewValue)
            
         # Append last action 
-        undoList.append( (ActionNow, dicActions) ) 
+        undoList.append( (ActionNow, dicActions, hashUndo) ) 
         # List is from the newest to the oldest modification
         return undoList[::-1]
     
@@ -124,8 +128,8 @@ class ModifySelector:
             undoFile.close()
         
         keyundofile = open(self.folder + '/' + str(key) + '.undo', 'w')
-        for action, dicAction in modList:
-            keyundofile.write("%s\n"%(action))
+        for action, dicAction, hashUndo in modList:
+            keyundofile.write( "%s\t%d\n"%(action,hashUndo) )
             for field in dicAction.keys():
                 assert dicFields[field] in ('int', 'float', 'char')
                 dataold, datanew = dicAction[field]
@@ -202,7 +206,8 @@ class ModifySelector:
         newDistAB = new_data[ recogdb.dicFields['distAB'] ]
         
         # Action identifier
-        keyundofile.write( '%s\n'%(dicUndo[INVERTION]) )
+        hashUndo = random.randint(0, 2**64-1)
+        keyundofile.write( '%s\t%d\n'%(dicUndo[INVERTION], hashUndo) )
         
         # Modified fields
         keyundofile.write( '\t%s\t%c\t%c\n'%('svm', oldSVM, newSVM) )
@@ -295,7 +300,8 @@ class ModifySelector:
         newDistAB = new_data[ recogdb.dicFields['distAB'] ]
         
         # Action identifier
-        keyundofile.write( '%s\n'%(dicUndo[SINGLE2OVERLAP]) )
+        hashUndo = random.randint(0, 2**64-1)
+        keyundofile.write( '%s\t%d\n'%(dicUndo[SINGLE2OVERLAP], hashUndo) )
         
         # Modified fields
         keyundofile.write( '\t%s\t%c\t%c\n'%('svm', oldSVM, newSVM) )
@@ -446,8 +452,9 @@ class ModifySelector:
         newDistAB2 = new_data2[ recogdb.dicFields['distAB'] ]
         
         # Action identifier
-        keyundofile1.write( '%s\n'%(dicUndo[CREATESVM]) )
-        keyundofile2.write( '%s\n'%(dicUndo[CREATESVM]) )
+        hashUndo = random.randint(0, 2**64-1)
+        keyundofile1.write( '%s\t%d\n'%(dicUndo[CREATESVM], hashUndo) )
+        keyundofile2.write( '%s\t%d\n'%(dicUndo[CREATESVM], hashUndo) )
         
         # Modified Fields
         keyundofile1.write( '\t%s\t%c\t%c\n'%('svm', oldSVM1, newSVM1) )
@@ -532,10 +539,11 @@ class ModifySelector:
         newCorrectedPosB = new_data[ recogdb.dicFields['correctedPosB'] ]
         
         # Action identifier
+        hashUndo = random.randint(0, 2**64-1)
         if fish == 'A':
-            keyundofile.write( '%s\n'%(dicUndo[CONVERT2SINGLEA]) )
+            keyundofile.write( '%s\t%d\n'%(dicUndo[CONVERT2SINGLEA], hashUndo) )
         elif fish == 'B':
-            keyundofile.write( '%s\n'%(dicUndo[CONVERT2SINGLEB]) )
+            keyundofile.write( '%s\t%d\n'%(dicUndo[CONVERT2SINGLEB], hashUndo) )
         
         # Modified Fields
         keyundofile.write( '\t%s\t%d\t%d\n'%('presentFish', oldPresentFish, newPresentFish) )
@@ -707,8 +715,9 @@ class ModifySelector:
         newSVM2 = new_data2[ recogdb.dicFields['svm'] ]
         
         # Action identifier
-        keyundofile1.write( '%s\n'%(dicUndo[SVMINVERTION]) )
-        keyundofile2.write( '%s\n'%(dicUndo[SVMINVERTION]) )
+        hashUndo = random.randint(0, 2**64-1)
+        keyundofile1.write( '%s\t%d\n'%(dicUndo[SVMINVERTION], hashUndo) )
+        keyundofile2.write( '%s\t%d\n'%(dicUndo[SVMINVERTION], hashUndo) )
         
         # Modified Fields
         keyundofile1.write( '\t%s\t%c\t%c\n'%('svm', oldSVM1, newSVM1) )
@@ -744,21 +753,17 @@ class ModifySelector:
         # When the 'selected' is an action, he will look in the list for the first
         # action that matches
         # TODO: Implementar esquema de "hash"
-        
-        if selected == dicUndo[CREATESVM]:
+       
+        if type(selected) is tuple:
+            selectedAction, selectedHash = selected
+            hashUndo = None
             action = None
-            selected = -1
-            while action != dicUndo[CREATESVM]:
+            selected = -1 # Overwrites selected to a number, like the common usage
+            while hashUndo != selectedHash:
                 selected = selected + 1
-                action, dicActions = modList[selected]
-        elif selected == dicUndo[SVMINVERTION]:
-            action = None
-            selected = -1
-            while action != dicUndo[SVMINVERTION]:
-                selected = selected + 1
-                action, dicActions = modList[selected]
+                action, dicActions, hashUndo = modList[selected]
         else:
-            action, dicActions = modList[selected]
+            action, dicActions, hashUndo = modList[selected]
 
         # Read to return if is a created SVM pair to be undone
         off, data, spkwin = recogdb.readHeaderEntry(self.db,key)
@@ -783,7 +788,7 @@ class ModifySelector:
             offN, read_dataN = recogdb.getNearestSVM(self.db, 1, key)
             offP, read_dataP = recogdb.getNearestSVM(self.db, -1, key)
         
-        return (action, offP, offN, pair_svm)
+        return (action, offP, offN, pair_svm, hashUndo)
 
 
 class IPIWindow(QtGui.QDialog):
@@ -883,12 +888,12 @@ class IPIWindow(QtGui.QDialog):
             self.close()
             return
         
-        action, offP, offN, pair_svm = self.modify.undo(self.modList, option, self.off)
+        action, offP, offN, pair_svm, hashUndo = self.modify.undo(self.modList, option, self.off)
         if action == dicUndo[CREATESVM]:
             # When the option is an action, he will look in the list for the first
             # action that matches
             pairModList = self.modify.parseModifications(pair_svm)
-            action, offP, offN, pair_svm = self.modify.undo(pairModList, action, pair_svm)
+            action, offP, offN, pair_svm, hashUndo = self.modify.undo(pairModList, (action, hashUndo), pair_svm)
             if (offN is not None) and (offP is not None):
                 self.iterate_from.append( (-1, False, offN) )
                 self.iterate_from.append( (1, True, offP) )
@@ -897,7 +902,7 @@ class IPIWindow(QtGui.QDialog):
             
         elif action == dicUndo[SVMINVERTION]:
             pairModList = self.modify.parseModifications(pair_svm)
-            action, offP, offN, pair_svm = self.modify.undo(pairModList, action, pair_svm)
+            action, offP, offN, pair_svm, hashUndo = self.modify.undo(pairModList, (action, hashUndo), pair_svm)
             if (offN is not None) and (offP is not None):
                 self.iterate_from.append( (-1, False, offN) )
                 self.iterate_from.append( (1, True, self.off) )
@@ -934,7 +939,7 @@ class IPIWindow(QtGui.QDialog):
         
         self.undoOptions = []
         i = 0
-        for action, dicActions in modList:
+        for action, dicActions, hashUndo in modList:
             RadioBut =  QtGui.QRadioButton(self.uiObject.scrollAreaWidgetContents)
             RadioBut.setObjectName(_fromUtf8('undo' + str(i)))
             RadioBut.setMinimumHeight(self.RButSize)

@@ -114,9 +114,6 @@ class single2overlap(QtGui.QDialog):
             correctedPos = pos*freq/1000. + self.off_now/4/self.NChan
             self.posB = int(np.round(correctedPos))
             self.uiObject.fishAButton.setChecked(True)
-        print self.posA
-        print self.posB
-        print '--'
         
     
     def drawSpikePos(self, pos):
