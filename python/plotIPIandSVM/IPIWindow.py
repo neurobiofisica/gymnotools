@@ -140,6 +140,9 @@ class ModifySelector:
                 elif dicFields[field] == 'char':
                     keyundofile.write("\t%s\t%c\t%c\n"%(field, dataold, datanew))
         keyundofile.close()
+        
+        if os.stat(keyundofile.name).st_size == 0:
+            os.remove(keyundofile.name)
 
     def invertIPI(self, key):
         if key not in self.undoKeys:
@@ -752,7 +755,6 @@ class ModifySelector:
     def undo(self, modList, selected, key):
         # When the 'selected' is an action, he will look in the list for the first
         # action that matches
-        # TODO: Implementar esquema de "hash"
        
         if type(selected) is tuple:
             selectedAction, selectedHash = selected
