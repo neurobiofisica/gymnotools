@@ -260,7 +260,7 @@ class PickPoints:
                     self.plotObject.app.restoreOverrideCursor()
 
     def press(self,event):
-        key = event.key
+        key = event.key.lower()
         sys.stdout.flush()
         if key == 'b':
             self.b = not(self.b)
