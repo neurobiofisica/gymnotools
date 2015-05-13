@@ -1,4 +1,5 @@
 import bsddb3.db as bsd
+import bsddb3
 from bsddb3 import _DBWithCursor
 
 import struct
@@ -216,9 +217,15 @@ def getNearestSVM(db, direction, k):
     svm = 'X'
     while svm not in ['s','v']:
         if direction == -1:
-            off, bindata = db.previous()
+            try:
+                off, bindata = db.previous()
+            except bsddb3._pybsddb.DBNotFoundError:
+                return (None, None)
         else:
-            off, bindata = db.next()
+            try:
+                off, bindata = db.next()
+            except bsddb3._pybsddb.DBNotFoundError:
+                return (None, None)
         read_data = parseDBHeader(bindata)
         svm = read_data[ dicFields['svm'] ]
     

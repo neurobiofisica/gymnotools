@@ -721,9 +721,10 @@ static void iterate_from(RecogDB &db, WindowFile &winfile, SFishPair curpairBeg,
 
         // Apply recog on the next spikes
         off = winfile.getEventOffset();
-        while (off != curpairEnd.first && off != curpairEnd.second) {
+        bool has_event = true;
+        while ( (off != curpairEnd.first && off != curpairEnd.second) && has_event) {
             worker.recog(direction, force);
-            winfile.prevEvent();
+            has_event = winfile.prevEvent();
             off = winfile.getEventOffset();
         }
 
@@ -761,9 +762,10 @@ static void iterate_from(RecogDB &db, WindowFile &winfile, SFishPair curpairBeg,
 
         // Apply recog on the next spikes
         off = winfile.getEventOffset();
-        while (off != curpairEnd.first && off != curpairEnd.second) {
+        bool has_event = true;
+        while ( (off != curpairEnd.first && off != curpairEnd.second) && has_event) {
             worker.recog(direction, force);
-            winfile.nextEvent();
+            has_event = winfile.nextEvent();
             off = winfile.getEventOffset();
         }
 
@@ -1217,29 +1219,42 @@ int main(int argc, char **argv)
         sfishfile.close();
         QListIterator<SFishPair> it(sfishlist);
         SFishPair curpairBeg, curpairEnd;
+        bool found = false;
         if (direction == 1) {
             it.toFront();
             while (it.hasNext()) {
                 curpairBeg = it.next();
-                if ((curpairBeg.first == from) || (curpairBeg.second == from))
-                        break;
+                if ((curpairBeg.first == from) || (curpairBeg.second == from)) {
+                    found = true;
+                    break;
+                }
             }
-            if (!it.hasNext()) {
-                fprintf(stderr, "Can't locate specified SVM offset (%lld).\n", from);
+            if (found == false) {
+                fprintf(stderr, "Can't locate specified SVM offset on direction=%d (%lld).\n", direction, from);
+                return 1;
             }
-            curpairEnd = it.next();
+            if (it.hasNext())
+                curpairEnd = it.next();
+            else
+                curpairEnd = SFishPair(-1, -1);
         }
         else{
             it.toBack();
             while (it.hasPrevious()) {
                 curpairBeg = it.previous();
-                if ((curpairBeg.first == from) || (curpairBeg.second == from))
-                        break;
+                if ((curpairBeg.first == from) || (curpairBeg.second == from)) {
+                    found = true;
+                    break;
+                }
             }
-            if (!it.hasPrevious()) {
-                fprintf(stderr, "Can't locate specified SVM offset (%lld).\n", from);
+            if (found == false) {
+                fprintf(stderr, "Can't locate specified SVM offset on direction=%d (%lld).\n", direction, from);
+                return 1;
             }
-            curpairEnd = it.previous();
+            if (it.hasPrevious())
+                curpairEnd = it.previous();
+            else
+                curpairEnd = SFishPair(-1, -1);
         }
 
         QFile probfile(argv[optind+3]);

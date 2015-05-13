@@ -1006,8 +1006,15 @@ class IPIWindow(QtGui.QDialog):
                 self.replot=True
                 offN, dataN = recogdb.getNearestSVM(self.db, 1, self.off)
                 offP, dataP = recogdb.getNearestSVM(self.db, -1, self.off)
-                self.iterate_from.append( (1, False, offP) )
-                self.iterate_from.append( (-1, True, offN) )
+                assert (offP is not None) or (offN is not None)
+                if (offP is not None) and (offN is not None):
+                    self.iterate_from.append( (1, False, offP) )
+                    self.iterate_from.append( (-1, True, offN) )
+                elif offP is None:
+                    self.iterate_from.append( (-1, True, offN) )
+                elif offN is None:
+                    self.iterate_from.append( (1, True, offP) )
+                
             # Reapply continuity (recog iterate_from)
             elif option == 2:
                 
@@ -1079,23 +1086,33 @@ class IPIWindow(QtGui.QDialog):
             # action that matches
             pairModList = self.modify.parseModifications(pair_svm)
             action, offP, offN, pair_svm, hashUndo = self.modify.undo(pairModList, (action, hashUndo), pair_svm)
+            assert (offP is not None) or (offN is not None)
             if (offN is not None) and (offP is not None):
                 self.iterate_from.append( (-1, False, offN) )
                 self.iterate_from.append( (1, True, offP) )
-            else:
-                pass
+                
+            elif offP is None:
+                self.iterate_from.append( (-1, True, offN) )
+                
+            elif offN is None:
+                self.iterate_from.append( (1, True, offP) )
             
         elif action in [ dicUndo[SVMINVERTION], dicUndo[SVMREMOVE] ]:
             pairModList = self.modify.parseModifications(pair_svm)
             action, offP, offN, pair_svm, hashUndo = self.modify.undo(pairModList, (action, hashUndo), pair_svm)
+            assert (offP is not None) or (offN is not None)
             if (offN is not None) and (offP is not None):
                 self.iterate_from.append( (-1, False, offN) )
                 self.iterate_from.append( (1, True, self.off) )
                 
                 self.iterate_from.append( (-1, False, self.off) )
                 self.iterate_from.append( (1, True, offP) )
-            else:
-                pass
+                
+            elif offP is None:
+                self.iterate_from.append( (-1, True, offN) )
+                
+            elif offN is None:
+                self.iterate_from.append( (1, True, offP) )
         
         elif action == dicUndo[RECOGFUTURE]:
             pairModList = self.modify.parseModifications(pair_svm)

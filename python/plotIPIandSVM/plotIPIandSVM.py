@@ -229,7 +229,7 @@ class PickPoints:
                     while len(self.plotObject.dialogIPI.iterate_from) != 0:
                         
                         direction, force, key = self.plotObject.dialogIPI.pop_iterate_from()
-                        print 'direction %d %r'%(direction, force)
+                        print 'direction %d %d %r'%(direction, key, force)
                         ret = subprocess.call(['./../../recog/recog', 'iterate_from', \
                                                '--from=%d'%key, \
                                                '--direction=%d'%direction, \
