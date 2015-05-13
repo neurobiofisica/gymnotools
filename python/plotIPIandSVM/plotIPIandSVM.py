@@ -254,6 +254,7 @@ class PickPoints:
                         
                     self.plotObject.loadDataFromDB()
                     self.plotObject.formatSVM2Plot()
+                    self.plotObject.formatModified2Plot()
                     
                     self.plotObject.replotData()
                     self.plotObject.dialogIPI.replot = False
@@ -484,6 +485,7 @@ class PlotData(QtGui.QDialog):
         # Runs the whole DB
         self.loadDataFromDB()
         self.formatSVM2Plot()
+        self.formatModified2Plot()
         
         self.formatterX = FuncFormatter(self.sec2hms)
         self.formatterY = FuncFormatter(self.sec2msus)
@@ -504,12 +506,14 @@ class PlotData(QtGui.QDialog):
         self.correctedPosDic = {}
         
         P1 = []
+        Modified1 = []
         direction1 = []
         SVM1 = []
         probs1 = []
         dists1 = []
         
         P2 = []
+        Modified2 = []
         direction2 = []
         SVM2 = []
         probs2 = []
@@ -548,6 +552,8 @@ class PlotData(QtGui.QDialog):
                 if (svm == 's') or (svm == 'v'): # SVM or manual SVM
                     SVM1.append(correctedPosA)
                     singlefishlist.append( (off, pairsvm) ) # It is only needed to write once
+                if (svm == 'm') or (svm == 'v'):
+                    Modified1.append(correctedPosA)
                 
             elif presentFish == 2:
                 Tam2 += 1
@@ -558,6 +564,8 @@ class PlotData(QtGui.QDialog):
                 if (svm == 's') or (svm == 'v'):
                     SVM2.append(correctedPosB)
                     ########################################## It is only needed to write once
+                if (svm == 'm') or (svm == 'v'):
+                    Modified2.append(correctedPosB)
                 
             else:
                 Tam1 += 1
@@ -573,8 +581,13 @@ class PlotData(QtGui.QDialog):
                 probs2.append( (probA,probB) )
                 dists2.append( (distA, distB, distAB) )
                 # 2 fish on same window is never a SVM classification
+                
+                if (svm == 'm') or (svm == 'v'):
+                    Modified1.append(correctedPosA)
+                    Modified2.append(correctedPosB)
         
         self.TS = ( np.sort(np.array(P1))/freq, np.sort(np.array(P2))/freq )
+        self.Modified = ( np.sort(np.array(Modified1))/freq, np.sort(np.array(Modified2))/freq )
         self.direction = ( np.array(direction1), np.array(direction2) )
         self.SVM = ( np.sort(SVM1)/freq, np.sort(SVM2)/freq )
         self.probs = (probs1, probs2)
@@ -613,6 +626,19 @@ class PlotData(QtGui.QDialog):
         Min = -0.1
         Max = max( np.diff(self.TS[0]).max(), np.diff(self.TS[1]).max() )
         self.SVMY = np.array( self.Tam * [Min,Max,Min] )
+        
+    
+    def formatModified2Plot(self):
+        self.Tam0 = self.Modified[0].size
+        self.Tam1 = self.Modified[1].size
+        
+        self.Modified2Plot0 = self.Modified[0].repeat(3) 
+        self.Modified2Plot1 = self.Modified[1].repeat(3) 
+        
+        Min = -0.1
+        Max = max( np.diff(self.TS[0]).max(), np.diff(self.TS[1]).max() )
+        self.ModifiedY0 = np.array( self.Tam0 * [Min,Max,Min] )
+        self.ModifiedY1 = np.array( self.Tam1 * [Min,Max,Min] )
 
     def replotData(self):
         
@@ -783,7 +809,7 @@ class PlotData(QtGui.QDialog):
             maxIdxX2 = next( n for n,i in enumerate(self.TS[1]) if i > MAX)+1
         except StopIteration:
             maxIdxX2 = self.TS[1].size-1
-
+            
         # Only plot once
         if plotSVM == True:
             try:
@@ -793,6 +819,16 @@ class PlotData(QtGui.QDialog):
             
             try:
                 self.SVMplotR.pop(0).remove()
+            except:
+                pass
+
+            try:
+                self.ModifiedplotB.pop(0).remove()
+            except:
+                pass
+            
+            try:
+                self.ModifiedplotR.pop(0).remove()
             except:
                 pass
             
@@ -809,6 +845,10 @@ class PlotData(QtGui.QDialog):
             # Plot SVM Lines
             self.SVMplotB = self.ax.plot(self.SVM2Plot[0], self.SVMY, 'b-.', alpha=0.3, lw=2)
             self.SVMplotR = self.ax.plot(self.SVM2Plot[1], self.SVMY, 'r-.', alpha=0.3, lw=2)
+            
+            # Plot Modified Lines
+            self.ModifiedplotB = self.ax.plot(self.Modified2Plot0, self.ModifiedY0, 'c--', alpha=0.3, lw=2)
+            self.ModifiedplotR = self.ax.plot(self.Modified2Plot1, self.ModifiedY1, 'm--', alpha=0.3, lw=2)
 
             # Lines and dots are plotter separately for picker act only on dots
             self.IPIplotR = self.ax.plot(self.TS[1][1:], np.diff(self.TS[1]), 'r-')
@@ -862,7 +902,7 @@ class PlotData(QtGui.QDialog):
 
             directIdx1 = find(self.direction[0][minIdxX1:maxIdxX1][1:] > 0)
             directIdx2 = find(self.direction[1][minIdxX2:maxIdxX2][1:] > 0)
-
+            
             self.scatter1d = self.ax.scatter(self.TS[0][minIdxX1:maxIdxX1][1:][directIdx1], np.diff(self.TS[0][minIdxX1:maxIdxX1])[directIdx1], c=color1, marker='>', linewidths=0, s=50+np.pi*size1, picker=3, zorder=IPIDATABLUE)
             self.scatter2d = self.ax.scatter(self.TS[1][minIdxX2:maxIdxX2][1:][directIdx2], np.diff(self.TS[1][minIdxX2:maxIdxX2])[directIdx2], c=color2, marker='>', linewidths=0, s=50+np.pi*size2, picker=3, zorder=IPIDATARED)
 
