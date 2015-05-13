@@ -32,13 +32,19 @@ CREATESVM = 2
 CONVERT2SINGLEA = 3
 CONVERT2SINGLEB = 4
 SVMINVERTION = 5
+SVMREMOVE = 6
+RECOGFUTURE = 7
+RECOGPAST = 8
 
 dicUndo = {INVERTION: 'Continuity invertion',
            SINGLE2OVERLAP: 'Single spike converted to overlap',
            CREATESVM: 'SVM pair created',
            CONVERT2SINGLEA: 'Convert overlap to single A fish',
            CONVERT2SINGLEB: 'Convert overlap to single B fish',
-           SVMINVERTION: 'SVM Inverted',
+           SVMINVERTION: 'SVM inverted',
+           SVMREMOVE: 'SVM removed', 
+           RECOGFUTURE: 'Continuity enforced from this SVM to the future', 
+           RECOGPAST: 'Continuity enforced from this SVM to the past', 
 }
 
 dicFields = {'presentFish': 'int',
@@ -88,7 +94,7 @@ class ModifySelector:
             
             # Action identifier
             if Columns[0] != '':
-                if len(dicActions.keys()) != 0:
+                if (len(dicActions.keys()) != 0) or (ActionNow in [ dicUndo[RECOGFUTURE], dicUndo[RECOGPAST] ]):
                     undoList.append( (ActionNow, dicActions, hashUndo) ) 
                     
                 ActionNow = Columns[0].strip() # remove last '\n'
@@ -751,11 +757,121 @@ class ModifySelector:
         
         keyundofile1.close()
         keyundofile2.close()
+    
+    def removeSVM(self, key):
         
+        # Read pair keys
+        off1, read_data1, spk_data1 = recogdb.readHeaderEntry(self.db, key)
+        
+        key1 = off1
+        key2 = read_data1[ recogdb.dicFields['pairsvm'] ]
+        
+        off2, read_data2, spk_data2 = recogdb.readHeaderEntry(self.db, key2)
+        
+        # Open undo files
+        if key1 not in self.undoKeys:
+            undoFile1 = open(self.undoFilename, 'a')
+            undoFile1.write('%s\n'%key1)
+            undoFile1.flush()
+            undoFile1.close()
+        keyundofile1 = open(self.folder + '/' + str(key1) + '.undo', 'a')
+        
+        if key2 not in self.undoKeys:
+            undoFile2 = open(self.undoFilename, 'a')
+            undoFile2.write('%s\n'%key2)
+            undoFile2.flush()
+            undoFile2.close()
+        keyundofile2 = open(self.folder + '/' + str(key2) + '.undo', 'a')
+        
+        # Read old data
+        presentFish1 = read_data1[ recogdb.dicFields['presentFish'] ]
+        presentFish2 = read_data2[ recogdb.dicFields['presentFish'] ]
+        
+        oldSVM1 = read_data1[ recogdb.dicFields['svm'] ]
+        oldSVM2 = read_data2[ recogdb.dicFields['svm'] ]
+        
+        oldDistA1 = read_data1[ recogdb.dicFields['distA'] ]
+        oldDistB1 = read_data1[ recogdb.dicFields['distB'] ]
+        oldDistAB1 = read_data1[ recogdb.dicFields['distAB'] ]
+        
+        oldDistA2 = read_data2[ recogdb.dicFields['distA'] ]
+        oldDistB2 = read_data2[ recogdb.dicFields['distB'] ]
+        oldDistAB2 = read_data2[ recogdb.dicFields['distAB'] ]
+        
+        newSVM1 = 'm'
+        newSVM2 = 'm'
+        
+        assert presentFish1 in [1, 2]
+        if presentFish1 == 1:
+            newDistA1 = 0
+            newDistB1 = float('Inf')
+            newDistAB1 = float('Inf')
+        else:
+            newDistA1 = float('Inf')
+            newDistB1 = 0
+            newDistAB1 = float('Inf')
+        
+        assert presentFish2 in [1, 2]
+        if presentFish2 == 1:
+            newDistA2 = 0
+            newDistB2 = float('Inf')
+            newDistAB2 = float('Inf')
+        else:
+            newDistA2 = float('Inf')
+            newDistB2 = 0
+            newDistAB2 = float('Inf')
+        
+        recogdb.updateHeaderEntry(self.db, key1, 'svm', newSVM1, sync=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'svm', newSVM2, sync=False)
+        
+        recogdb.updateHeaderEntry(self.db, key1, 'distA', newDistA1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key1, 'distB', newDistB1, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key1, 'distAB', newDistAB1, sync=False, change_svm=False)
+        
+        recogdb.updateHeaderEntry(self.db, key2, 'distA', newDistA2, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'distB', newDistB2, sync=False, change_svm=False)
+        recogdb.updateHeaderEntry(self.db, key2, 'distAB', newDistAB2, sync=True, change_svm=False)
+        
+        # Read new data
+        off1, new_data1, spk_data1 = recogdb.readHeaderEntry(self.db, key1)
+        off2, new_data2, spk_data2 = recogdb.readHeaderEntry(self.db, key2)
+        
+        newSVM1 = new_data1[ recogdb.dicFields['svm'] ]
+        newSVM2 = new_data2[ recogdb.dicFields['svm'] ]
+        
+        newDistA1 = new_data1[ recogdb.dicFields['distA'] ]
+        newDistB1 = new_data1[ recogdb.dicFields['distB'] ]
+        newDistAB1 = new_data1[ recogdb.dicFields['distAB'] ]
+        
+        newDistA2 = new_data2[ recogdb.dicFields['distA'] ]
+        newDistB2 = new_data2[ recogdb.dicFields['distB'] ]
+        newDistAB2 = new_data2[ recogdb.dicFields['distAB'] ]
+        
+        # Action identifier
+        hashUndo = random.randint(0, 2**64-1)
+        keyundofile1.write( '%s\t%d\n'%(dicUndo[SVMREMOVE], hashUndo) )
+        keyundofile2.write( '%s\t%d\n'%(dicUndo[SVMREMOVE], hashUndo) )
+        
+        # Modified Fields
+        keyundofile1.write( '\t%s\t%c\t%c\n'%('svm', oldSVM1, newSVM1) )
+        keyundofile2.write( '\t%s\t%c\t%c\n'%('svm', oldSVM2, newSVM2) )
+        
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distA', oldDistA1, newDistA1) )
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distB', oldDistB1, newDistB1) )
+        keyundofile1.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB1, newDistAB1) )
+        
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distA', oldDistA2, newDistA2) )
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distB', oldDistB2, newDistB2) )
+        keyundofile2.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB2, newDistAB2) )
+        
+        keyundofile1.close()
+        keyundofile2.close()
+    
+    
     def undo(self, modList, selected, key):
         # When the 'selected' is an action, he will look in the list for the first
         # action that matches
-       
+        
         if type(selected) is tuple:
             selectedAction, selectedHash = selected
             hashUndo = None
@@ -766,30 +882,42 @@ class ModifySelector:
                 action, dicActions, hashUndo = modList[selected]
         else:
             action, dicActions, hashUndo = modList[selected]
-
+            
+            
         # Read to return if is a created SVM pair to be undone
         off, data, spkwin = recogdb.readHeaderEntry(self.db,key)
         pair_svm = data[ recogdb.dicFields['pairsvm'] ]
-        
-        for field in dicActions.keys():
-            assert dicFields[field] in ('int', 'float', 'char')
-            if dicFields[field] == 'int':
-                data = int(dicActions[field][0])
-            elif dicFields[field] == 'float':
-                data = float(dicActions[field][0])
-            else:
-                data = dicActions[field][0]
-            recogdb.updateHeaderEntry(self.db, key, field, data, sync=False, change_svm=False)
-        self.db.sync()
-        newModList = modList[selected+1:]
-        self.regenUndoFile(key,newModList)
-        
-        offN = None
-        offP = None
-        if action in [ dicUndo[CREATESVM], dicUndo[SVMINVERTION] ]:
+            
+        if action not in [ dicUndo[RECOGFUTURE], dicUndo[RECOGPAST] ]:
+            
+            # Undo DB modifications 
+            for field in dicActions.keys():
+                assert dicFields[field] in ('int', 'float', 'char')
+                if dicFields[field] == 'int':
+                    data = int(dicActions[field][0])
+                elif dicFields[field] == 'float':
+                    data = float(dicActions[field][0])
+                else:
+                    data = dicActions[field][0]
+                recogdb.updateHeaderEntry(self.db, key, field, data, sync=False, change_svm=False)
+            self.db.sync()
+            newModList = modList[selected+1:]
+            self.regenUndoFile(key,newModList)
+            
+            offN = None
+            offP = None
+            if action in [ dicUndo[CREATESVM], dicUndo[SVMINVERTION] ]:
+                offN, read_dataN = recogdb.getNearestSVM(self.db, 1, key)
+                offP, read_dataP = recogdb.getNearestSVM(self.db, -1, key)
+            
+        else:
+            
             offN, read_dataN = recogdb.getNearestSVM(self.db, 1, key)
             offP, read_dataP = recogdb.getNearestSVM(self.db, -1, key)
-        
+            
+            modList.pop(selected)
+            self.regenUndoFile(key, modList)
+            
         return (action, offP, offN, pair_svm, hashUndo)
 
 
@@ -802,6 +930,8 @@ class IPIWindow(QtGui.QDialog):
         QtGui.QWidget.__init__(self)
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
+        
+        self.db = db
         
         self.modify = ModifySelector(db, undoFilename, folder, datafile)
 
@@ -872,10 +1002,63 @@ class IPIWindow(QtGui.QDialog):
                 self.iterate_from.append( (-1, True, self.off) )
             # Remove SVM
             elif option == 1:
-                pass
+                self.modify.removeSVM(self.off)
+                self.replot=True
+                offN, dataN = recogdb.getNearestSVM(self.db, 1, self.off)
+                offP, dataP = recogdb.getNearestSVM(self.db, -1, self.off)
+                self.iterate_from.append( (1, False, offP) )
+                self.iterate_from.append( (-1, True, offN) )
             # Reapply continuity (recog iterate_from)
             elif option == 2:
-                pass
+                
+                self.replot = True
+                
+                key1, read_data1, spk_data1 = recogdb.readHeaderEntry(self.db, self.off)
+                assert (read_data1[ recogdb.dicFields['svm'] ] in ['s', 'v'])
+                off2 = read_data1[ recogdb.dicFields['pairsvm'] ]
+                key2, read_data2, spk_data2 = recogdb.readHeaderEntry(self.db, off2)
+                
+                # Open undo file
+                if key1 not in self.modify.undoKeys:
+                    undoFile1 = open(self.modify.undoFilename, 'a')
+                    undoFile1.write('%s\n'%key1)
+                    undoFile1.flush()
+                    undoFile1.close()
+                keyundofile1 = open(self.modify.folder + '/' + str(key1) + '.undo', 'a')
+                
+                if key2 not in self.modify.undoKeys:
+                    undoFile2 = open(self.modify.undoFilename, 'a')
+                    undoFile2.write('%s\n'%key1)
+                    undoFile2.flush()
+                    undoFile2.close()
+                keyundofile2 = open(self.modify.folder + '/' + str(key2) + '.undo', 'a')
+                
+                # Message box to ask future or past
+                msgbox = QtGui.QMessageBox()
+                msgbox.setText('Apply continuity criteria to: ')
+                
+                returnValues = [-1, 1]
+                action = [ dicUndo[RECOGPAST], dicUndo[RECOGFUTURE] ]
+                msgbox.addButton(QtGui.QPushButton('Past'), QtGui.QMessageBox.NoRole)
+                msgbox.addButton(QtGui.QMessageBox.Cancel)
+                msgbox.addButton(QtGui.QPushButton('Future'), QtGui.QMessageBox.YesRole)
+                
+                ret = msgbox.exec_()
+                
+                if ret == QtGui.QMessageBox.Cancel:
+                    return None
+                
+                # Apply iterate from
+                self.iterate_from.append( (returnValues[ret], True, self.off) )
+                
+                # Modification file
+                hashUndo = random.randint(0, 2**64-1)
+                keyundofile1.write( '%s\t%d\n'%(action[ret], hashUndo) )
+                keyundofile2.write( '%s\t%d\n'%(action[ret], hashUndo) )
+                
+                keyundofile1.close()
+                keyundofile2.close()
+                
         
         self.close()
     
@@ -902,7 +1085,7 @@ class IPIWindow(QtGui.QDialog):
             else:
                 pass
             
-        elif action == dicUndo[SVMINVERTION]:
+        elif action in [ dicUndo[SVMINVERTION], dicUndo[SVMREMOVE] ]:
             pairModList = self.modify.parseModifications(pair_svm)
             action, offP, offN, pair_svm, hashUndo = self.modify.undo(pairModList, (action, hashUndo), pair_svm)
             if (offN is not None) and (offP is not None):
@@ -913,7 +1096,23 @@ class IPIWindow(QtGui.QDialog):
                 self.iterate_from.append( (1, True, offP) )
             else:
                 pass
-            
+        
+        elif action == dicUndo[RECOGFUTURE]:
+            pairModList = self.modify.parseModifications(pair_svm)
+            action, offP, offN, pair_svm, hashUndo = self.modify.undo(pairModList, (action, hashUndo), pair_svm)
+            if offN is not None:
+                self.iterate_from.append( (-1, False, offN) )
+            else:
+                pass
+        
+        elif action == dicUndo[RECOGPAST]:
+            pairModList = self.modify.parseModifications(pair_svm)
+            action, offP, offN, pair_svm, hashUndo = self.modify.undo(pairModList, (action, hashUndo), pair_svm)
+            if offP is not None:
+                self.iterate_from.append( (1, False, offP) )
+            else:
+                pass
+        
         self.replot = True
         self.close()
     
