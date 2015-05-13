@@ -256,6 +256,7 @@ class PickPoints:
                     self.plotObject.formatSVM2Plot()
                     self.plotObject.formatModified2Plot()
                     
+                    
                     self.plotObject.replotData()
                     self.plotObject.dialogIPI.replot = False
                     self.plotObject.app.restoreOverrideCursor()

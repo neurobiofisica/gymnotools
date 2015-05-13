@@ -409,7 +409,7 @@ public:
 
         const int len = winfile.getEventSamples();
         const int zfilling = qMax(fishlenA, fishlenB);
-        assert(zfilling <= EODSamples);
+        //assert(zfilling <= EODSamples);
         assert(len + zfilling <= WinWorkerBufLen);
         const int firstpos = zfilling/2;
 
