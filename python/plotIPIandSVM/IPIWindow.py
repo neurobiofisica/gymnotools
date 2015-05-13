@@ -31,16 +31,18 @@ SINGLE2OVERLAP = 1
 CREATESVM = 2
 CONVERT2SINGLEA = 3
 CONVERT2SINGLEB = 4
-SVMINVERTION = 5
-SVMREMOVE = 6
-RECOGFUTURE = 7
-RECOGPAST = 8
+CHANGEOVERLAPPOSITION = 5
+SVMINVERTION = 6
+SVMREMOVE = 7
+RECOGFUTURE = 8
+RECOGPAST = 9
 
 dicUndo = {INVERTION: 'Continuity invertion',
            SINGLE2OVERLAP: 'Single spike converted to overlap',
            CREATESVM: 'SVM pair created',
            CONVERT2SINGLEA: 'Convert overlap to single A fish',
            CONVERT2SINGLEB: 'Convert overlap to single B fish',
+           CHANGEOVERLAPPOSITION: 'Changes spikes positioning',
            SVMINVERTION: 'SVM inverted',
            SVMREMOVE: 'SVM removed', 
            RECOGFUTURE: 'Continuity enforced from this SVM to the future', 
@@ -253,6 +255,7 @@ class ModifySelector:
                                      self.single2overlapWindow.posB)
     
     def convert2overlapOnDB(self, key, posA, posB):
+        # Used to change spike positioning too
         if key not in self.undoKeys:
             undoFile = open(self.undoFilename, 'a')
             undoFile.write('%d\n'%key)
@@ -268,9 +271,6 @@ class ModifySelector:
         
         # Store old 'presentFish' data
         oldFish = read_data[ recogdb.dicFields['presentFish'] ]
-        if oldFish not in (1,2):
-            print 'only single spikes can be converted to overlap'
-            assert False
         newFish = 3
         
         # Store old correctedPos data
@@ -310,7 +310,10 @@ class ModifySelector:
         
         # Action identifier
         hashUndo = random.randint(0, 2**64-1)
-        keyundofile.write( '%s\t%d\n'%(dicUndo[SINGLE2OVERLAP], hashUndo) )
+        if oldFish in [1, 2]:
+            keyundofile.write( '%s\t%d\n'%(dicUndo[SINGLE2OVERLAP], hashUndo) )
+        else:
+            keyundofile.write( '%s\t%d\n'%(dicUndo[CHANGEOVERLAPPOSITION], hashUndo) )
         
         # Modified fields
         keyundofile.write( '\t%s\t%c\t%c\n'%('svm', oldSVM, newSVM) )
@@ -361,6 +364,7 @@ class ModifySelector:
         ret = msgbox.exec_()
         
         if ret == QtGui.QMessageBox.Cancel:
+            self.replot = False
             return None
         
         self.createSVMPairOnDB(off, returnValues[ret])
@@ -979,8 +983,34 @@ class IPIWindow(QtGui.QDialog):
                 self.modify.createSVMPair(self.off)
                 if self.modify.replot == True:
                     self.replot = True
-                    self.iterate_from.append( (1, True, self.off) )
-                    self.iterate_from.append( (-1, True, self.off) )
+                    
+                    msgbox = QtGui.QMessageBox()
+                    msgbox.setText('Enforce SVM detection to:\n' + \
+                    '(The detection will be done to the other side, but will respect the minimun distance)')
+                    
+                    msgbox.addButton(QtGui.QPushButton('Past'), QtGui.QMessageBox.NoRole)
+                    msgbox.addButton(QtGui.QPushButton('Future'), QtGui.QMessageBox.YesRole)
+                    msgbox.addButton(QtGui.QPushButton('Both'), QtGui.QMessageBox.AcceptRole)
+                    msgbox.addButton(QtGui.QPushButton('None'), QtGui.QMessageBox.AcceptRole)
+                    
+                    ret = msgbox.exec_()
+                    
+                    if ret == QtGui.QMessageBox.Cancel:
+                        return None
+                    
+                    if ret == 0:
+                        self.iterate_from.append( (1, False, self.off) )
+                        self.iterate_from.append( (-1, True, self.off) )
+                    if ret == 1:
+                        self.iterate_from.append( (-1, False, self.off) )
+                        self.iterate_from.append( (1, True, self.off) )
+                    if ret == 2:
+                        self.iterate_from.append( (1, True, self.off) )
+                        self.iterate_from.append( (-1, True, self.off) )
+                    if ret == 3:
+                        self.iterate_from.append( (1, False, self.off) )
+                        self.iterate_from.append( (-1, False, self.off) )
+                        
                 self.show()
             
         elif self.windowType == 'overlap':
@@ -992,6 +1022,14 @@ class IPIWindow(QtGui.QDialog):
             elif option == 1:
                 self.modify.overlap2single(self.off, 'B')
                 self.replot = True
+            # Change overlapping spike position
+            elif option == 2:
+                self.hide()
+                self.modify.convert2overlap(self.off)
+                if self.modify.single2overlapWindow.replot == True:
+                    self.replot = True
+                    self.modify.single2overlapWindow.replot = False
+                self.show()
             
         elif self.windowType == 'svm':
             # Invert SVM
@@ -1089,13 +1127,13 @@ class IPIWindow(QtGui.QDialog):
             assert (offP is not None) or (offN is not None)
             if (offN is not None) and (offP is not None):
                 self.iterate_from.append( (-1, False, offN) )
-                self.iterate_from.append( (1, True, offP) )
+                self.iterate_from.append( (1, False, offP) )
                 
             elif offP is None:
-                self.iterate_from.append( (-1, True, offN) )
+                self.iterate_from.append( (-1, False, offN) )
                 
             elif offN is None:
-                self.iterate_from.append( (1, True, offP) )
+                self.iterate_from.append( (1, False, offP) )
             
         elif action in [ dicUndo[SVMINVERTION], dicUndo[SVMREMOVE] ]:
             pairModList = self.modify.parseModifications(pair_svm)
@@ -1211,13 +1249,14 @@ class IPIWindow(QtGui.QDialog):
                 self.windowType = 'overlap'
                 self.setMainText('Overlapping spikes selected')
 
-                for i in xrange(2):
+                for i in xrange(3):
                     self.options.append( QtGui.QRadioButton(self.uiObject.mainOptionsBox) )
                     self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
                     self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
                 self.setOpt(0, 'Convert to single A spike')
                 self.setOpt(1, 'Convert to single B spike')
+                self.setOpt(2, 'Change spike positioning')
 
         # SVM spike
         else:

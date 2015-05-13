@@ -219,6 +219,12 @@ class PickPoints:
             if self.options == True:
                 self.plotObject.dialogIPI.fillTextBoxes(Parameters)
                 self.plotObject.dialogIPI.exec_()
+                # Switch option to 'off' state
+                self.options = not(self.options)
+                self.dicHandles['Options'].set_label('\'o\' Options off')
+                self.ax.legend()
+                self.fig.canvas.draw()
+                
                 if self.plotObject.dialogIPI.replot == True:
                     
                     self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))

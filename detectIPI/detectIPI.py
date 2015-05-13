@@ -52,6 +52,10 @@ for rec in db.iteritems():
     read_data = recogdb.parseDBHeader(bindata)
     correctedPosA = read_data[ recogdb.dicFields['correctedPosA'] ]
     correctedPosB = read_data[ recogdb.dicFields['correctedPosB'] ]
+    if (correctedPosA != -1) and (correctedPosB != -1):
+        f.write( '%d\t%d\n'%(1, correctedPosA) )
+        f.write( '%d\t%d\n'%(-1, correctedPosB) )
+        continue
     if (correctedPosA != -1):
         f.write( '%d\t%d\n'%(1, correctedPosA) )
         continue
