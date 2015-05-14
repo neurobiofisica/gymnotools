@@ -69,7 +69,7 @@ class ModifySelector:
         self.undoFilename = undoFilename
         self.folder = folder
         
-        self.single2overlapWindow = single2overlap(NChan, datafile)
+        self.single2overlapWindow = single2overlap(db, NChan, datafile)
         
         # if to avoid warning of loadtxt from empty file
         if os.stat(undoFilename).st_size != 0:
@@ -985,11 +985,12 @@ class IPIWindow(QtGui.QDialog):
                     self.replot = True
                     
                     msgbox = QtGui.QMessageBox()
-                    msgbox.setText('Enforce SVM detection to:\n' + \
-                    '(The detection will be done to the other side, but will respect the minimun distance)')
+                    msgbox.setText('Enforce SVM detection in direction:\n' + \
+                    '(The detection will be done to the other side, but will respect the minimun distance)\n' + \
+                    'WARNING: This may undo some of your manual modifications')
                     
-                    msgbox.addButton(QtGui.QPushButton('Past'), QtGui.QMessageBox.NoRole)
-                    msgbox.addButton(QtGui.QPushButton('Future'), QtGui.QMessageBox.YesRole)
+                    msgbox.addButton(QtGui.QPushButton('Backward'), QtGui.QMessageBox.NoRole)
+                    msgbox.addButton(QtGui.QPushButton('Foreward'), QtGui.QMessageBox.YesRole)
                     msgbox.addButton(QtGui.QPushButton('Both'), QtGui.QMessageBox.AcceptRole)
                     msgbox.addButton(QtGui.QPushButton('None'), QtGui.QMessageBox.AcceptRole)
                     
@@ -1093,8 +1094,25 @@ class IPIWindow(QtGui.QDialog):
                 if ret == QtGui.QMessageBox.Cancel:
                     return None
                 
+                msgbox = QtGui.QMessageBox()
+                msgbox.setText('Enforce?\n' + \
+                'WARNING: This may undo some of your manual modifications')
+                msgbox.addButton(QtGui.QMessageBox.Yes)
+                msgbox.addButton(QtGui.QMessageBox.No)
+                msgbox.addButton(QtGui.QMessageBox.Cancel)
+                
+                ret2 = msgbox.exec_()
+                
+                if ret2 == QtGui.QMessageBox.Cancel:
+                    return None
+                
+                if ret2 == QtGui.QMessageBox.Yes:
+                    enforce = True
+                elif ret2 == QtGui.QMessageBox.No:
+                    enforce = False
+                
                 # Apply iterate from
-                self.iterate_from.append( (returnValues[ret], True, self.off) )
+                self.iterate_from.append( (returnValues[ret], enforce, self.off) )
                 
                 # Modification file
                 hashUndo = random.randint(0, 2**64-1)

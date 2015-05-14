@@ -579,9 +579,9 @@ public:
             // copy spike
             fishlenA = copylen;
             quint32 satFlag = 0;
-            if (existsInDB && db.presentFish()==1) {
+            /*if (existsInDB && db.presentFish()==1) {
                 qint32 offset;
-                SignalBuffer FishA(EODSamples);
+                SignalBuffer FishA(fishlenA);
                 db.spikeData(1,offset,FishA);
                 for(int ch = 0; ch < NumChannels; ch++) {
                     memcpy(fishvecA[ch], FishA.ch(ch), copylen*sizeof(float));
@@ -590,13 +590,13 @@ public:
                         satFlag |= (1<<ch);
                 }
             }
-            else {
+            else {*/
                 for(int ch = 0; ch < NumChannels; ch++) {
                     memcpy(fishvecA[ch], &buf[ch][copystart], copylen*sizeof(float));
                     if(saturate(fishvecA[ch], copylen, saturationLow, saturationHigh))
                         satFlag |= (1<<ch);
                 }
-            }
+            //}
 
 
             // emit to db
@@ -616,9 +616,9 @@ public:
             // copy spike
             fishlenB = copylen;
             quint32 satFlag = 0;
-            if (existsInDB && db.presentFish()==2) {
+            /*if (existsInDB && db.presentFish()==2) {
                 qint32 offset;
-                SignalBuffer FishB(EODSamples);
+                SignalBuffer FishB(fishlenB);
                 db.spikeData(1,offset,FishB);
                 for(int ch = 0; ch < NumChannels; ch++) {
                     memcpy(fishvecB[ch], FishB.ch(ch), copylen*sizeof(float));
@@ -627,13 +627,13 @@ public:
                         satFlag |= (1<<ch);
                 }
             }
-            else {
+            else {*/
                 for(int ch = 0; ch < NumChannels; ch++) {
                     memcpy(fishvecB[ch], &buf[ch][copystart], copylen*sizeof(float));
                     if(saturate(fishvecB[ch], copylen, saturationLow, saturationHigh))
                         satFlag |= (1<<ch);
                 }
-            }
+            //}
 
             // emit to db
             if(distB < curBestDist || forceSub)

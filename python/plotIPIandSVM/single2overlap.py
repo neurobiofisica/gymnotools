@@ -1,6 +1,10 @@
 from PyQt4 import QtCore, QtGui
 from single2overlapInterface import *
 
+import sys, os
+sys.path.append( os.path.realpath('../') )
+import recogdb
+
 import numpy as np
 
 try:
@@ -21,29 +25,18 @@ spkSize = 128
 freq = 45454.54545454
 saturationLow = -10
 saturationHigh = 10
-dicFields = {'presentFish': 0,
-        'direction': 1,
-        'distA': 2,
-        'distB': 3,
-        'distAB': 4,
-        'flags': 5,
-        'correctedPosA': 6,
-        'correctedPosB': 7,
-        'svm': 8,
-        'pairsvm': 9,
-        'probA': 10,
-        'probB': 11,
-}
     
 class single2overlap(QtGui.QDialog):
     
-    def __init__(self, NChan, datafile):
+    def __init__(self, db, NChan, datafile):
         QtGui.QWidget.__init__(self)
         self.uiObject = Ui_single2overlap()
         self.uiObject.setupUi(self)
         
         self.resizeEvent = self.onResize
         self.setWindowState(QtCore.Qt.WindowMaximized)
+        
+        self.db = db
         
         self.datafile = datafile
         
@@ -54,7 +47,7 @@ class single2overlap(QtGui.QDialog):
         self.uiObject.channelSelector.setMaximum(NChan-1)
         self.uiObject.channelNumber.setText(_translate("single2overlap", str(self.curChan), None))
         
-        QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.close)
+        QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.cancel)
         QtCore.QObject.connect(self.uiObject.okButton, QtCore.SIGNAL('clicked()'), self.okClick)
         QtCore.QObject.connect(self.uiObject.channelSelector, QtCore.SIGNAL('valueChanged(int)'), self.movingChannels)
 
@@ -69,6 +62,20 @@ class single2overlap(QtGui.QDialog):
         self.axNext1 = self.uiObject.next1.canvas.ax
         self.axNext2 = self.uiObject.next2.canvas.ax
         
+        self.zLine_pB = []
+        self.cLine_pB = []
+        self.zLine_pR = []
+        self.cLine_pR = []
+        
+        self.zLine_Spk = []
+        self.cLine_SpkB = []
+        self.cLine_SpkR = []
+        
+        self.zLine_nB = []
+        self.cLine_nB = []
+        self.zLine_nR = []
+        self.cLine_nR = []
+        
         self.positionSelectorClick = self.uiObject.spike.canvas.fig.canvas.mpl_connect('button_press_event', self.spikeClick)
         self.positionSelectorMove = self.uiObject.spike.canvas.fig.canvas.mpl_connect('motion_notify_event', self.spikeMove)
         self.positionSelectorRelease = self.uiObject.spike.canvas.fig.canvas.mpl_connect('button_release_event', self.spikeRelease)
@@ -77,6 +84,11 @@ class single2overlap(QtGui.QDialog):
         
         self.posA = None
         self.posB = None
+    
+    def cancel(self):
+        self.posA = None
+        self.posB = None
+        self.close()
     
     def onResize(self,event):
         self.uiObject.mainLayout.setGeometry( QtCore.QRect(0,0,self.size().width(),self.size().height()) )
@@ -155,6 +167,32 @@ class single2overlap(QtGui.QDialog):
         self.plotNext2, = self.axNext2.plot( [], [], 'r.-')
     
     def plotSignals(self, data, channel=0):
+        # Remove old lines
+        while len(self.zLine_pB) > 0:
+            self.zLine_pB.pop().remove()
+        while len(self.cLine_pB) > 0:
+            self.cLine_pB.pop().remove()
+        while len(self.zLine_pR) > 0:
+            self.zLine_pR.pop().remove()
+        while len(self.cLine_pR) > 0:
+            self.cLine_pR.pop().remove()
+            
+        while len(self.zLine_Spk) > 0:
+            self.zLine_Spk.pop().remove()
+        while len(self.cLine_SpkB) > 0:
+            self.cLine_SpkB.pop().remove()
+        while len(self.cLine_SpkR) > 0:
+            self.cLine_SpkR.pop().remove()
+        
+        while len(self.zLine_nB) > 0:
+            self.zLine_nB.pop().remove()
+        while len(self.cLine_nB) > 0:
+            self.cLine_nB.pop().remove()
+        while len(self.zLine_nR) > 0:
+            self.zLine_nR.pop().remove()
+        while len(self.cLine_nR) > 0:
+            self.cLine_nR.pop().remove()
+        
         f = self.datafile
         
         self.off_pB, entry_pB = data[0]
@@ -163,12 +201,18 @@ class single2overlap(QtGui.QDialog):
         self.off_nB, entry_nB = data[3]
         self.off_nR, entry_nR = data[4]
         
-        correctedPos_pB = entry_pB[ dicFields['correctedPosA'] ]
-        correctedPos_pR = entry_pR[ dicFields['correctedPosB'] ]
-        correctedPos_nowB = entry_now[ dicFields['correctedPosA'] ]
-        correctedPos_nowR = entry_now[ dicFields['correctedPosB'] ]
-        correctedPos_nB = entry_nB[ dicFields['correctedPosA'] ]
-        correctedPos_nR = entry_nR[ dicFields['correctedPosB'] ]
+        NSamples_pB = recogdb.getNSamples(self.db, self.off_pB)
+        NSamples_pR = recogdb.getNSamples(self.db, self.off_pR)
+        NSamples_now = recogdb.getNSamples(self.db, self.off_now)
+        NSamples_nB = recogdb.getNSamples(self.db, self.off_nB)
+        NSamples_nR = recogdb.getNSamples(self.db, self.off_nR)
+        
+        correctedPos_pB = entry_pB[ recogdb.dicFields['correctedPosA'] ]
+        correctedPos_pR = entry_pR[ recogdb.dicFields['correctedPosB'] ]
+        correctedPos_nowB = entry_now[ recogdb.dicFields['correctedPosA'] ]
+        correctedPos_nowR = entry_now[ recogdb.dicFields['correctedPosB'] ]
+        correctedPos_nB = entry_nB[ recogdb.dicFields['correctedPosA'] ]
+        correctedPos_nR = entry_nR[ recogdb.dicFields['correctedPosB'] ]
         
         # 1000 is to plot in ms
         sample2plot_pB = 1000.*(correctedPos_pB - self.off_pB/self.NChan/4.) / freq
@@ -178,63 +222,72 @@ class single2overlap(QtGui.QDialog):
         sample2plot_nB = 1000.*(correctedPos_nB - self.off_nB/self.NChan/4.) / freq
         sample2plot_nR = 1000.*(correctedPos_nR - self.off_nR/self.NChan/4.) / freq
         
-        t = 1000. * np.arange(spkSize) / freq
+        t_pB = 1000. * np.arange(NSamples_pB) / freq
+        t_pR = 1000. * np.arange(NSamples_pR) / freq
+        t_now = 1000. * np.arange(NSamples_now) / freq
+        t_nB = 1000. * np.arange(NSamples_nB) / freq
+        t_nR = 1000. * np.arange(NSamples_nR) / freq
         
         # Previous blue plot
-        f.seek(self.off_pB)
-        self.data_pB = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
-        self.axPrev1.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
-        self.axPrev1.plot( (sample2plot_pB, sample2plot_pB), (saturationLow, saturationHigh), 'b-')
-        self.plotPrev1.set_xdata(t)
+        f.seek(self.off_pB)
+        self.data_pB = np.frombuffer(f.read(4*NSamples_pB*self.NChan), dtype=np.float32)
+        
+        self.zLine_pB = self.axPrev1.plot( (t_pB.min(), t_pB.max()), [0., 0.], 'k-.' )
+        self.cLine_pB = self.axPrev1.plot( (sample2plot_pB, sample2plot_pB), (saturationLow, saturationHigh), 'b-')
+        self.plotPrev1.set_xdata(t_pB)
         self.plotPrev1.set_ydata(self.data_pB[channel::self.NChan])
         
-        self.axPrev1.set_xlim( (t.min(), t.max()) )
+        self.axPrev1.set_xlim( (t_pB.min(), t_pB.max()) )
 
         # Previous red plot
-        f.seek(self.off_pR)
-        self.data_pR = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
-        self.axPrev2.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
-        self.axPrev2.plot( (sample2plot_pR, sample2plot_pR), (saturationLow, saturationHigh), 'r-')
-        self.plotPrev2.set_xdata(t)
+        f.seek(self.off_pR)
+        self.data_pR = np.frombuffer(f.read(4*NSamples_pR*self.NChan), dtype=np.float32)
+        
+        self.zLine_pR = self.axPrev2.plot( (t_pR.min(), t_pR.max()), [0., 0.], 'k-.' )
+        self.cLine_pR = self.axPrev2.plot( (sample2plot_pR, sample2plot_pR), (saturationLow, saturationHigh), 'r-')
+        self.plotPrev2.set_xdata(t_pR)
         self.plotPrev2.set_ydata(self.data_pR[channel::self.NChan])
         
-        self.axPrev2.set_xlim( (t.min(), t.max()) )
+        self.axPrev2.set_xlim( (t_pR.min(), t_pR.max()) )
 
         # Selected spike plot
-        f.seek(self.off_now)
-        self.data_now = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
-        self.axSpike.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
-        self.axSpike.plot( (sample2plot_nowB, sample2plot_nowB), (saturationLow, saturationHigh), 'k-.')
-        self.axSpike.plot( (sample2plot_nowR, sample2plot_nowR), (saturationLow, saturationHigh), 'k-.')
-        self.plotSpike.set_xdata(t)
+        f.seek(self.off_now)
+        self.data_now = np.frombuffer(f.read(4*NSamples_now*self.NChan), dtype=np.float32)
+        
+        self.zLine_Spk = self.axSpike.plot( (t_now.min(), t_now.max()), [0., 0.], 'k-.' )
+        self.cLine_SpkB = self.axSpike.plot( (sample2plot_nowB, sample2plot_nowB), (saturationLow, saturationHigh), 'k-.')
+        self.cLine_SpkR = self.axSpike.plot( (sample2plot_nowR, sample2plot_nowR), (saturationLow, saturationHigh), 'k-.')
+        self.plotSpike.set_xdata(t_now)
         self.plotSpike.set_ydata(self.data_now[channel::self.NChan])
         
-        self.axSpike.set_xlim( (t.min(), t.max()) )
+        self.axSpike.set_xlim( (t_now.min(), t_now.max()) )
 
         # Next blue plot
-        f.seek(self.off_nB)
-        self.data_nB = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
-        self.axNext1.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
-        self.axNext1.plot( (sample2plot_nB, sample2plot_nB), (saturationLow, saturationHigh), 'b-')
-        self.plotNext1.set_xdata(t)
+        f.seek(self.off_nB)
+        self.data_nB = np.frombuffer(f.read(4*NSamples_nB*self.NChan), dtype=np.float32)
+        
+        self.zLine_nB = self.axNext1.plot( (t_nB.min(), t_nB.max()), [0., 0.], 'k-.' )
+        self.cLine_nB = self.axNext1.plot( (sample2plot_nB, sample2plot_nB), (saturationLow, saturationHigh), 'b-')
+        self.plotNext1.set_xdata(t_nB)
         self.plotNext1.set_ydata(self.data_nB[channel::self.NChan])
         
-        self.axNext1.set_xlim( (t.min(), t.max()) )
+        self.axNext1.set_xlim( (t_nB.min(), t_nB.max()) )
 
         # Next red plot
-        f.seek(self.off_nR)
-        self.data_nR = np.frombuffer(f.read(4*spkSize*self.NChan), dtype=np.float32)
         
-        self.axNext2.plot( (t.min(), t.max()), [0., 0.], 'k-.' )
-        self.axNext2.plot( (sample2plot_nR, sample2plot_nR), (saturationLow, saturationHigh), 'r-')
-        self.plotNext2.set_xdata(t)
+        f.seek(self.off_nR)
+        self.data_nR = np.frombuffer(f.read(4*NSamples_nR*self.NChan), dtype=np.float32)
+        
+        self.zLine_nR = self.axNext2.plot( (t_nR.min(), t_nR.max()), [0., 0.], 'k-.' )
+        self.cLine_nB = self.axNext2.plot( (sample2plot_nR, sample2plot_nR), (saturationLow, saturationHigh), 'r-')
+        self.plotNext2.set_xdata(t_nR)
         self.plotNext2.set_ydata(self.data_nR[channel::self.NChan])
         
-        self.axNext2.set_xlim( (t.min(), t.max()) )
+        self.axNext2.set_xlim( (t_nR.min(), t_nR.max()) )
 
         self.adjustYLim(channel)
         self.drawAll()

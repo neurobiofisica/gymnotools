@@ -139,7 +139,6 @@ def fishrec(tup):
             read_data[ dicFields['probB'] ], \
             fishwins
 
-
 def readHeaderEntry(db,k):
     key = verifyKey(db,k)
     if key is None:
@@ -166,6 +165,18 @@ def get_location(db,k):
     read_data = parseDBHeader(bindata)
     
     return (off, read_data)
+
+def getNSamples(db, k):
+    key = struct.pack('=q', k)
+    if not db.has_key(key):
+        return None
+    
+    off, bindata = db.set_location(key)
+    read_data = parseDBHeader(bindata)
+    spkdata = read_data[-1]
+    off2, size = struct.unpack('ii', spkdata[:8])
+    
+    return size
 
 def readOff(tup):
     return struct.unpack('=q', tup[0])[0]
