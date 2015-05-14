@@ -1000,7 +1000,7 @@ static int usage(const char *progname)
     fprintf(stderr, "options:\n"
             "  -z|--saturation=a,b Low and high saturation levels\n"
             "  -d|--direction=d    Scan direction (positive or negative)\n\n"
-            "  -f|--from=f         iterate from this SVM detection to the next one, according to the direction");
+            "  -f|--from=f         iterate from this SVM detection to the next one, according to the direction\n");
 
     fprintf(stderr, "%s waveform [options] recog.db outA.spikes outB.spikes\n", progname);
     fprintf(stderr, "options:\n"
