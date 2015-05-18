@@ -727,17 +727,17 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="sliceInfoLabel">
-             <property name="text">
-              <string>Total number of windows: </string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="1">
             <widget class="QRadioButton" name="fish2Radio">
              <property name="text">
               <string>Fish 2</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0" colspan="5">
+            <widget class="QLabel" name="sliceInfoLabel">
+             <property name="text">
+              <string>Total number of windows: </string>
              </property>
             </widget>
            </item>

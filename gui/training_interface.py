@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'training_interface.ui'
 #
-# Created: Mon May 18 19:03:00 2015
+# Created: Mon May 18 19:05:32 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -406,12 +406,12 @@ class Ui_trainingWindow(object):
         self.fish1Radio = QtGui.QRadioButton(self.scrollAreaWidgetContents)
         self.fish1Radio.setObjectName(_fromUtf8("fish1Radio"))
         self.step4ParametersLayout.addWidget(self.fish1Radio, 1, 0, 1, 1)
-        self.sliceInfoLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
-        self.sliceInfoLabel.setObjectName(_fromUtf8("sliceInfoLabel"))
-        self.step4ParametersLayout.addWidget(self.sliceInfoLabel, 2, 0, 1, 1)
         self.fish2Radio = QtGui.QRadioButton(self.scrollAreaWidgetContents)
         self.fish2Radio.setObjectName(_fromUtf8("fish2Radio"))
         self.step4ParametersLayout.addWidget(self.fish2Radio, 1, 1, 1, 1)
+        self.sliceInfoLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
+        self.sliceInfoLabel.setObjectName(_fromUtf8("sliceInfoLabel"))
+        self.step4ParametersLayout.addWidget(self.sliceInfoLabel, 2, 0, 1, 5)
         self.step4Layout.addLayout(self.step4ParametersLayout)
         spacerItem6 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.step4Layout.addItem(spacerItem6)
@@ -597,8 +597,8 @@ class Ui_trainingWindow(object):
         self.sliceBut.setText(_translate("trainingWindow", "Slice", None))
         self.saveSlicesLabel.setText(_translate("trainingWindow", "Save as:", None))
         self.fish1Radio.setText(_translate("trainingWindow", "Fish 1", None))
-        self.sliceInfoLabel.setText(_translate("trainingWindow", "Total number of windows: ", None))
         self.fish2Radio.setText(_translate("trainingWindow", "Fish 2", None))
+        self.sliceInfoLabel.setText(_translate("trainingWindow", "Total number of windows: ", None))
         self.step5TitleLabel.setText(_translate("trainingWindow", "5. Train SVM v", None))
         self.defaultValuesBut.setText(_translate("trainingWindow", "Default values", None))
         self.saveSVMLabel.setText(_translate("trainingWindow", "Save SVM model as: ", None))
