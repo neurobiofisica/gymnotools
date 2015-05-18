@@ -1,0 +1,1045 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>trainingWindow</class>
+ <widget class="QWidget" name="trainingWindow">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1124</width>
+    <height>1051</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>gymnotools - Training</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout" rowstretch="0" columnstretch="0">
+   <item row="0" column="0">
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>1106</width>
+        <height>1033</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0" colspan="5">
+        <layout class="QHBoxLayout" name="saveLoadParametersLayout">
+         <item>
+          <widget class="QPushButton" name="saveParametersBut">
+           <property name="text">
+            <string>Save parameters</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="loadParametersBut">
+           <property name="text">
+            <string>Load parameters</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <layout class="QVBoxLayout" name="step1Layout" stretch="0,4,0">
+         <item>
+          <widget class="clickQLabel" name="step1TitleLabel">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>11</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>1. Select parameters for spike detection v</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="step1ParametersLayout">
+           <item row="8" column="2">
+            <widget class="QLineEdit" name="cutoff2LineEdit"/>
+           </item>
+           <item row="10" column="2">
+            <widget class="QPushButton" name="thresholdAssist2But">
+             <property name="text">
+              <string>Threshold Assistant</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="spikeParametersFish1Label">
+             <property name="text">
+              <string>Fish 1</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="saturationLabel">
+             <property name="font">
+              <font>
+               <family>Sans Serif</family>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Saturation level:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="1">
+            <widget class="QLineEdit" name="cutoff1LineEdit"/>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="lowSaturation1LineEdit"/>
+           </item>
+           <item row="7" column="1">
+            <widget class="QLineEdit" name="taps1LineEdit"/>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="loadTS1LineEdit"/>
+           </item>
+           <item row="11" column="1">
+            <widget class="QLineEdit" name="thresholdLevel1LineEdit"/>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLineEdit" name="highSaturation1LineEdit"/>
+           </item>
+           <item row="9" column="0">
+            <widget class="QLabel" name="thresholdLabel">
+             <property name="font">
+              <font>
+               <family>Sans Serif</family>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Threshold:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="filterLabel">
+             <property name="font">
+              <font>
+               <family>Sans Serif</family>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Low-pass filter parameters:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLineEdit" name="loadTS2LineEdit"/>
+           </item>
+           <item row="11" column="0">
+            <widget class="QLabel" name="thresholdLevelLabel">
+             <property name="text">
+              <string>Threshold level:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="2">
+            <widget class="QPushButton" name="filterAssist2But">
+             <property name="text">
+              <string>Filter Assistant</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="2">
+            <widget class="QLineEdit" name="taps2LineEdit"/>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="spikeParametersFish2Label">
+             <property name="text">
+              <string>Fish 2</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QLineEdit" name="lowSaturation2LineEdit"/>
+           </item>
+           <item row="4" column="2">
+            <widget class="QLineEdit" name="highSaturation2LineEdit"/>
+           </item>
+           <item row="10" column="1">
+            <widget class="QPushButton" name="thresholdAssist1But">
+             <property name="text">
+              <string>Threshold Assistant</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QPushButton" name="filterAssist1But">
+             <property name="text">
+              <string>Filter Assistant</string>
+             </property>
+            </widget>
+           </item>
+           <item row="11" column="2">
+            <widget class="QLineEdit" name="thresholdLevel2LineEdit"/>
+           </item>
+           <item row="8" column="0">
+            <widget class="QLabel" name="cutoffLabel">
+             <property name="text">
+              <string>Cutoff frequency:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="highSaturationLabel">
+             <property name="text">
+              <string>HIGH saturation level</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="lowSaturationLabel">
+             <property name="text">
+              <string>LOW saturation level</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="tapsLabel">
+             <property name="text">
+              <string>Number of taps:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="loadTSLabel">
+             <property name="text">
+              <string>Load timeseries data:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="1">
+        <widget class="Line" name="line_0">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <layout class="QVBoxLayout" name="step2Layout" stretch="0,4,0">
+         <item>
+          <widget class="clickQLabel" name="step2TitleLabel">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>11</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>2. Detect Spikes v</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="step2ParametersLayout" rowstretch="0,0,0,0,0,0,0,0,0,0" columnstretch="4,0,4">
+           <property name="horizontalSpacing">
+            <number>6</number>
+           </property>
+           <property name="verticalSpacing">
+            <number>0</number>
+           </property>
+           <item row="2" column="2">
+            <widget class="QLineEdit" name="saveSpikes2LineEdit"/>
+           </item>
+           <item row="9" column="0" colspan="2">
+            <widget class="QPushButton" name="verifySpikes1But">
+             <property name="text">
+              <string>Verify detection</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0" colspan="2">
+            <widget class="QPushButton" name="detectSpikes1But">
+             <property name="text">
+              <string>Detect Spikes</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <widget class="QLineEdit" name="saveSpikes1LineEdit"/>
+           </item>
+           <item row="4" column="0" colspan="2">
+            <widget class="QLineEdit" name="saveWindowLengths1LineEdit"/>
+           </item>
+           <item row="8" column="0" colspan="2">
+            <widget class="QLineEdit" name="loadSpikes1LineEdit"/>
+           </item>
+           <item row="8" column="2">
+            <widget class="QLineEdit" name="loadSpikes2LineEdit"/>
+           </item>
+           <item row="4" column="2">
+            <widget class="QLineEdit" name="saveWindowLengths2LineEdit"/>
+           </item>
+           <item row="5" column="2">
+            <widget class="QPushButton" name="detectSpikes2But">
+             <property name="text">
+              <string>Detect Spikes</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="detectFish2Label">
+             <property name="text">
+              <string>Fish 2</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0" colspan="2">
+            <widget class="QLabel" name="detectFish1Label">
+             <property name="text">
+              <string>Fish 1</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="3">
+            <widget class="QLabel" name="saveSpikesLabel">
+             <property name="text">
+              <string>Save detected spikes as: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0" colspan="3">
+            <widget class="QLabel" name="saveWindowLengthsLabel">
+             <property name="text">
+              <string>Save window lengths as:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0" colspan="3">
+            <spacer name="step2ParametersSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Expanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="7" column="0" colspan="3">
+            <widget class="QLabel" name="loadSpikesLabel">
+             <property name="text">
+              <string>Load spikes file:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="2">
+            <widget class="QPushButton" name="verifySpikes2But">
+             <property name="text">
+              <string>Verify detection</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::MinimumExpanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="3">
+        <widget class="Line" name="line_4">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="4">
+        <layout class="QVBoxLayout" name="step3Layout" stretch="0,4,0">
+         <item>
+          <widget class="clickQLabel" name="step3TitleLabel">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>11</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>3. Rescale and extract features v</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="step3ParametersLayout">
+           <item row="5" column="0" colspan="2">
+            <widget class="QLabel" name="numberFeaturesLabel">
+             <property name="text">
+              <string>Number of features: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="0" colspan="2">
+            <spacer name="step3ParametersSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Expanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="1" column="0" colspan="2">
+            <widget class="QLabel" name="saveFeaturesLabel">
+             <property name="text">
+              <string>Save features as:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="0" colspan="2">
+            <widget class="QLabel" name="loadFeaturesLabel">
+             <property name="text">
+              <string>Load features file: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="featuresFish1Label">
+             <property name="text">
+              <string>Fish 1</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="featuresFish2Label">
+             <property name="text">
+              <string>Fish 2</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLineEdit" name="saveFeatures1LineEdit"/>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="saveFeatures2LineEdit"/>
+           </item>
+           <item row="11" column="0">
+            <widget class="QLineEdit" name="loadFeatures1LineEdit"/>
+           </item>
+           <item row="11" column="1">
+            <widget class="QLineEdit" name="loadFeatures2LineEdit"/>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="saveFilterLabel">
+             <property name="text">
+              <string>Save filter as:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0" colspan="2">
+            <widget class="QLineEdit" name="saveFilterLineEdit"/>
+           </item>
+           <item row="6" column="0" colspan="2">
+            <widget class="QLineEdit" name="numberFeaturesLineEdit"/>
+           </item>
+           <item row="8" column="0" colspan="2">
+            <widget class="QPushButton" name="extractFeaturesBut">
+             <property name="text">
+              <string>Extract features</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::MinimumExpanding</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="0" colspan="5">
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="5">
+        <layout class="QVBoxLayout" name="step4Layout" stretch="0,0,0">
+         <item>
+          <widget class="clickQLabel" name="step4TitleLabel">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>11</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>4. Slice series to make training, cross validation and testing sets v</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="step4ParametersLayout" rowstretch="0,0,0,0,0,0,0,0" columnstretch="0,0,0,0,0">
+           <item row="3" column="2">
+            <widget class="QLabel" name="probabilityLabel">
+             <property name="text">
+              <string>Probability of selection</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="trainingLabel">
+             <property name="text">
+              <string>Training set: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="4">
+            <widget class="QLineEdit" name="testingLoadLineEdit"/>
+           </item>
+           <item row="6" column="2">
+            <widget class="QLineEdit" name="testingProbabilityLineEdit"/>
+           </item>
+           <item row="4" column="4">
+            <widget class="QLineEdit" name="trainingLoadLineEdit"/>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLineEdit" name="crossNumberSamplesLineEdit"/>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLineEdit" name="trainingNumberSamplesLineEdit"/>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLabel" name="numberSamplesLabel">
+             <property name="text">
+              <string>Number of samples</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="4">
+            <widget class="QLabel" name="loadSlicesLabel">
+             <property name="text">
+              <string>Load slice:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="crossValidationLabel">
+             <property name="text">
+              <string>Cross validation set: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="testingLabel">
+             <property name="text">
+              <string>Testing set: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QLineEdit" name="testingNumberSamplesLineEdit"/>
+           </item>
+           <item row="5" column="4">
+            <widget class="QLineEdit" name="crossLoadLineEdit"/>
+           </item>
+           <item row="5" column="3">
+            <widget class="QLineEdit" name="crossSaveLineEdit"/>
+           </item>
+           <item row="5" column="2">
+            <widget class="QLineEdit" name="crossProbabilityLineEdit"/>
+           </item>
+           <item row="4" column="2">
+            <widget class="QLineEdit" name="trainingProbabilityLineEdit"/>
+           </item>
+           <item row="7" column="0" colspan="5">
+            <widget class="QPushButton" name="sliceBut">
+             <property name="text">
+              <string>Slice</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="3">
+            <widget class="QLineEdit" name="testingSaveLineEdit"/>
+           </item>
+           <item row="3" column="3">
+            <widget class="QLabel" name="saveSlicesLabel">
+             <property name="text">
+              <string>Save as:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="3">
+            <widget class="QLineEdit" name="trainingSaveLineEdit"/>
+           </item>
+           <item row="3" column="0">
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="1" column="0">
+            <widget class="QRadioButton" name="fish1Radio">
+             <property name="text">
+              <string>Fish 1</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="sliceInfoLabel">
+             <property name="text">
+              <string>Total number of windows: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QRadioButton" name="fish2Radio">
+             <property name="text">
+              <string>Fish 2</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_4">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="5" column="0">
+        <widget class="Line" name="line_1">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="2" colspan="3">
+        <widget class="Line" name="line_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <layout class="QVBoxLayout" name="step5Layout" stretch="0,0,0,0">
+         <item>
+          <widget class="clickQLabel" name="step5TitleLabel">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>11</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>5. Train SVM v</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="step5ParametersLayout" rowstretch="0,0,0,0,0,0,0" columnstretch="0,0,0,0,0">
+           <item row="1" column="0">
+            <spacer name="horizontalSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="0" column="0" colspan="5">
+            <widget class="QPushButton" name="defaultValuesBut">
+             <property name="text">
+              <string>Default values</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="saveSVMLabel">
+             <property name="text">
+              <string>Save SVM model as: </string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="4">
+            <widget class="QLabel" name="valueLabel">
+             <property name="text">
+              <string>Selected value</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0" colspan="5">
+            <widget class="QPushButton" name="trainSVMBut">
+             <property name="text">
+              <string>Train SVM</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="startLabel">
+             <property name="text">
+              <string>Start</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLabel" name="stopLabel">
+             <property name="text">
+              <string>Stop</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QLineEdit" name="gStopLineEdit"/>
+           </item>
+           <item row="5" column="1" colspan="4">
+            <widget class="QLineEdit" name="saveSVMLineEdit"/>
+           </item>
+           <item row="2" column="3">
+            <widget class="QLineEdit" name="cStepLineEdit"/>
+           </item>
+           <item row="2" column="4">
+            <widget class="QLineEdit" name="cValueLineEdit"/>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="gStartLineEdit"/>
+           </item>
+           <item row="3" column="3">
+            <widget class="QLineEdit" name="gStepLineEdit"/>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="cLabel">
+             <property name="text">
+              <string>SVM C Parameter: </string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="4">
+            <widget class="QLineEdit" name="gValueLineEdit"/>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="cStartLineEdit"/>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="gLabel">
+             <property name="text">
+              <string>SVM G Parameter: </string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QLineEdit" name="cStopLineEdit"/>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLabel" name="stepLabel">
+             <property name="text">
+              <string>Step</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0" colspan="5">
+            <widget class="QPushButton" name="optimizeSVMBut">
+             <property name="text">
+              <string>Optimize Parameters</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_5">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="KPixmapRegionSelectorWidget" name="logoPixMap">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="pixmap">
+            <pixmap>../../../Dropbox/LogoClaro_comLogo_w300.png</pixmap>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="6" column="1">
+        <widget class="Line" name="line_5">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2" colspan="3">
+        <layout class="QGridLayout" name="rocCurveLayout">
+         <item row="1" column="0">
+          <widget class="QLabel" name="loadSVMLabel">
+           <property name="text">
+            <string>Load SVM model: </string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="loadSVMLineEdit"/>
+         </item>
+         <item row="2" column="0" colspan="2">
+          <widget class="QPushButton" name="generateROCBut">
+           <property name="text">
+            <string>Generate ROC Curve</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0" colspan="2">
+          <widget class="ROCWidget" name="ROCWidget" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>200</width>
+             <height>200</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="7" column="0" colspan="5">
+        <spacer name="bottomSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>10</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <spacer name="topSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>529</width>
+           <height>57</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>KPixmapRegionSelectorWidget</class>
+   <extends>QWidget</extends>
+   <header>kpixmapregionselectorwidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ROCWidget</class>
+   <extends>QWidget</extends>
+   <header>ROCAux</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>clickQLabel</class>
+   <extends>QLabel</extends>
+   <header>clickQlabel</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
