@@ -67,14 +67,22 @@ class TrainingWindow(QtGui.QDialog):
     
     def fileFieldHandler(self):
         field = self.sender()
-        filename = QtGui.QFileDialog.getOpenFileName(self)
+        # TODO: define saving path
+        path = ''
+        fileFilter = QtCore.QString(self.fileFieldsExtension[field]) + QtCore.QString(';;All files (*.*) (*.*)')
+        if self.fieldsType[field] == 'load':
+            filename = QtGui.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
+        elif self.fieldsType[field] == 'save':
+            filename = QtGui.QFileDialog.getSaveFileName( self, 'Save file', path, fileFilter )
         if filename != '':
             field.setText(filename)
+        else:
+            pass
     
     def defineFieldsType(self):
-        self.fieldsType = {self.ui.loadTS1LineEdit: 'file', \
+        self.fieldsType = {self.ui.loadTS1LineEdit: 'load', \
                        
-                       self.ui.loadTS2LineEdit: 'file', \
+                       self.ui.loadTS2LineEdit: 'load', \
                        
                        self.ui.lowSaturation1LineEdit: 'float', \
                        self.ui.highSaturation1LineEdit: 'float', \
@@ -88,49 +96,49 @@ class TrainingWindow(QtGui.QDialog):
                        self.ui.cutoff2LineEdit: 'float', \
                        self.ui.thresholdLevel2LineEdit: 'float', \
                        
-                       self.ui.saveSpikes1LineEdit: 'file', \
-                       self.ui.saveWindowLengths1LineEdit: 'file', \
+                       self.ui.saveSpikes1LineEdit: 'save', \
+                       self.ui.saveWindowLengths1LineEdit: 'save', \
                        
-                       self.ui.saveSpikes2LineEdit: 'file', \
-                       self.ui.saveWindowLengths2LineEdit: 'file', \
+                       self.ui.saveSpikes2LineEdit: 'save', \
+                       self.ui.saveWindowLengths2LineEdit: 'save', \
                        
-                       self.ui.loadSpikes1LineEdit: 'file', \
+                       self.ui.loadSpikes1LineEdit: 'load', \
                        
-                       self.ui.loadSpikes2LineEdit: 'file', \
+                       self.ui.loadSpikes2LineEdit: 'load', \
                        
-                       self.ui.saveFeatures1LineEdit: 'file', \
-                       self.ui.saveFeatures2LineEdit: 'file', \
-                       self.ui.saveFilterLineEdit: 'file', \
+                       self.ui.saveFeatures1LineEdit: 'save', \
+                       self.ui.saveFeatures2LineEdit: 'save', \
+                       self.ui.saveFilterLineEdit: 'save', \
                        self.ui.numberFeaturesLineEdit: 'int', \
                        
-                       self.ui.loadFeatures1LineEdit: 'file', \
+                       self.ui.loadFeatures1LineEdit: 'load', \
                        
-                       self.ui.loadFeatures2LineEdit: 'file', \
+                       self.ui.loadFeatures2LineEdit: 'load', \
                        
                        self.ui.trainingNumberSamplesFish1LineEdit: 'int', \
                        self.ui.trainingProbabilityFish1LineEdit: 'float', \
-                       self.ui.trainingSaveFish1LineEdit: 'file', \
+                       self.ui.trainingSaveFish1LineEdit: 'save', \
                        self.ui.crossNumberSamplesFish1LineEdit: 'int', \
                        self.ui.crossProbabilityFish1LineEdit: 'float', \
-                       self.ui.crossSaveFish1LineEdit: 'file', \
+                       self.ui.crossSaveFish1LineEdit: 'save', \
                        self.ui.testingNumberSamplesFish1LineEdit: 'int', \
                        self.ui.testingProbabilityFish1LineEdit: 'float', \
-                       self.ui.testingSaveFish1LineEdit: 'file', \
+                       self.ui.testingSaveFish1LineEdit: 'save', \
                        
                        self.ui.trainingNumberSamplesFish2LineEdit: 'int', \
                        self.ui.trainingProbabilityFish2LineEdit: 'float', \
-                       self.ui.trainingSaveFish2LineEdit: 'file', \
+                       self.ui.trainingSaveFish2LineEdit: 'save', \
                        self.ui.crossNumberSamplesFish2LineEdit: 'int', \
                        self.ui.crossProbabilityFish2LineEdit: 'float', \
-                       self.ui.crossSaveFish2LineEdit: 'file', \
+                       self.ui.crossSaveFish2LineEdit: 'save', \
                        self.ui.testingNumberSamplesFish2LineEdit: 'int', \
                        self.ui.testingProbabilityFish2LineEdit: 'float', \
-                       self.ui.testingSaveFish2LineEdit: 'file', \
+                       self.ui.testingSaveFish2LineEdit: 'save', \
                        
-                       self.ui.trainingLoadFish1LineEdit: 'file', \
-                       self.ui.trainingLoadFish2LineEdit: 'file', \
-                       self.ui.crossLoadFish1LineEdit: 'file', \
-                       self.ui.crossLoadFish2LineEdit: 'file', \
+                       self.ui.trainingLoadFish1LineEdit: 'load', \
+                       self.ui.trainingLoadFish2LineEdit: 'load', \
+                       self.ui.crossLoadFish1LineEdit: 'load', \
+                       self.ui.crossLoadFish2LineEdit: 'load', \
                        
                        self.ui.cStartLineEdit: 'float', \
                        self.ui.cStepLineEdit: 'float', \
@@ -141,11 +149,11 @@ class TrainingWindow(QtGui.QDialog):
                        
                        self.ui.cValueLineEdit: 'float', \
                        self.ui.gValueLineEdit: 'float', \
-                       self.ui.saveSVMLineEdit: 'file', \
+                       self.ui.saveSVMLineEdit: 'save', \
                        
-                       self.ui.loadSVMLineEdit: 'file', \
-                       self.ui.testingLoadFish1LineEdit: 'file', \
-                       self.ui.testingLoadFish2LineEdit: 'file', \
+                       self.ui.loadSVMLineEdit: 'load', \
+                       self.ui.testingLoadFish1LineEdit: 'load', \
+                       self.ui.testingLoadFish2LineEdit: 'load', \
                        }
         
         for field in self.fieldsType.keys():
@@ -153,6 +161,36 @@ class TrainingWindow(QtGui.QDialog):
                 field.setValidator( QtGui.QIntValidator() )
             elif self.fieldsType[field] == 'float':
                 field.setValidator( QtGui.QDoubleValidator() )
+        
+        self.fileFieldsExtension = {
+            self.ui.loadTS1LineEdit: 'Timeseries on format I32 file (*.*) (*.*)', \
+            self.ui.loadTS2LineEdit: 'Timeseries on format I32 file (*.*) (*.*)', \
+            self.ui.saveSpikes1LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
+            self.ui.saveSpikes2LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
+            self.ui.loadSpikes1LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
+            self.ui.loadSpikes2LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
+            self.ui.saveWindowLengths1LineEdit: 'Window Length File (*.winlen) (*.winlen)', \
+            self.ui.saveWindowLengths2LineEdit: 'Window Length File (*.winlen) (*.winlen)', \
+            self.ui.saveFeatures1LineEdit: 'Features File (*.features) (*.features)', \
+            self.ui.saveFeatures2LineEdit: 'Features File (*.features) (*.features)', \
+            self.ui.loadFeatures1LineEdit: 'Features File (*.features) (*.features)', \
+            self.ui.loadFeatures2LineEdit: 'Features File (*.features) (*.features)', \
+            self.ui.saveFilterLineEdit: 'Filter File (*.filter) (*.filter)', \
+            self.ui.trainingSaveFish1LineEdit: 'Training set File (*.training) (*.training)', \
+            self.ui.trainingSaveFish2LineEdit: 'Training set File (*.training) (*.training)', \
+            self.ui.trainingLoadFish1LineEdit: 'Training set File (*.training) (*.training)', \
+            self.ui.trainingLoadFish2LineEdit: 'Training set File (*.training) (*.training)', \
+            self.ui.crossSaveFish1LineEdit: 'Cross Validation set File (*.cross) (*.cross)', \
+            self.ui.crossSaveFish2LineEdit: 'Cross Validation set File (*.cross) (*.cross)', \
+            self.ui.crossLoadFish1LineEdit: 'Cross Validation set File (*.cross) (*.cross)', \
+            self.ui.crossLoadFish2LineEdit: 'Cross Validation set File (*.cross) (*.cross)', \
+            self.ui.testingSaveFish1LineEdit: 'Testing set File (*.testing) (*.testing)', \
+            self.ui.testingSaveFish2LineEdit: 'Testing set File (*.testing) (*.testing)', \
+            self.ui.testingLoadFish1LineEdit: 'Testing set File (*.testing) (*.testing)', \
+            self.ui.testingLoadFish2LineEdit: 'Testing set File (*.testing) (*.testing)', \
+            self.ui.saveSVMLineEdit: 'SVM Model File (*.svmmodel) (*.svmmodel)', \
+            self.ui.loadSVMLineEdit: 'SVM Model File (*.svmmodel) (*.svmmodel)', \
+            }
     
     def connectUnlockFields(self):
         
@@ -543,11 +581,24 @@ class TrainingWindow(QtGui.QDialog):
 
     def verifyField(self, field):
         data = field.text()
-        if self.fieldsType[field] == 'file':
+        if self.fieldsType[field] == 'load':
             if os.path.isfile(data):
                 return True
             else:
                 return False
+        elif self.fieldsType[field] == 'save':
+            try:
+                if os.path.isfile(data):
+                    exists = True
+                else:
+                    exists = False
+                open(data, 'a').close() # Nao destroi conteudo do arquivo
+                if exists == False:
+                    os.remove(data) # Nao cria um arquivo novo a menos que ja exista
+                return True
+            except:
+                return False
+            
         else:
             if data != '':
                 return True

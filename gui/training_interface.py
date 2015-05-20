@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'training_interface.ui'
 #
-# Created: Tue May 19 21:33:35 2015
+# Created: Wed May 20 00:49:27 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
