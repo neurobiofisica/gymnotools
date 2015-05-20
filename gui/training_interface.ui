@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1124</width>
-    <height>1051</height>
+    <width>1117</width>
+    <height>1149</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -39,33 +39,15 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>1106</width>
-        <height>1033</height>
+        <width>1099</width>
+        <height>1131</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="0" colspan="5">
-        <layout class="QHBoxLayout" name="saveLoadParametersLayout">
-         <item>
-          <widget class="QPushButton" name="saveParametersBut">
-           <property name="text">
-            <string>Save parameters</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="loadParametersBut">
-           <property name="text">
-            <string>Load parameters</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="2" column="0">
+       <item row="1" column="0">
         <layout class="QVBoxLayout" name="step1Layout" stretch="0,4,0">
          <item>
-          <widget class="clickQLabel" name="step1TitleLabel">
+          <widget class="ClickQLabel" name="step1TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -81,89 +63,6 @@
          </item>
          <item>
           <layout class="QGridLayout" name="step1ParametersLayout">
-           <item row="8" column="2">
-            <widget class="QLineEdit" name="cutoff2LineEdit"/>
-           </item>
-           <item row="10" column="2">
-            <widget class="QPushButton" name="thresholdAssist2But">
-             <property name="text">
-              <string>Threshold Assistant</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="spikeParametersFish1Label">
-             <property name="text">
-              <string>Fish 1</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="saturationLabel">
-             <property name="font">
-              <font>
-               <family>Sans Serif</family>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Saturation level:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="1">
-            <widget class="QLineEdit" name="cutoff1LineEdit"/>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLineEdit" name="lowSaturation1LineEdit"/>
-           </item>
-           <item row="7" column="1">
-            <widget class="QLineEdit" name="taps1LineEdit"/>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLineEdit" name="loadTS1LineEdit"/>
-           </item>
-           <item row="11" column="1">
-            <widget class="QLineEdit" name="thresholdLevel1LineEdit"/>
-           </item>
-           <item row="4" column="1">
-            <widget class="QLineEdit" name="highSaturation1LineEdit"/>
-           </item>
-           <item row="9" column="0">
-            <widget class="QLabel" name="thresholdLabel">
-             <property name="font">
-              <font>
-               <family>Sans Serif</family>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Threshold:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="filterLabel">
-             <property name="font">
-              <font>
-               <family>Sans Serif</family>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Low-pass filter parameters:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLineEdit" name="loadTS2LineEdit"/>
-           </item>
            <item row="11" column="0">
             <widget class="QLabel" name="thresholdLevelLabel">
              <property name="text">
@@ -267,10 +166,93 @@
              </property>
             </widget>
            </item>
+           <item row="8" column="2">
+            <widget class="QLineEdit" name="cutoff2LineEdit"/>
+           </item>
+           <item row="10" column="2">
+            <widget class="QPushButton" name="thresholdAssist2But">
+             <property name="text">
+              <string>Threshold Assistant</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="spikeParametersFish1Label">
+             <property name="text">
+              <string>Fish 1</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="saturationLabel">
+             <property name="font">
+              <font>
+               <family>Sans Serif</family>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Saturation level:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="1">
+            <widget class="QLineEdit" name="cutoff1LineEdit"/>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="lowSaturation1LineEdit"/>
+           </item>
+           <item row="7" column="1">
+            <widget class="QLineEdit" name="taps1LineEdit"/>
+           </item>
+           <item row="1" column="1">
+            <widget class="ClickQLineEdit" name="loadTS1LineEdit"/>
+           </item>
+           <item row="11" column="1">
+            <widget class="QLineEdit" name="thresholdLevel1LineEdit"/>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLineEdit" name="highSaturation1LineEdit"/>
+           </item>
+           <item row="9" column="0">
+            <widget class="QLabel" name="thresholdLabel">
+             <property name="font">
+              <font>
+               <family>Sans Serif</family>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Threshold:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="filterLabel">
+             <property name="font">
+              <font>
+               <family>Sans Serif</family>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Low-pass filter parameters:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="ClickQLineEdit" name="loadTS2LineEdit"/>
+           </item>
           </layout>
          </item>
          <item>
-          <spacer name="verticalSpacer">
+          <spacer name="verticalSpacer_2">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
@@ -284,17 +266,35 @@
          </item>
         </layout>
        </item>
-       <item row="2" column="1">
+       <item row="0" column="0" colspan="5">
+        <layout class="QHBoxLayout" name="saveLoadParametersLayout">
+         <item>
+          <widget class="QPushButton" name="saveParametersBut">
+           <property name="text">
+            <string>Save parameters</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="loadParametersBut">
+           <property name="text">
+            <string>Load parameters</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="1">
         <widget class="Line" name="line_0">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
         </widget>
        </item>
-       <item row="2" column="2">
-        <layout class="QVBoxLayout" name="step2Layout" stretch="0,4,0">
+       <item row="1" column="2">
+        <layout class="QVBoxLayout" name="step2Layout" stretch="0,4">
          <item>
-          <widget class="clickQLabel" name="step2TitleLabel">
+          <widget class="ClickQLabel" name="step2TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -320,7 +320,7 @@
             <number>0</number>
            </property>
            <item row="2" column="2">
-            <widget class="QLineEdit" name="saveSpikes2LineEdit"/>
+            <widget class="ClickQLineEdit" name="saveSpikes2LineEdit"/>
            </item>
            <item row="9" column="0" colspan="2">
             <widget class="QPushButton" name="verifySpikes1But">
@@ -337,19 +337,19 @@
             </widget>
            </item>
            <item row="2" column="0" colspan="2">
-            <widget class="QLineEdit" name="saveSpikes1LineEdit"/>
+            <widget class="ClickQLineEdit" name="saveSpikes1LineEdit"/>
            </item>
            <item row="4" column="0" colspan="2">
-            <widget class="QLineEdit" name="saveWindowLengths1LineEdit"/>
+            <widget class="ClickQLineEdit" name="saveWindowLengths1LineEdit"/>
            </item>
            <item row="8" column="0" colspan="2">
-            <widget class="QLineEdit" name="loadSpikes1LineEdit"/>
+            <widget class="ClickQLineEdit" name="loadSpikes1LineEdit"/>
            </item>
            <item row="8" column="2">
-            <widget class="QLineEdit" name="loadSpikes2LineEdit"/>
+            <widget class="ClickQLineEdit" name="loadSpikes2LineEdit"/>
            </item>
            <item row="4" column="2">
-            <widget class="QLineEdit" name="saveWindowLengths2LineEdit"/>
+            <widget class="ClickQLineEdit" name="saveWindowLengths2LineEdit"/>
            </item>
            <item row="5" column="2">
             <widget class="QPushButton" name="detectSpikes2But">
@@ -424,35 +424,19 @@
            </item>
           </layout>
          </item>
-         <item>
-          <spacer name="verticalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
         </layout>
        </item>
-       <item row="2" column="3">
+       <item row="1" column="3">
         <widget class="Line" name="line_4">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
         </widget>
        </item>
-       <item row="2" column="4">
-        <layout class="QVBoxLayout" name="step3Layout" stretch="0,4,0">
+       <item row="1" column="4">
+        <layout class="QVBoxLayout" name="step3Layout" stretch="0,4">
          <item>
-          <widget class="clickQLabel" name="step3TitleLabel">
+          <widget class="ClickQLabel" name="step3TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -474,22 +458,6 @@
               <string>Number of features: </string>
              </property>
             </widget>
-           </item>
-           <item row="9" column="0" colspan="2">
-            <spacer name="step3ParametersSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Expanding</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>40</height>
-              </size>
-             </property>
-            </spacer>
            </item>
            <item row="1" column="0" colspan="2">
             <widget class="QLabel" name="saveFeaturesLabel">
@@ -526,16 +494,16 @@
             </widget>
            </item>
            <item row="2" column="0">
-            <widget class="QLineEdit" name="saveFeatures1LineEdit"/>
+            <widget class="ClickQLineEdit" name="saveFeatures1LineEdit"/>
            </item>
            <item row="2" column="1">
-            <widget class="QLineEdit" name="saveFeatures2LineEdit"/>
+            <widget class="ClickQLineEdit" name="saveFeatures2LineEdit"/>
            </item>
            <item row="11" column="0">
-            <widget class="QLineEdit" name="loadFeatures1LineEdit"/>
+            <widget class="ClickQLineEdit" name="loadFeatures1LineEdit"/>
            </item>
            <item row="11" column="1">
-            <widget class="QLineEdit" name="loadFeatures2LineEdit"/>
+            <widget class="ClickQLineEdit" name="loadFeatures2LineEdit"/>
            </item>
            <item row="3" column="0">
             <widget class="QLabel" name="saveFilterLabel">
@@ -545,7 +513,7 @@
             </widget>
            </item>
            <item row="4" column="0" colspan="2">
-            <widget class="QLineEdit" name="saveFilterLineEdit"/>
+            <widget class="ClickQLineEdit" name="saveFilterLineEdit"/>
            </item>
            <item row="6" column="0" colspan="2">
             <widget class="QLineEdit" name="numberFeaturesLineEdit"/>
@@ -557,37 +525,37 @@
              </property>
             </widget>
            </item>
+           <item row="9" column="0" colspan="2">
+            <spacer name="step3ParametersSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Expanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
           </layout>
-         </item>
-         <item>
-          <spacer name="verticalSpacer_3">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </item>
-       <item row="3" column="0" colspan="5">
+       <item row="2" column="0" colspan="5">
         <widget class="Line" name="line_2">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
-       <item row="4" column="0" colspan="5">
-        <layout class="QVBoxLayout" name="step4Layout" stretch="0,0,0">
+       <item row="3" column="0" colspan="5">
+        <layout class="QVBoxLayout" name="step4Layout" stretch="0,0">
          <item>
-          <widget class="clickQLabel" name="step4TitleLabel">
+          <widget class="ClickQLabel" name="step4TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -602,180 +570,300 @@
           </widget>
          </item>
          <item>
-          <layout class="QGridLayout" name="step4ParametersLayout" rowstretch="0,0,0,0,0,0,0,0" columnstretch="0,0,0,0,0">
-           <item row="3" column="2">
-            <widget class="QLabel" name="probabilityLabel">
-             <property name="text">
-              <string>Probability of selection</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="trainingLabel">
-             <property name="text">
-              <string>Training set: </string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="4">
-            <widget class="QLineEdit" name="testingLoadLineEdit"/>
-           </item>
-           <item row="6" column="2">
-            <widget class="QLineEdit" name="testingProbabilityLineEdit"/>
-           </item>
-           <item row="4" column="4">
-            <widget class="QLineEdit" name="trainingLoadLineEdit"/>
-           </item>
-           <item row="5" column="1">
-            <widget class="QLineEdit" name="crossNumberSamplesLineEdit"/>
-           </item>
-           <item row="4" column="1">
-            <widget class="QLineEdit" name="trainingNumberSamplesLineEdit"/>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLabel" name="numberSamplesLabel">
-             <property name="text">
-              <string>Number of samples</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="4">
-            <widget class="QLabel" name="loadSlicesLabel">
-             <property name="text">
-              <string>Load slice:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="crossValidationLabel">
-             <property name="text">
-              <string>Cross validation set: </string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="testingLabel">
-             <property name="text">
-              <string>Testing set: </string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="1">
-            <widget class="QLineEdit" name="testingNumberSamplesLineEdit"/>
-           </item>
-           <item row="5" column="4">
-            <widget class="QLineEdit" name="crossLoadLineEdit"/>
-           </item>
-           <item row="5" column="3">
-            <widget class="QLineEdit" name="crossSaveLineEdit"/>
-           </item>
-           <item row="5" column="2">
-            <widget class="QLineEdit" name="crossProbabilityLineEdit"/>
-           </item>
-           <item row="4" column="2">
-            <widget class="QLineEdit" name="trainingProbabilityLineEdit"/>
-           </item>
-           <item row="7" column="0" colspan="5">
-            <widget class="QPushButton" name="sliceBut">
-             <property name="text">
-              <string>Slice</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="3">
-            <widget class="QLineEdit" name="testingSaveLineEdit"/>
-           </item>
-           <item row="3" column="3">
-            <widget class="QLabel" name="saveSlicesLabel">
-             <property name="text">
-              <string>Save as:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="3">
-            <widget class="QLineEdit" name="trainingSaveLineEdit"/>
-           </item>
-           <item row="3" column="0">
-            <spacer name="horizontalSpacer_2">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item row="1" column="0">
-            <widget class="QRadioButton" name="fish1Radio">
-             <property name="text">
-              <string>Fish 1</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QRadioButton" name="fish2Radio">
-             <property name="text">
-              <string>Fish 2</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0" colspan="5">
-            <widget class="QLabel" name="sliceInfoLabel">
-             <property name="text">
-              <string>Total number of windows: </string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <spacer name="verticalSpacer_4">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
+          <widget class="QTabWidget" name="tabWidget">
+           <property name="currentIndex">
+            <number>0</number>
            </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
+           <widget class="QWidget" name="tabFish1">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <attribute name="title">
+             <string>Fish 1</string>
+            </attribute>
+            <layout class="QGridLayout" name="gridLayout_3">
+             <item row="0" column="0">
+              <widget class="QLabel" name="sliceInfoFish1Label">
+               <property name="text">
+                <string>Total number of windows: </string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="numberSamplesFish1Label">
+               <property name="text">
+                <string>Number of samples</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="probabilityFish1Label">
+               <property name="text">
+                <string>Probability of selection</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLabel" name="saveSlicesFish1Label">
+               <property name="text">
+                <string>Save as:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="4">
+              <widget class="QLabel" name="loadSlicesFish1Label">
+               <property name="text">
+                <string>Load slice file:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="trainingFish1Label">
+               <property name="text">
+                <string>Training set: </string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="trainingNumberSamplesFish1LineEdit"/>
+             </item>
+             <item row="2" column="2">
+              <widget class="QLineEdit" name="trainingProbabilityFish1LineEdit"/>
+             </item>
+             <item row="2" column="3">
+              <widget class="ClickQLineEdit" name="trainingSaveFish1LineEdit"/>
+             </item>
+             <item row="2" column="4">
+              <widget class="ClickQLineEdit" name="trainingLoadFish1LineEdit"/>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="crossValidationFish1Label">
+               <property name="text">
+                <string>Cross validation set: </string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLineEdit" name="crossNumberSamplesFish1LineEdit"/>
+             </item>
+             <item row="3" column="2">
+              <widget class="QLineEdit" name="crossProbabilityFish1LineEdit"/>
+             </item>
+             <item row="3" column="3">
+              <widget class="ClickQLineEdit" name="crossSaveFish1LineEdit"/>
+             </item>
+             <item row="3" column="4">
+              <widget class="ClickQLineEdit" name="crossLoadFish1LineEdit"/>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="testingFish1Label">
+               <property name="text">
+                <string>Testing set: </string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QLineEdit" name="testingNumberSamplesFish1LineEdit"/>
+             </item>
+             <item row="4" column="2">
+              <widget class="QLineEdit" name="testingProbabilityFish1LineEdit"/>
+             </item>
+             <item row="4" column="3">
+              <widget class="ClickQLineEdit" name="testingSaveFish1LineEdit"/>
+             </item>
+             <item row="4" column="4">
+              <widget class="ClickQLineEdit" name="testingLoadFish1LineEdit"/>
+             </item>
+             <item row="5" column="0" colspan="5">
+              <widget class="QPushButton" name="sliceFish1But">
+               <property name="text">
+                <string>Slice</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <spacer name="horizontalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>204</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="tabFish2">
+            <attribute name="title">
+             <string>Fish 2</string>
+            </attribute>
+            <layout class="QGridLayout" name="gridLayout_4">
+             <item row="0" column="0">
+              <widget class="QLabel" name="sliceInfoFish2Label">
+               <property name="text">
+                <string>Total number of windows: </string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <spacer name="horizontalSpacer_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>204</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="numberSamplesFish2Label">
+               <property name="text">
+                <string>Number of samples</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="probabilityFish2Label">
+               <property name="text">
+                <string>Probability of selection</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLabel" name="saveSlicesFish2Label">
+               <property name="text">
+                <string>Save as:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="4">
+              <widget class="QLabel" name="loadSlicesFish2Label">
+               <property name="text">
+                <string>Load slice file:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="trainingFish2Label">
+               <property name="text">
+                <string>Training set: </string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="trainingNumberSamplesFish2LineEdit"/>
+             </item>
+             <item row="2" column="2">
+              <widget class="QLineEdit" name="trainingProbabilityFish2LineEdit"/>
+             </item>
+             <item row="2" column="3">
+              <widget class="ClickQLineEdit" name="trainingSaveFish2LineEdit"/>
+             </item>
+             <item row="2" column="4">
+              <widget class="ClickQLineEdit" name="trainingLoadFish2LineEdit"/>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="crossValidationFish2Label">
+               <property name="text">
+                <string>Cross validation set: </string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLineEdit" name="crossNumberSamplesFish2LineEdit"/>
+             </item>
+             <item row="3" column="2">
+              <widget class="QLineEdit" name="crossProbabilityFish2LineEdit"/>
+             </item>
+             <item row="3" column="3">
+              <widget class="ClickQLineEdit" name="crossSaveFish2LineEdit"/>
+             </item>
+             <item row="3" column="4">
+              <widget class="ClickQLineEdit" name="crossLoadFish2LineEdit"/>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="testingFish2Label">
+               <property name="text">
+                <string>Testing set: </string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QLineEdit" name="testingNumberSamplesFish2LineEdit"/>
+             </item>
+             <item row="4" column="2">
+              <widget class="QLineEdit" name="testingProbabilityFish2LineEdit"/>
+             </item>
+             <item row="4" column="3">
+              <widget class="ClickQLineEdit" name="testingSaveFish2LineEdit"/>
+             </item>
+             <item row="4" column="4">
+              <widget class="ClickQLineEdit" name="testingLoadFish2LineEdit"/>
+             </item>
+             <item row="5" column="0" colspan="5">
+              <widget class="QPushButton" name="sliceFish2But">
+               <property name="text">
+                <string>Slice</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </widget>
          </item>
         </layout>
        </item>
-       <item row="5" column="0">
+       <item row="4" column="0">
         <widget class="Line" name="line_1">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
-       <item row="5" column="2" colspan="3">
+       <item row="4" column="2" colspan="3">
         <widget class="Line" name="line_3">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
-       <item row="6" column="0">
-        <layout class="QVBoxLayout" name="step5Layout" stretch="0,0,0,0">
+       <item row="5" column="0">
+        <layout class="QVBoxLayout" name="step5Layout" stretch="0,0,0">
          <item>
-          <widget class="clickQLabel" name="step5TitleLabel">
+          <widget class="ClickQLabel" name="step5TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -862,7 +950,7 @@
             <widget class="QLineEdit" name="gStopLineEdit"/>
            </item>
            <item row="5" column="1" colspan="4">
-            <widget class="QLineEdit" name="saveSVMLineEdit"/>
+            <widget class="ClickQLineEdit" name="saveSVMLineEdit"/>
            </item>
            <item row="2" column="3">
             <widget class="QLineEdit" name="cStepLineEdit"/>
@@ -925,19 +1013,6 @@
           </layout>
          </item>
          <item>
-          <spacer name="verticalSpacer_5">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
           <widget class="KPixmapRegionSelectorWidget" name="logoPixMap">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -952,14 +1027,14 @@
          </item>
         </layout>
        </item>
-       <item row="6" column="1">
+       <item row="5" column="1">
         <widget class="Line" name="line_5">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
         </widget>
        </item>
-       <item row="6" column="2" colspan="3">
+       <item row="5" column="2" colspan="3">
         <layout class="QGridLayout" name="rocCurveLayout">
          <item row="1" column="0">
           <widget class="QLabel" name="loadSVMLabel">
@@ -969,7 +1044,7 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLineEdit" name="loadSVMLineEdit"/>
+          <widget class="ClickQLineEdit" name="loadSVMLineEdit"/>
          </item>
          <item row="2" column="0" colspan="2">
           <widget class="QPushButton" name="generateROCBut">
@@ -990,7 +1065,7 @@
          </item>
         </layout>
        </item>
-       <item row="7" column="0" colspan="5">
+       <item row="6" column="0" colspan="5">
         <spacer name="bottomSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -999,19 +1074,6 @@
           <size>
            <width>20</width>
            <height>10</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="0" colspan="2">
-        <spacer name="topSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>529</width>
-           <height>57</height>
           </size>
          </property>
         </spacer>
@@ -1035,11 +1097,95 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>clickQLabel</class>
+   <class>ClickQLabel</class>
    <extends>QLabel</extends>
-   <header>clickQlabel</header>
+   <header>clickAux</header>
+  </customwidget>
+  <customwidget>
+   <class>ClickQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>clickAux</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>saveParametersBut</tabstop>
+  <tabstop>loadParametersBut</tabstop>
+  <tabstop>loadTS1LineEdit</tabstop>
+  <tabstop>lowSaturation1LineEdit</tabstop>
+  <tabstop>highSaturation1LineEdit</tabstop>
+  <tabstop>filterAssist1But</tabstop>
+  <tabstop>taps1LineEdit</tabstop>
+  <tabstop>cutoff1LineEdit</tabstop>
+  <tabstop>thresholdAssist1But</tabstop>
+  <tabstop>thresholdLevel1LineEdit</tabstop>
+  <tabstop>loadTS2LineEdit</tabstop>
+  <tabstop>lowSaturation2LineEdit</tabstop>
+  <tabstop>highSaturation2LineEdit</tabstop>
+  <tabstop>filterAssist2But</tabstop>
+  <tabstop>taps2LineEdit</tabstop>
+  <tabstop>cutoff2LineEdit</tabstop>
+  <tabstop>thresholdAssist2But</tabstop>
+  <tabstop>thresholdLevel2LineEdit</tabstop>
+  <tabstop>saveSpikes1LineEdit</tabstop>
+  <tabstop>saveWindowLengths1LineEdit</tabstop>
+  <tabstop>detectSpikes1But</tabstop>
+  <tabstop>saveSpikes2LineEdit</tabstop>
+  <tabstop>saveWindowLengths2LineEdit</tabstop>
+  <tabstop>detectSpikes2But</tabstop>
+  <tabstop>loadSpikes1LineEdit</tabstop>
+  <tabstop>verifySpikes1But</tabstop>
+  <tabstop>loadSpikes2LineEdit</tabstop>
+  <tabstop>verifySpikes2But</tabstop>
+  <tabstop>saveFeatures1LineEdit</tabstop>
+  <tabstop>saveFeatures2LineEdit</tabstop>
+  <tabstop>saveFilterLineEdit</tabstop>
+  <tabstop>numberFeaturesLineEdit</tabstop>
+  <tabstop>extractFeaturesBut</tabstop>
+  <tabstop>loadFeatures1LineEdit</tabstop>
+  <tabstop>loadFeatures2LineEdit</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>trainingNumberSamplesFish1LineEdit</tabstop>
+  <tabstop>trainingProbabilityFish1LineEdit</tabstop>
+  <tabstop>trainingSaveFish1LineEdit</tabstop>
+  <tabstop>trainingLoadFish1LineEdit</tabstop>
+  <tabstop>crossNumberSamplesFish1LineEdit</tabstop>
+  <tabstop>crossProbabilityFish1LineEdit</tabstop>
+  <tabstop>crossSaveFish1LineEdit</tabstop>
+  <tabstop>crossLoadFish1LineEdit</tabstop>
+  <tabstop>testingNumberSamplesFish1LineEdit</tabstop>
+  <tabstop>testingProbabilityFish1LineEdit</tabstop>
+  <tabstop>testingSaveFish1LineEdit</tabstop>
+  <tabstop>testingLoadFish1LineEdit</tabstop>
+  <tabstop>sliceFish1But</tabstop>
+  <tabstop>defaultValuesBut</tabstop>
+  <tabstop>cStartLineEdit</tabstop>
+  <tabstop>cStopLineEdit</tabstop>
+  <tabstop>cStepLineEdit</tabstop>
+  <tabstop>cValueLineEdit</tabstop>
+  <tabstop>gStartLineEdit</tabstop>
+  <tabstop>gStopLineEdit</tabstop>
+  <tabstop>gStepLineEdit</tabstop>
+  <tabstop>gValueLineEdit</tabstop>
+  <tabstop>optimizeSVMBut</tabstop>
+  <tabstop>saveSVMLineEdit</tabstop>
+  <tabstop>trainSVMBut</tabstop>
+  <tabstop>loadSVMLineEdit</tabstop>
+  <tabstop>generateROCBut</tabstop>
+  <tabstop>trainingNumberSamplesFish2LineEdit</tabstop>
+  <tabstop>sliceFish2But</tabstop>
+  <tabstop>crossNumberSamplesFish2LineEdit</tabstop>
+  <tabstop>trainingLoadFish2LineEdit</tabstop>
+  <tabstop>testingLoadFish2LineEdit</tabstop>
+  <tabstop>testingNumberSamplesFish2LineEdit</tabstop>
+  <tabstop>crossProbabilityFish2LineEdit</tabstop>
+  <tabstop>trainingProbabilityFish2LineEdit</tabstop>
+  <tabstop>trainingSaveFish2LineEdit</tabstop>
+  <tabstop>crossLoadFish2LineEdit</tabstop>
+  <tabstop>testingProbabilityFish2LineEdit</tabstop>
+  <tabstop>testingSaveFish2LineEdit</tabstop>
+  <tabstop>crossSaveFish2LineEdit</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
