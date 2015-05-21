@@ -66,7 +66,7 @@
            <item row="11" column="0">
             <widget class="QLabel" name="thresholdLevelLabel">
              <property name="text">
-              <string>Threshold level:</string>
+              <string>Threshold level (V):</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
@@ -81,7 +81,11 @@
             </widget>
            </item>
            <item row="7" column="2">
-            <widget class="QLineEdit" name="taps2LineEdit"/>
+            <widget class="QLineEdit" name="taps2LineEdit">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
            </item>
            <item row="0" column="2">
             <widget class="QLabel" name="spikeParametersFish2Label">
@@ -106,20 +110,13 @@
              </property>
             </widget>
            </item>
-           <item row="6" column="1">
-            <widget class="QPushButton" name="filterAssist1But">
-             <property name="text">
-              <string>Filter Assistant</string>
-             </property>
-            </widget>
-           </item>
            <item row="11" column="2">
             <widget class="QLineEdit" name="thresholdLevel2LineEdit"/>
            </item>
            <item row="8" column="0">
             <widget class="QLabel" name="cutoffLabel">
              <property name="text">
-              <string>Cutoff frequency:</string>
+              <string>Cutoff frequency (cycles/sample):</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
@@ -129,7 +126,7 @@
            <item row="4" column="0">
             <widget class="QLabel" name="highSaturationLabel">
              <property name="text">
-              <string>HIGH saturation level</string>
+              <string>HIGH saturation level (V):</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
@@ -139,7 +136,7 @@
            <item row="3" column="0">
             <widget class="QLabel" name="lowSaturationLabel">
              <property name="text">
-              <string>LOW saturation level</string>
+              <string>LOW saturation level (V):</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
@@ -167,7 +164,11 @@
             </widget>
            </item>
            <item row="8" column="2">
-            <widget class="QLineEdit" name="cutoff2LineEdit"/>
+            <widget class="QLineEdit" name="cutoff2LineEdit">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
            </item>
            <item row="10" column="2">
             <widget class="QPushButton" name="thresholdAssist2But">
@@ -201,13 +202,21 @@
             </widget>
            </item>
            <item row="8" column="1">
-            <widget class="QLineEdit" name="cutoff1LineEdit"/>
+            <widget class="QLineEdit" name="cutoff1LineEdit">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
            </item>
            <item row="3" column="1">
             <widget class="QLineEdit" name="lowSaturation1LineEdit"/>
            </item>
            <item row="7" column="1">
-            <widget class="QLineEdit" name="taps1LineEdit"/>
+            <widget class="QLineEdit" name="taps1LineEdit">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
            </item>
            <item row="1" column="1">
             <widget class="ClickQLineEdit" name="loadTS1LineEdit"/>
@@ -248,6 +257,13 @@
            </item>
            <item row="1" column="2">
             <widget class="ClickQLineEdit" name="loadTS2LineEdit"/>
+           </item>
+           <item row="6" column="1">
+            <widget class="QPushButton" name="filterAssist1But">
+             <property name="text">
+              <string>Filter Assistant</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -452,7 +468,14 @@
          </item>
          <item>
           <layout class="QGridLayout" name="step3ParametersLayout">
-           <item row="5" column="0" colspan="2">
+           <item row="5" column="0">
+            <widget class="QLabel" name="saveRescaleLabel">
+             <property name="text">
+              <string>Save rescale as:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0" colspan="2">
             <widget class="QLabel" name="numberFeaturesLabel">
              <property name="text">
               <string>Number of features: </string>
@@ -466,7 +489,7 @@
              </property>
             </widget>
            </item>
-           <item row="10" column="0" colspan="2">
+           <item row="12" column="0" colspan="2">
             <widget class="QLabel" name="loadFeaturesLabel">
              <property name="text">
               <string>Load features file: </string>
@@ -499,10 +522,10 @@
            <item row="2" column="1">
             <widget class="ClickQLineEdit" name="saveFeatures2LineEdit"/>
            </item>
-           <item row="11" column="0">
+           <item row="13" column="0">
             <widget class="ClickQLineEdit" name="loadFeatures1LineEdit"/>
            </item>
-           <item row="11" column="1">
+           <item row="13" column="1">
             <widget class="ClickQLineEdit" name="loadFeatures2LineEdit"/>
            </item>
            <item row="3" column="0">
@@ -515,17 +538,21 @@
            <item row="4" column="0" colspan="2">
             <widget class="ClickQLineEdit" name="saveFilterLineEdit"/>
            </item>
-           <item row="6" column="0" colspan="2">
-            <widget class="QLineEdit" name="numberFeaturesLineEdit"/>
-           </item>
            <item row="8" column="0" colspan="2">
+            <widget class="QLineEdit" name="numberFeaturesLineEdit">
+             <property name="text">
+              <string>20</string>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="0" colspan="2">
             <widget class="QPushButton" name="extractFeaturesBut">
              <property name="text">
               <string>Extract features</string>
              </property>
             </widget>
            </item>
-           <item row="9" column="0" colspan="2">
+           <item row="11" column="0" colspan="2">
             <spacer name="step3ParametersSpacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -540,6 +567,9 @@
               </size>
              </property>
             </spacer>
+           </item>
+           <item row="6" column="0" colspan="2">
+            <widget class="ClickQLineEdit" name="saveRescaleLineEdit"/>
            </item>
           </layout>
          </item>
@@ -947,22 +977,38 @@
             </widget>
            </item>
            <item row="3" column="2">
-            <widget class="QLineEdit" name="gStopLineEdit"/>
+            <widget class="QLineEdit" name="gStopLineEdit">
+             <property name="text">
+              <string>3.0</string>
+             </property>
+            </widget>
            </item>
            <item row="5" column="1" colspan="4">
             <widget class="ClickQLineEdit" name="saveSVMLineEdit"/>
            </item>
            <item row="2" column="3">
-            <widget class="QLineEdit" name="cStepLineEdit"/>
+            <widget class="QLineEdit" name="cStepLineEdit">
+             <property name="text">
+              <string>2.0</string>
+             </property>
+            </widget>
            </item>
            <item row="2" column="4">
             <widget class="QLineEdit" name="cValueLineEdit"/>
            </item>
            <item row="3" column="1">
-            <widget class="QLineEdit" name="gStartLineEdit"/>
+            <widget class="QLineEdit" name="gStartLineEdit">
+             <property name="text">
+              <string>-15.0</string>
+             </property>
+            </widget>
            </item>
            <item row="3" column="3">
-            <widget class="QLineEdit" name="gStepLineEdit"/>
+            <widget class="QLineEdit" name="gStepLineEdit">
+             <property name="text">
+              <string>2.0</string>
+             </property>
+            </widget>
            </item>
            <item row="2" column="0">
             <widget class="QLabel" name="cLabel">
@@ -978,12 +1024,16 @@
             <widget class="QLineEdit" name="gValueLineEdit"/>
            </item>
            <item row="2" column="1">
-            <widget class="QLineEdit" name="cStartLineEdit"/>
+            <widget class="QLineEdit" name="cStartLineEdit">
+             <property name="text">
+              <string>-5.0</string>
+             </property>
+            </widget>
            </item>
            <item row="3" column="0">
             <widget class="QLabel" name="gLabel">
              <property name="text">
-              <string>SVM G Parameter: </string>
+              <string>SVM Gamma Parameter: </string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
@@ -991,7 +1041,11 @@
             </widget>
            </item>
            <item row="2" column="2">
-            <widget class="QLineEdit" name="cStopLineEdit"/>
+            <widget class="QLineEdit" name="cStopLineEdit">
+             <property name="text">
+              <string>15.0</string>
+             </property>
+            </widget>
            </item>
            <item row="1" column="3">
             <widget class="QLabel" name="stepLabel">

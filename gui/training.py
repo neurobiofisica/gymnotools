@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, subprocess
 
 import matplotlib.pyplot as plt
 
@@ -62,8 +62,314 @@ class TrainingWindow(QtGui.QDialog):
         
         self.connectFileFields(self.fileFieldHandler)
         self.connectUnlockFields()
+        self.connectButtons()
         
         self.initialClickState()
+    
+    def connectButtons(self):
+        QtCore.QObject.connect(self.ui.filterAssist1But, QtCore.SIGNAL('clicked()'), self.filterAssist1)
+        QtCore.QObject.connect(self.ui.filterAssist2But, QtCore.SIGNAL('clicked()'), self.filterAssist2)
+        
+        QtCore.QObject.connect(self.ui.thresholdAssist1But, QtCore.SIGNAL('clicked()'), self.thresholdAssist1)
+        QtCore.QObject.connect(self.ui.thresholdAssist2But, QtCore.SIGNAL('clicked()'), self.thresholdAssist2)
+        
+        QtCore.QObject.connect(self.ui.verifySpikes1But, QtCore.SIGNAL('clicked()'), self.verifySpikes1)
+        QtCore.QObject.connect(self.ui.verifySpikes2But, QtCore.SIGNAL('clicked()'), self.verifySpikes2)
+        
+        QtCore.QObject.connect(self.ui.detectSpikes1But, QtCore.SIGNAL('clicked()'), self.detectSpikes1)
+        QtCore.QObject.connect(self.ui.detectSpikes2But, QtCore.SIGNAL('clicked()'), self.detectSpikes2)
+        
+        QtCore.QObject.connect(self.ui.extractFeaturesBut, QtCore.SIGNAL('clicked()'), self.extractFeatures)
+    
+    def filterAssist1(self):
+        TSName = self.ui.loadTS1LineEdit.text()
+        
+        try:
+            out = subprocess.check_output(['./../paramchooser/paramchooser', 'lowpass', TSName], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print '\n---\tERROR!\t---\n'
+            print e.returncode
+            
+        numtaps = out.split('numtaps = ')[1].split('\n')[0]
+        cutoff = out.split('cutoff = ')[1].split('\n')[0]
+        
+        self.ui.taps1LineEdit.setText(numtaps)
+        self.ui.cutoff1LineEdit.setText(cutoff)
+    
+    def filterAssist2(self):
+        TSName = self.ui.loadTS2LineEdit.text()
+        
+        try:
+            out = subprocess.check_output(['./../paramchooser/paramchooser', 'lowpass', TSName], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print '\n---\tERROR!\t---\n'
+            print e.returncode
+            
+        numtaps = out.split('numtaps = ')[1].split('\n')[0]
+        cutoff = out.split('cutoff = ')[1].split('\n')[0]
+        
+        self.ui.taps2LineEdit.setText(numtaps)
+        self.ui.cutoff2LineEdit.setText(cutoff)
+    
+    def thresholdAssist1(self):
+        TSName = self.ui.loadTS1LineEdit.text()
+        taps = self.ui.taps1LineEdit.text()
+        cutoff = self.ui.cutoff1LineEdit.text()
+        
+        try:
+            out = subprocess.check_output(['./../paramchooser/paramchooser', 'threshold', TSName, taps, cutoff], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print '\n---\tERROR!\t---\n'
+            print e.returncode
+        
+        threshold = out.split('threshold = ')[1].split('\n')[0]
+        self.ui.thresholdLevel1LineEdit.setText(threshold)
+    
+    def thresholdAssist2(self):
+        TSName = self.ui.loadTS2LineEdit.text()
+        taps = self.ui.taps2LineEdit.text()
+        cutoff = self.ui.cutoff2LineEdit.text()
+        
+        try:
+            out = subprocess.check_output(['./../paramchooser/paramchooser', 'threshold', TSName, taps, cutoff], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print '\n---\tERROR!\t---\n'
+            print e.returncode
+        
+        threshold = out.split('threshold = ')[1].split('\n')[0]
+        self.ui.thresholdLevel2LineEdit.setText(threshold)
+    
+    def verifySpikes1(self):
+        spikesName = self.ui.loadSpikes1LineEdit.text()
+        TSName = self.ui.loadTS1LineEdit.text()
+        
+        try:
+            if TSName != '':
+                out = subprocess.check_output(['./../winview/winview', spikesName, TSName], stderr=subprocess.STDOUT)
+            else:
+                out = subprocess.check_output(['./../winview/winview', spikesName], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print '\n---\tERROR!\t---\n'
+            print e.returncode
+    
+    def verifySpikes2(self):
+        spikesName = self.ui.loadSpikes2LineEdit.text()
+        TSName = self.ui.loadTS2LineEdit.text()
+        
+        try:
+            if TSName != '':
+                out = subprocess.check_output(['./../winview/winview', spikesName, TSName], stderr=subprocess.STDOUT)
+            else:
+                out = subprocess.check_output(['./../winview/winview', spikesName], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print '\n---\tERROR!\t---\n'
+            print e.returncode
+    
+    def detectSpikes1(self):
+        TSName = self.ui.loadTS1LineEdit.text()
+        lowSat = self.ui.lowSaturation1LineEdit.text()
+        highSat = self.ui.highSaturation1LineEdit.text()
+        taps = self.ui.taps1LineEdit.text()
+        cutoff = self.ui.cutoff1LineEdit.text()
+        threshold = self.ui.thresholdLevel1LineEdit.text()
+        saveSpikes = self.ui.saveSpikes1LineEdit.text()
+        saveWindowLengths = self.ui.saveWindowLengths1LineEdit.text()
+        
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        try:
+            out = subprocess.check_output(['./../spikes/spikes', \
+                                           '--fixedwin', \
+                                           '--saturation=%s,%s'%(lowSat,highSat), \
+                                           '--numtaps=%s'%taps, \
+                                           '--cutoff=%s'%cutoff, \
+                                           '--detection=%s'%threshold, \
+                                           '--winlen=%s'%saveWindowLengths, \
+                                           TSName, \
+                                           saveSpikes], \
+                                          stderr=subprocess.STDOUT)
+            
+            self.ui.loadSpikes1LineEdit.setText(saveSpikes)
+        except subprocess.CalledProcessError as e:
+            print '\n---\tERROR!\t---\n'
+            print e.returncode
+        self.app.restoreOverrideCursor()
+    
+    def detectSpikes2(self):
+        TSName = self.ui.loadTS2LineEdit.text()
+        lowSat = self.ui.lowSaturation2LineEdit.text()
+        highSat = self.ui.highSaturation2LineEdit.text()
+        taps = self.ui.taps2LineEdit.text()
+        cutoff = self.ui.cutoff2LineEdit.text()
+        threshold = self.ui.thresholdLevel2LineEdit.text()
+        saveSpikes = self.ui.saveSpikes2LineEdit.text()
+        saveWindowLengths = self.ui.saveWindowLengths2LineEdit.text()
+        
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        try:
+            out = subprocess.check_output(['./../spikes/spikes', \
+                                           '--fixedwin', \
+                                           '--saturation=%s,%s'%(lowSat,highSat), \
+                                           '--numtaps=%s'%taps, \
+                                           '--cutoff=%s'%cutoff, \
+                                           '--detection=%s'%threshold, \
+                                           '--winlen=%s'%saveWindowLengths, \
+                                           TSName, \
+                                           saveSpikes], \
+                                          stderr=subprocess.STDOUT)
+            
+            self.ui.loadSpikes2LineEdit.setText(saveSpikes)
+        except subprocess.CalledProcessError as e:
+            print '\n---\tERROR!\t---\n'
+            print e.returncode
+        self.app.restoreOverrideCursor()
+    
+    def extractFeatures(self):
+        spikesName1 = self.ui.loadSpikes1LineEdit.text()
+        spikesName2 = self.ui.loadSpikes2LineEdit.text()
+        unfilteredFeaturesName1 = self.ui.saveFeatures1LineEdit.text() + '_unfiltered'
+        unfilteredFeaturesName2 = self.ui.saveFeatures2LineEdit.text() + '_unfiltered'
+        featuresName1 = self.ui.saveFeatures1LineEdit.text()
+        featuresName2 = self.ui.saveFeatures2LineEdit.text()
+        filterName = self.ui.saveFilterLineEdit.text()
+        rescaleName = self.ui.saveRescaleLineEdit.text()
+        number = self.ui.numberFeaturesLineEdit.text()
+        
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        # features compute
+        print '\nfeatures compute'
+        try:
+            compute1 = subprocess.Popen(['./../features/features', \
+                                           'compute', \
+                                           spikesName1, \
+                                           unfilteredFeaturesName1], \
+                                          stderr=subprocess.STDOUT, \
+                                          stdout=subprocess.PIPE)
+            compute2 = subprocess.Popen(['./../features/features', \
+                                           'compute', \
+                                           spikesName2, \
+                                           unfilteredFeaturesName2], \
+                                          stderr=subprocess.STDOUT, \
+                                          stdout=subprocess.PIPE)
+            
+            while (compute1.poll() is None) or (compute2.poll() is None):
+                out = compute1.stdout.readline()
+                if out != '':
+                    print 'features compute file1: %s'%out
+                out = compute2.stdout.readline()
+                if out != '':
+                    print 'features compute file2: %s'%out
+                    
+        except subprocess.CalledProcessError as e:
+            print '\n---\tfeatures compute ERROR!\t---\n'
+            print e.returncode
+            return None
+        
+        # features rescale prepare
+        print '\nfeatures rescale prepare'
+        try:
+            rescalePrepare = subprocess.Popen(['./../features/features', \
+                                                'rescale', \
+                                                'prepare', \
+                                                rescaleName, \
+                                                unfilteredFeaturesName1, \
+                                                unfilteredFeaturesName2], \
+                                               stderr=subprocess.STDOUT, \
+                                               stdout=subprocess.PIPE)
+            
+            while rescalePrepare.poll() is None:
+                out = rescalePrepare.stdout.readline()
+                if out != '':
+                    print 'features rescale prepare: %s'%out
+        
+        except subprocess.CalledProcessError as e:
+            print '\n---\tfeatures rescale prepare ERROR!\t---\n'
+            print e.returncode
+            return None
+        
+        # features rescale apply
+        print '\nfeatures rescale apply'
+        try:
+            rescaleApply = subprocess.Popen(['./../features/features', \
+                                                'rescale', \
+                                                'apply', \
+                                                rescaleName, \
+                                                unfilteredFeaturesName1, \
+                                                unfilteredFeaturesName2], \
+                                               stderr=subprocess.STDOUT, \
+                                               stdout=subprocess.PIPE)
+            
+            while rescaleApply.poll() is None:
+                out = rescaleApply.stdout.readline()
+                if out != '':
+                    print 'features rescale apply: %s'%out
+        
+        except subprocess.CalledProcessError as e:
+            print '\n---\tfeatures rescale apply ERROR!\t---\n'
+            print e.returncode
+            return None
+        
+        # features filter prepare
+        print '\nfeatures filter prepare'
+        try:
+            filterPrepare = subprocess.Popen(['./../features/features', \
+                                                'filter', \
+                                                'prepare', \
+                                                '--best=%s'%number, \
+                                                filterName, \
+                                                unfilteredFeaturesName1, \
+                                                unfilteredFeaturesName2], \
+                                               stderr=subprocess.STDOUT, \
+                                               stdout=subprocess.PIPE)
+            
+            while filterPrepare.poll() is None:
+                out = filterPrepare.stdout.readline()
+                if out != '':
+                    print 'features filter prepare: %s'%out
+        
+        except subprocess.CalledProcessError as e:
+            print '\n---\tfeatures filter prepare ERROR!\t---\n'
+            print e.returncode
+            return None
+        
+        # features filter apply
+        print '\nfeatures filter apply'
+        try:
+            filterApply1 = subprocess.Popen(['./../features/features', \
+                                                'filter', \
+                                                'apply', \
+                                                filterName, \
+                                                unfilteredFeaturesName1, \
+                                                featuresName1], \
+                                               stderr=subprocess.STDOUT, \
+                                               stdout=subprocess.PIPE)
+            
+            filterApply2 = subprocess.Popen(['./../features/features', \
+                                                'filter', \
+                                                'apply', \
+                                                filterName, \
+                                                unfilteredFeaturesName2, \
+                                                featuresName2], \
+                                               stderr=subprocess.STDOUT, \
+                                               stdout=subprocess.PIPE)
+            
+            while (filterApply1.poll() is None) or (filterApply2.poll() is None):
+                out = filterApply1.stdout.readline()
+                if out != '':
+                    print 'features filter apply file1: %s'%out
+                out = filterApply2.stdout.readline()
+                if out != '':
+                    print 'features filter apply file2: %s'%out
+        
+        except subprocess.CalledProcessError as e:
+            print '\n---\tfeatures filter apply ERROR!\t---\n'
+            print e.returncode
+            return None
+        
+        print '\nend features'
+        self.ui.loadFeatures1LineEdit.setText(featuresName1)
+        self.ui.loadFeatures2LineEdit.setText(featuresName2)
+        self.app.restoreOverrideCursor()
     
     def fileFieldHandler(self):
         field = self.sender()
@@ -109,6 +415,7 @@ class TrainingWindow(QtGui.QDialog):
                        self.ui.saveFeatures1LineEdit: 'save', \
                        self.ui.saveFeatures2LineEdit: 'save', \
                        self.ui.saveFilterLineEdit: 'save', \
+                       self.ui.saveRescaleLineEdit: 'save', \
                        self.ui.numberFeaturesLineEdit: 'int', \
                        
                        self.ui.loadFeatures1LineEdit: 'load', \
@@ -176,6 +483,7 @@ class TrainingWindow(QtGui.QDialog):
             self.ui.loadFeatures1LineEdit: 'Features File (*.features) (*.features)', \
             self.ui.loadFeatures2LineEdit: 'Features File (*.features) (*.features)', \
             self.ui.saveFilterLineEdit: 'Filter File (*.filter) (*.filter)', \
+            self.ui.saveRescaleLineEdit: 'Rescale File (*.scale) (*.scale)', \
             self.ui.trainingSaveFish1LineEdit: 'Training set File (*.training) (*.training)', \
             self.ui.trainingSaveFish2LineEdit: 'Training set File (*.training) (*.training)', \
             self.ui.trainingLoadFish1LineEdit: 'Training set File (*.training) (*.training)', \
@@ -204,8 +512,6 @@ class TrainingWindow(QtGui.QDialog):
                  self.ui.highSaturation1LineEdit, \
                  self.ui.taps1LineEdit, \
                  self.ui.cutoff1LineEdit, \
-                 self.ui.thresholdLevel1LineEdit, \
-                 self.ui.thresholdAssist1But, \
                  self.ui.filterAssist1But,
                  ) \
             ), \
@@ -219,8 +525,6 @@ class TrainingWindow(QtGui.QDialog):
                  self.ui.highSaturation2LineEdit, \
                  self.ui.taps2LineEdit, \
                  self.ui.cutoff2LineEdit, \
-                 self.ui.thresholdLevel2LineEdit, \
-                 self.ui.thresholdAssist2But, \
                  self.ui.filterAssist2But, \
                  ) \
             ), \
@@ -238,6 +542,14 @@ class TrainingWindow(QtGui.QDialog):
                  self.ui.saveWindowLengths1LineEdit, \
                 ) \
             ), \
+            ( \
+                (self.ui.taps1LineEdit, \
+                 self.ui.cutoff1LineEdit, \
+                 ), \
+                (self.ui.thresholdAssist1But, \
+                 self.ui.thresholdLevel1LineEdit, \
+                 ) \
+            ), \
         )
         
         self.spikeParametersFish2Unlocker = ( \
@@ -251,6 +563,14 @@ class TrainingWindow(QtGui.QDialog):
                 (self.ui.saveSpikes2LineEdit, \
                  self.ui.saveWindowLengths2LineEdit, \
                 ) \
+            ), \
+            ( \
+                (self.ui.taps2LineEdit, \
+                 self.ui.cutoff2LineEdit, \
+                 ), \
+                (self.ui.thresholdAssist2But, \
+                 self.ui.thresholdLevel2LineEdit, \
+                 ) \
             ), \
         )
         
@@ -288,6 +608,7 @@ class TrainingWindow(QtGui.QDialog):
                 (self.ui.saveFeatures1LineEdit, \
                  self.ui.saveFeatures2LineEdit, \
                  self.ui.saveFilterLineEdit, \
+                 self.ui.saveRescaleLineEdit, \
                  self.ui.numberFeaturesLineEdit, \
                  ) \
             ), \
@@ -307,6 +628,7 @@ class TrainingWindow(QtGui.QDialog):
                 (self.ui.saveFeatures1LineEdit, \
                  self.ui.saveFeatures2LineEdit, \
                  self.ui.saveFilterLineEdit, \
+                 self.ui.saveRescaleLineEdit, \
                  self.ui.numberFeaturesLineEdit, \
                  ) \
             ), \
@@ -317,6 +639,7 @@ class TrainingWindow(QtGui.QDialog):
                 (self.ui.saveFeatures1LineEdit, \
                  self.ui.saveFeatures2LineEdit, \
                  self.ui.saveFilterLineEdit, \
+                 self.ui.saveRescaleLineEdit, \
                  self.ui.numberFeaturesLineEdit, \
                  ), \
                 (self.ui.extractFeaturesBut, \
@@ -494,6 +817,7 @@ class TrainingWindow(QtGui.QDialog):
                        self.ui.saveFeatures1LineEdit: self.featuresParametersUnlocker, \
                        self.ui.saveFeatures2LineEdit: self.featuresParametersUnlocker, \
                        self.ui.saveFilterLineEdit: self.featuresParametersUnlocker, \
+                       self.ui.saveRescaleLineEdit: self.featuresParametersUnlocker, \
                        self.ui.numberFeaturesLineEdit: self.featuresParametersUnlocker, \
                        
                        self.ui.loadFeatures1LineEdit: self.loadFeaturesFish1Unlocker, \
@@ -558,6 +882,7 @@ class TrainingWindow(QtGui.QDialog):
                            self.ui.saveFeatures1LineEdit, \
                            self.ui.saveFeatures2LineEdit, \
                            self.ui.saveFilterLineEdit, \
+                           self.ui.saveRescaleLineEdit, \
                            self.ui.loadFeatures1LineEdit, \
                            self.ui.loadFeatures2LineEdit, \
                            self.ui.trainingSaveFish1LineEdit, \
@@ -612,8 +937,8 @@ class TrainingWindow(QtGui.QDialog):
     def tryUnlock(self, text):
         field = self.sender()
         
-        allChecked = True
         for tup in self.Fields[field]:
+            allChecked = True
             for f in tup[0]:
                 allChecked = allChecked and self.verifyField(f)
         
