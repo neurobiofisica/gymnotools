@@ -1,4 +1,4 @@
-import os, sys, subprocess
+import os, sys
 
 import matplotlib.pyplot as plt
 
@@ -23,6 +23,46 @@ class TrainingWindow(QtGui.QDialog):
 
         self.fig = self.ui.ROCWidget.canvas.fig
         self.ax = self.ui.ROCWidget.canvas.ax
+       
+        # Program objects -> they must be parameters for the GarbageCollector
+        # do not clean them
+        # If you insert a new item, it must be inserted on cancelApp method too!
+        self.filterAssist1Program = QtCore.QProcess()
+        self.filterAssist2Program = QtCore.QProcess()
+        self.thresholdAssist1Program = QtCore.QProcess()
+        self.thresholdAssist2Program = QtCore.QProcess()
+        self.verifySpikes1Program = QtCore.QProcess()
+        self.verifySpikes2Program = QtCore.QProcess()
+        self.detectSpikes1Program = QtCore.QProcess()
+        self.detectSpikes2Program = QtCore.QProcess()
+        self.featuresCompute1Program = QtCore.QProcess()
+        self.featuresCompute2Program = QtCore.QProcess()
+        self.featuresRescalePrepareProgram = QtCore.QProcess()
+        self.featuresRescaleApplyProgram = QtCore.QProcess()
+        self.featuresFilterPrepareProgram = QtCore.QProcess()
+        self.featuresFilterApply1Program = QtCore.QProcess()
+        self.featuresFilterApply2Program = QtCore.QProcess()
+        self.sliceInfo1Program = QtCore.QProcess()
+        self.sliceInfo2Program = QtCore.QProcess()
+        self.sliceRandom1Program = QtCore.QProcess()
+        self.sliceRandom2Program = QtCore.QProcess()
+        
+        self.dicProgram = {'paramchooser lowpass': (self.filterAssist1Program, self.filterAssist2Program), \
+                           'paramchooser threshold': (self.thresholdAssist1Program, self.thresholdAssist2Program), \
+                           'winview': (self.verifySpikes1Program, self.verifySpikes2Program), \
+                           'spikes Fish 1': (self.detectSpikes1Program), \
+                           'spikes Fish 2': (self.detectSpikes2Program), \
+                           'features compute': (self.featuresCompute1Program, self.featuresCompute2Program), \
+                           'features rescale prepare': (self.featuresRescalePrepareProgram), \
+                           'features rescale apply': (self.featuresRescaleApplyProgram), \
+                           'features filter prepare': (self.featuresFilterPrepareProgram), \
+                           'features filter apply': (self.featuresFilterApply1Program, self.featuresFilterApply2Program), \
+                           'slice info': (self.sliceInfo1Program, self.sliceInfo2Program), \
+                           'slice random': (self.sliceRandom1Program, self.sliceRandom2Program), \
+                           }
+        
+        self.cancelled = False
+        self.finish = False
 
         self.ParametersLayout = [self.ui.step1ParametersLayout, \
                 self.ui.step2ParametersLayout, \
@@ -60,9 +100,17 @@ class TrainingWindow(QtGui.QDialog):
         for label in self.titleLabels:
             QtCore.QObject.connect(label, QtCore.SIGNAL('clicked()'), self.expandLayout)
         
+        # Connect load features file to load slice info
+        QtCore.QObject.connect(self.ui.loadFeatures1LineEdit, QtCore.SIGNAL('textChanged(QString)'), self.sliceInfo)
+        QtCore.QObject.connect(self.ui.loadFeatures2LineEdit, QtCore.SIGNAL('textChanged(QString)'), self.sliceInfo)
+        
         self.connectFileFields(self.fileFieldHandler)
         self.connectUnlockFields()
         self.connectButtons()
+        
+        self.NWindows1 = 0.
+        self.NWindows2 = 0.
+        self.connectSliceFields()
         
         self.initialClickState()
     
@@ -80,90 +128,172 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.detectSpikes2But, QtCore.SIGNAL('clicked()'), self.detectSpikes2)
         
         QtCore.QObject.connect(self.ui.extractFeaturesBut, QtCore.SIGNAL('clicked()'), self.extractFeatures)
+        
+        QtCore.QObject.connect(self.ui.sliceFish1But, QtCore.SIGNAL('clicked()'), self.sliceRandom1)
+        QtCore.QObject.connect(self.ui.sliceFish2But, QtCore.SIGNAL('clicked()'), self.sliceRandom2)
+    
+    def isReturnCodeOk(self, ret):
+        if ret != 0:
+            print '\n---\tERROR (%s): %d\t---\n'%(self.programname, ret)
+            print self.dicProgram[self.programname].readAllStandardOutput()
+            print self.printProgramStandardError()
+            self.raiseParameterError('%s ERROR!\n'%self.programname)
+            return False
+        else:
+            return True
+    
+    def printAllStandardOutput(self):
+        print '%s\n'%self.programname
+        print self.dicProgram[self.programname].readAllStandardOutput()
+    
+    def printAllStandardError(self):
+        print '%s\n'%self.programname
+        print self.dicProgram[self.programname].readAllStandardError()
     
     def filterAssist1(self):
         TSName = self.ui.loadTS1LineEdit.text()
         
-        try:
-            out = subprocess.check_output(['./../paramchooser/paramchooser', 'lowpass', TSName], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            print '\n---\tERROR!\t---\n'
-            print e.returncode
-            
-        numtaps = out.split('numtaps = ')[1].split('\n')[0]
-        cutoff = out.split('cutoff = ')[1].split('\n')[0]
+        # Same name of self.dicProgram
+        self.programname = 'paramchooser lowpass'
+        self.filterAssist1Program = QtCore.QProcess()
+        self.filterAssist1Program.start('./../paramchooser/paramchooser', ['lowpass', TSName])
         
-        self.ui.taps1LineEdit.setText(numtaps)
-        self.ui.cutoff1LineEdit.setText(cutoff)
-    
+        def filterAssist1Finish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                out = self.filterAssist1Program.readAllStandardOutput()
+                out = out + '\n' + self.filterAssist1Program.readAllStandardError()
+                
+                out = str(out)
+                
+                numtaps = out.split('numtaps = ')[1].split('\n')[0]
+                cutoff = out.split('cutoff = ')[1].split('\n')[0]
+                
+                self.ui.taps1LineEdit.setText(numtaps)
+                self.ui.cutoff1LineEdit.setText(cutoff)
+            else:
+                self.cancelled = False
+                return None
+        
+        QtCore.QObject.connect(self.filterAssist1Program, QtCore.SIGNAL('finished(int)'), filterAssist1Finish)
+        
     def filterAssist2(self):
         TSName = self.ui.loadTS2LineEdit.text()
+       
+        # Same name of self.dicProgram
+        self.programname = 'paramchooser lowpass'
+        self.filterAssist2Program = QtCore.QProcess()
+        self.filterAssist2Program.start('./../paramchooser/paramchooser', ['lowpass', TSName])
         
-        try:
-            out = subprocess.check_output(['./../paramchooser/paramchooser', 'lowpass', TSName], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            print '\n---\tERROR!\t---\n'
-            print e.returncode
-            
-        numtaps = out.split('numtaps = ')[1].split('\n')[0]
-        cutoff = out.split('cutoff = ')[1].split('\n')[0]
+        def filterAssist2Finish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                out = self.filterAssist2Program.readAllStandardOutput()
+                out = out + '\n' + self.filterAssist2Program.readAllStandardError()
+                
+                out = str(out)
+                
+                numtaps = out.split('numtaps = ')[1].split('\n')[0]
+                cutoff = out.split('cutoff = ')[1].split('\n')[0]
+                
+                self.ui.taps2LineEdit.setText(numtaps)
+                self.ui.cutoff2LineEdit.setText(cutoff)
+            else:
+                self.cancelled = False
+                return None
         
-        self.ui.taps2LineEdit.setText(numtaps)
-        self.ui.cutoff2LineEdit.setText(cutoff)
+        QtCore.QObject.connect(self.filterAssist2Program, QtCore.SIGNAL('finished(int)'), filterAssist2Finish)
     
     def thresholdAssist1(self):
         TSName = self.ui.loadTS1LineEdit.text()
         taps = self.ui.taps1LineEdit.text()
         cutoff = self.ui.cutoff1LineEdit.text()
         
-        try:
-            out = subprocess.check_output(['./../paramchooser/paramchooser', 'threshold', TSName, taps, cutoff], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            print '\n---\tERROR!\t---\n'
-            print e.returncode
+        # Same name of self.dicProgram
+        self.programname = 'paramchooser threshold'
+        self.thresholdAssist1Program = QtCore.QProcess()
+        self.thresholdAssist1Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
         
-        threshold = out.split('threshold = ')[1].split('\n')[0]
-        self.ui.thresholdLevel1LineEdit.setText(threshold)
+        def thresholdAssist1Finish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                out = self.thresholdAssist1Program.readAllStandardOutput()
+                out = out + '\n' + self.thresholdAssist1Program.readAllStandardError()
+                
+                out = str(out)
+                
+                threshold = out.split('threshold = ')[1].split('\n')[0]
+                self.ui.thresholdLevel1LineEdit.setText(threshold)
+            else:
+                self.cancelled = False
+                return None
+        
+        QtCore.QObject.connect(self.thresholdAssist1Program, QtCore.SIGNAL('finished(int)'), thresholdAssist1Finish)
+        
     
     def thresholdAssist2(self):
         TSName = self.ui.loadTS2LineEdit.text()
         taps = self.ui.taps2LineEdit.text()
         cutoff = self.ui.cutoff2LineEdit.text()
         
-        try:
-            out = subprocess.check_output(['./../paramchooser/paramchooser', 'threshold', TSName, taps, cutoff], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            print '\n---\tERROR!\t---\n'
-            print e.returncode
+        # Same name of self.dicProgram
+        self.programname = 'paramchooser threshold'
+        self.thresholdAssist2Program = QtCore.QProcess()
+        self.thresholdAssist2Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
         
-        threshold = out.split('threshold = ')[1].split('\n')[0]
-        self.ui.thresholdLevel2LineEdit.setText(threshold)
+        def thresholdAssist2Finish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                out = self.thresholdAssist2Program.readAllStandardOutput()
+                out = out + '\n' + self.thresholdAssist2Program.readAllStandardError()
+                
+                out = str(out)
+                
+                threshold = out.split('threshold = ')[1].split('\n')[0]
+                self.ui.thresholdLevel2LineEdit.setText(threshold)
+            else:
+                self.cancelled = False
+                return None
+        
+        QtCore.QObject.connect(self.thresholdAssist2Program, QtCore.SIGNAL('finished(int)'), thresholdAssist2Finish)
     
     def verifySpikes1(self):
         spikesName = self.ui.loadSpikes1LineEdit.text()
         TSName = self.ui.loadTS1LineEdit.text()
         
-        try:
-            if TSName != '':
-                out = subprocess.check_output(['./../winview/winview', spikesName, TSName], stderr=subprocess.STDOUT)
+        # Same name of self.dicProgram
+        self.programname = 'winview'
+        self.verifySpikes1Program = QtCore.QProcess()
+        if TSName != '':
+            self.verifySpikes1Program.start('./../winview/winview', [spikesName, TSName])
+        else:
+            self.verifySpikes1Program.start('./../winview/winview', [spikesName])
+        
+        def verifySpikes1Finish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                pass
             else:
-                out = subprocess.check_output(['./../winview/winview', spikesName], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            print '\n---\tERROR!\t---\n'
-            print e.returncode
-    
+                self.cancelled = False
+                return None
+            
+        QtCore.QObject.connect(self.verifySpikes1Program, QtCore.SIGNAL('finished(int)'), verifySpikes1Finish)
+        
     def verifySpikes2(self):
         spikesName = self.ui.loadSpikes2LineEdit.text()
         TSName = self.ui.loadTS2LineEdit.text()
         
-        try:
-            if TSName != '':
-                out = subprocess.check_output(['./../winview/winview', spikesName, TSName], stderr=subprocess.STDOUT)
+        # Same name of self.dicProgram
+        self.programname = 'winview'
+        self.verifySpikes2Program = QtCore.QProcess()
+        if TSName != '':
+            self.verifySpikes2Program.start('./../winview/winview', [spikesName, TSName])
+        else:
+            self.verifySpikes2Program.start('./../winview/winview', [spikesName])
+        
+        def verifySpikes2Finish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                pass
             else:
-                out = subprocess.check_output(['./../winview/winview', spikesName], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            print '\n---\tERROR!\t---\n'
-            print e.returncode
+                self.cancelled = False
+                return None
+            
+        QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int)'), verifySpikes2Finish)
     
     def detectSpikes1(self):
         TSName = self.ui.loadTS1LineEdit.text()
@@ -175,25 +305,36 @@ class TrainingWindow(QtGui.QDialog):
         saveSpikes = self.ui.saveSpikes1LineEdit.text()
         saveWindowLengths = self.ui.saveWindowLengths1LineEdit.text()
         
+        dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
-        try:
-            out = subprocess.check_output(['./../spikes/spikes', \
-                                           '--fixedwin', \
-                                           '--saturation=%s,%s'%(lowSat,highSat), \
-                                           '--numtaps=%s'%taps, \
-                                           '--cutoff=%s'%cutoff, \
-                                           '--detection=%s'%threshold, \
-                                           '--winlen=%s'%saveWindowLengths, \
-                                           TSName, \
-                                           saveSpikes], \
-                                          stderr=subprocess.STDOUT)
+        
+        # Same name of self.dicProgram
+        self.programname = 'spikes Fish 1'
+        self.detectSpikes1Program = QtCore.QProcess()
+        self.detectSpikes1Program.start('./../spikes/spikes', \
+                           ['--fixedwin', \
+                            '--saturation=%s,%s'%(lowSat,highSat), \
+                            '--numtaps=%s'%taps, \
+                            '--cutoff=%s'%cutoff, \
+                            '--detection=%s'%threshold, \
+                            '--winlen=%s'%saveWindowLengths, \
+                            TSName, \
+                            saveSpikes])
+        
+        def detectSpikes1Finish(ret):
+            self.app.restoreOverrideCursor()
+            dialog.hide()
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                self.ui.loadSpikes1LineEdit.setText(saveSpikes)
+            else:
+                self.cancelled = False
+                return None
             
-            self.ui.loadSpikes1LineEdit.setText(saveSpikes)
-        except subprocess.CalledProcessError as e:
-            print '\n---\tERROR!\t---\n'
-            print e.returncode
-        self.app.restoreOverrideCursor()
-    
+        QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('finished(int)'), detectSpikes1Finish)
+        QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        
+        
     def detectSpikes2(self):
         TSName = self.ui.loadTS2LineEdit.text()
         lowSat = self.ui.lowSaturation2LineEdit.text()
@@ -204,172 +345,360 @@ class TrainingWindow(QtGui.QDialog):
         saveSpikes = self.ui.saveSpikes2LineEdit.text()
         saveWindowLengths = self.ui.saveWindowLengths2LineEdit.text()
         
+        dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
-        try:
-            out = subprocess.check_output(['./../spikes/spikes', \
-                                           '--fixedwin', \
-                                           '--saturation=%s,%s'%(lowSat,highSat), \
-                                           '--numtaps=%s'%taps, \
-                                           '--cutoff=%s'%cutoff, \
-                                           '--detection=%s'%threshold, \
-                                           '--winlen=%s'%saveWindowLengths, \
-                                           TSName, \
-                                           saveSpikes], \
-                                          stderr=subprocess.STDOUT)
+        
+        # Same name of self.dicProgram
+        self.programname = 'spikes Fish 2'
+        self.detectSpikes2Program = QtCore.QProcess()
+        self.detectSpikes2Program.start('./../spikes/spikes', \
+                           ['--fixedwin', \
+                            '--saturation=%s,%s'%(lowSat,highSat), \
+                            '--numtaps=%s'%taps, \
+                            '--cutoff=%s'%cutoff, \
+                            '--detection=%s'%threshold, \
+                            '--winlen=%s'%saveWindowLengths, \
+                            TSName, \
+                            saveSpikes])
+        
+        def detectSpikes2Finish(ret):
+            self.app.restoreOverrideCursor()
+            dialog.hide()
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                self.ui.loadSpikes2LineEdit.setText(saveSpikes)
+            else:
+                self.cancelled = False
+                return None
             
-            self.ui.loadSpikes2LineEdit.setText(saveSpikes)
-        except subprocess.CalledProcessError as e:
-            print '\n---\tERROR!\t---\n'
-            print e.returncode
-        self.app.restoreOverrideCursor()
+        QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('finished(int)'), detectSpikes2Finish)
+        QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        
     
     def extractFeatures(self):
-        spikesName1 = self.ui.loadSpikes1LineEdit.text()
-        spikesName2 = self.ui.loadSpikes2LineEdit.text()
-        unfilteredFeaturesName1 = self.ui.saveFeatures1LineEdit.text() + '_unfiltered'
-        unfilteredFeaturesName2 = self.ui.saveFeatures2LineEdit.text() + '_unfiltered'
-        featuresName1 = self.ui.saveFeatures1LineEdit.text()
-        featuresName2 = self.ui.saveFeatures2LineEdit.text()
-        filterName = self.ui.saveFilterLineEdit.text()
-        rescaleName = self.ui.saveRescaleLineEdit.text()
-        number = self.ui.numberFeaturesLineEdit.text()
+        self.spikesName1 = self.ui.loadSpikes1LineEdit.text()
+        self.spikesName2 = self.ui.loadSpikes2LineEdit.text()
+        self.unfilteredFeaturesName1 = self.ui.saveFeatures1LineEdit.text() + '_unfiltered'
+        self.unfilteredFeaturesName2 = self.ui.saveFeatures2LineEdit.text() + '_unfiltered'
+        self.featuresName1 = self.ui.saveFeatures1LineEdit.text()
+        self.featuresName2 = self.ui.saveFeatures2LineEdit.text()
+        self.filterName = self.ui.saveFilterLineEdit.text()
+        self.rescaleName = self.ui.saveRescaleLineEdit.text()
+        self.number = self.ui.numberFeaturesLineEdit.text()
         
+        self.dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
-        # features compute
-        print '\nfeatures compute'
-        try:
-            compute1 = subprocess.Popen(['./../features/features', \
-                                           'compute', \
-                                           spikesName1, \
-                                           unfilteredFeaturesName1], \
-                                          stderr=subprocess.STDOUT, \
-                                          stdout=subprocess.PIPE)
-            compute2 = subprocess.Popen(['./../features/features', \
-                                           'compute', \
-                                           spikesName2, \
-                                           unfilteredFeaturesName2], \
-                                          stderr=subprocess.STDOUT, \
-                                          stdout=subprocess.PIPE)
-            
-            while (compute1.poll() is None) or (compute2.poll() is None):
-                out = compute1.stdout.readline()
-                if out != '':
-                    print 'features compute file1: %s'%out
-                out = compute2.stdout.readline()
-                if out != '':
-                    print 'features compute file2: %s'%out
-                    
-        except subprocess.CalledProcessError as e:
-            print '\n---\tfeatures compute ERROR!\t---\n'
-            print e.returncode
-            return None
+        # Will call the other functions sequentally using listeners
+        self.featuresCompute() 
         
-        # features rescale prepare
-        print '\nfeatures rescale prepare'
-        try:
-            rescalePrepare = subprocess.Popen(['./../features/features', \
-                                                'rescale', \
-                                                'prepare', \
-                                                rescaleName, \
-                                                unfilteredFeaturesName1, \
-                                                unfilteredFeaturesName2], \
-                                               stderr=subprocess.STDOUT, \
-                                               stdout=subprocess.PIPE)
-            
-            while rescalePrepare.poll() is None:
-                out = rescalePrepare.stdout.readline()
-                if out != '':
-                    print 'features rescale prepare: %s'%out
+    def featuresCompute(self):
+        print 'features compute'
         
-        except subprocess.CalledProcessError as e:
-            print '\n---\tfeatures rescale prepare ERROR!\t---\n'
-            print e.returncode
-            return None
+        # Same name of self.dicProgram
+        self.programname = 'features compute'
         
-        # features rescale apply
-        print '\nfeatures rescale apply'
-        try:
-            rescaleApply = subprocess.Popen(['./../features/features', \
-                                                'rescale', \
-                                                'apply', \
-                                                rescaleName, \
-                                                unfilteredFeaturesName1, \
-                                                unfilteredFeaturesName2], \
-                                               stderr=subprocess.STDOUT, \
-                                               stdout=subprocess.PIPE)
-            
-            while rescaleApply.poll() is None:
-                out = rescaleApply.stdout.readline()
-                if out != '':
-                    print 'features rescale apply: %s'%out
+        self.finish = False
         
-        except subprocess.CalledProcessError as e:
-            print '\n---\tfeatures rescale apply ERROR!\t---\n'
-            print e.returncode
-            return None
+        self.featuresCompute1Program = QtCore.QProcess()
+        self.featuresCompute1Program.start('./../features/features', \
+                           ['compute', \
+                            self.spikesName1, \
+                            self.unfilteredFeaturesName1])
         
-        # features filter prepare
-        print '\nfeatures filter prepare'
-        try:
-            filterPrepare = subprocess.Popen(['./../features/features', \
-                                                'filter', \
-                                                'prepare', \
-                                                '--best=%s'%number, \
-                                                filterName, \
-                                                unfilteredFeaturesName1, \
-                                                unfilteredFeaturesName2], \
-                                               stderr=subprocess.STDOUT, \
-                                               stdout=subprocess.PIPE)
-            
-            while filterPrepare.poll() is None:
-                out = filterPrepare.stdout.readline()
-                if out != '':
-                    print 'features filter prepare: %s'%out
+        self.featuresCompute2Program = QtCore.QProcess()
+        self.featuresCompute2Program.start('./../features/features', \
+                           ['compute', \
+                            self.spikesName2, \
+                            self.unfilteredFeaturesName2])
         
-        except subprocess.CalledProcessError as e:
-            print '\n---\tfeatures filter prepare ERROR!\t---\n'
-            print e.returncode
-            return None
+        def featuresComputeFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                if self.finish == False:
+                    self.finish = True
+                else:
+                    self.finish = False
+                    self.featuresRescalePrepare()
+            else:
+                self.cancelled = False
+                self.finish = False
+                self.app.restoreOverrideCursor()
+                self.dialog.hide()
         
-        # features filter apply
-        print '\nfeatures filter apply'
-        try:
-            filterApply1 = subprocess.Popen(['./../features/features', \
-                                                'filter', \
-                                                'apply', \
-                                                filterName, \
-                                                unfilteredFeaturesName1, \
-                                                featuresName1], \
-                                               stderr=subprocess.STDOUT, \
-                                               stdout=subprocess.PIPE)
-            
-            filterApply2 = subprocess.Popen(['./../features/features', \
-                                                'filter', \
-                                                'apply', \
-                                                filterName, \
-                                                unfilteredFeaturesName2, \
-                                                featuresName2], \
-                                               stderr=subprocess.STDOUT, \
-                                               stdout=subprocess.PIPE)
-            
-            while (filterApply1.poll() is None) or (filterApply2.poll() is None):
-                out = filterApply1.stdout.readline()
-                if out != '':
-                    print 'features filter apply file1: %s'%out
-                out = filterApply2.stdout.readline()
-                if out != '':
-                    print 'features filter apply file2: %s'%out
+        QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('finished(int)'), featuresComputeFinish)
+        QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('finished(int)'), featuresComputeFinish)
+        QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
-        except subprocess.CalledProcessError as e:
-            print '\n---\tfeatures filter apply ERROR!\t---\n'
-            print e.returncode
-            return None
+    def featuresRescalePrepare(self):        
+        print 'features rescale prepare'
         
-        print '\nend features'
-        self.ui.loadFeatures1LineEdit.setText(featuresName1)
-        self.ui.loadFeatures2LineEdit.setText(featuresName2)
+        # Same name of self.dicProgram
+        self.programname = 'features rescale prepare'
+        
+        self.featuresRescalePrepareProgram = QtCore.QProcess()
+        self.featuresRescalePrepareProgram.start('./../features/features', \
+                           ['rescale', \
+                            'prepare', \
+                            self.rescaleName, \
+                            self.unfilteredFeaturesName1, \
+                            self.unfilteredFeaturesName2])
+        
+        def featuresRescalePrepareFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                self.featuresRescaleApply()
+            else:
+                self.cancelled = False
+                self.app.restoreOverrideCursor()
+                self.dialog.hide()
+                
+        QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('finished(int)'), featuresRescalePrepareFinish)
+        QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        
+    def featuresRescaleApply(self):
+        print 'features rescale apply'
+        
+        # Same name of self.dicProgram
+        self.programname = 'features rescale apply'
+        
+        self.featuresRescaleApplyProgram = QtCore.QProcess()
+        self.featuresRescaleApplyProgram.start('./../features/features', \
+                           ['rescale', \
+                            'apply', \
+                            self.rescaleName, \
+                            self.unfilteredFeaturesName1, \
+                            self.unfilteredFeaturesName2])
+        
+        def featuresRescaleApplyFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                self.featuresFilterPrepare()
+            else:
+                self.cancelled = False
+                self.app.restoreOverrideCursor()
+                self.dialog.hide()
+        
+        QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('finished(int)'), featuresRescaleApplyFinish)
+        QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        
+    def featuresFilterPrepare(self):
+        print 'features filter prepare'
+        
+        # Same name of self.dicProgram
+        self.programname = 'features filter prepare'
+        
+        self.featuresFilterPrepareProgram = QtCore.QProcess()
+        self.featuresFilterPrepareProgram.start('./../features/features', \
+                           ['filter', \
+                            'prepare', \
+                            '--best=%s'%self.number, \
+                            self.filterName, \
+                            self.unfilteredFeaturesName1, \
+                            self.unfilteredFeaturesName2])
+        
+        def featuresFilterPrepareFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                self.featuresFilterApply()
+            else:
+                self.cancelled = False
+                self.app.restoreOverrideCursor()
+                self.dialog.hide()
+                
+        QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('finished(int)'), featuresFilterPrepareFinish)
+        QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        
+        
+    def featuresFilterApply(self):
+        print 'features filter apply'
+        
+        # Same name of self.dicProgram
+        self.programname = 'features filter apply'
+        
+        self.finish = False
+        
+        self.featuresFilterApply1Program = QtCore.QProcess()
+        self.featuresFilterApply1Program.start('./../features/features', \
+                           ['filter', \
+                            'apply', \
+                            self.filterName, \
+                            self.unfilteredFeaturesName1, \
+                            self.featuresName1])
+        
+        self.featuresFilterApply2Program = QtCore.QProcess()
+        self.featuresFilterApply2Program.start('./../features/features', \
+                           ['filter', \
+                            'apply', \
+                            self.filterName, \
+                            self.unfilteredFeaturesName2, \
+                            self.featuresName2])
+        
+        def featuresFilterApplyFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                if self.finish == False:
+                    self.finish = True
+                else:
+                    self.finish = False
+                    self.featuresFinish()
+            else:
+                self.cancelled = False
+                self.finish = False
+                self.app.restoreOverrideCursor()
+                self.dialog.hide()
+        
+        QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('finished(int)'), featuresFilterApplyFinish)
+        QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('finished(int)'), featuresFilterApplyFinish)
+        QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        
+    def featuresFinish(self):
+        print 'end features'
+        self.ui.loadFeatures1LineEdit.setText(self.featuresName1)
+        self.ui.loadFeatures2LineEdit.setText(self.featuresName2)
+        os.remove(self.unfilteredFeaturesName1)
+        os.remove(self.unfilteredFeaturesName2)
         self.app.restoreOverrideCursor()
+        self.dialog.hide()
+    
+    def sliceInfo(self, filename):
+        print 'slice info'
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        field = self.sender()
+        featuresName = field.text()
+        
+        def fillInfoLabel1(ret):
+            self.app.restoreOverrideCursor()
+            if self.isReturnCodeOk(ret) is True:
+                stdout = self.sliceInfo1Program.readAllStandardOutput()
+                stderr = self.sliceInfo1Program.readAllStandardError()
+                if stdout != '':
+                    text, self.NWindows1 = self.formatInfoText(str(stdout))
+                else:
+                    text, self.NWindows1 = self.formatInfoText(str(stderr))
+                self.ui.sliceInfoFish1Label.setText(text)
+            else:
+                return None
+        
+        def fillInfoLabel2(ret):
+            self.app.restoreOverrideCursor()
+            if self.isReturnCodeOk(ret) is True:
+                stdout = self.sliceInfo2Program.readAllStandardOutput()
+                stderr = self.sliceInfo2Program.readAllStandardError()
+                if stdout != '':
+                    text, self.NWindows2 = self.formatInfoText(str(stdout))
+                else:
+                    text, self.NWindows2 = self.formatInfoText(str(stderr))
+                self.ui.sliceInfoFish2Label.setText(text)
+            else:
+                return None
+        
+        # If they are executed at the same time, the program variable cannot be overriden
+        # by the Garbage Collector
+        if os.path.isfile(featuresName):
+            if field == self.ui.loadFeatures1LineEdit:
+                self.sliceInfo1Program = QtCore.QProcess()
+                self.sliceInfo1Program.start('./../slice/slice', \
+                                             ['info', \
+                                              featuresName])
+                QtCore.QObject.connect(self.sliceInfo1Program, QtCore.SIGNAL('finished(int)'), fillInfoLabel1)
+            else:
+                self.sliceInfo2Program = QtCore.QProcess()
+                self.sliceInfo2Program.start('./../slice/slice', \
+                                             ['info', \
+                                              featuresName])
+                QtCore.QObject.connect(self.sliceInfo2Program, QtCore.SIGNAL('finished(int)'), fillInfoLabel2)
+   
+    def sliceRandom1(self):
+        featuresName = self.ui.loadFeatures1LineEdit.text()
+        probTrain = float(self.ui.trainingProbabilityFish1LineEdit.text())
+        saveTrain = self.ui.trainingSaveFish1LineEdit.text()
+        probCross = float(self.ui.crossProbabilityFish1LineEdit.text())
+        saveCross = self.ui.crossSaveFish1LineEdit.text()
+        probTest = float(self.ui.testingProbabilityFish1LineEdit.text())
+        saveTest = self.ui.testingSaveFish1LineEdit.text()
+        
+        if (0 <= probTrain <= 1) and \
+           (0 <= probCross <= 1) and \
+           (0 <= probTest <= 1) and \
+           (0 <= probTrain + probCross + probTest <= 1):
+            print 'slice random'
+            self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+            
+            self.programName = 'slice random'
+            
+            self.sliceRandom1Program = QtCore.QProcess()
+            self.sliceRandom1Program.start('./../slice/slice', \
+                                           ['random', \
+                                            featuresName, \
+                                            str(probTrain), saveTrain, \
+                                            str(probCross), saveCross, \
+                                            str(probTest), saveTest])
+            
+            def sliceRandomFinish(ret):
+                self.app.restoreOverrideCursor()
+                if self.isReturnCodeOk(ret) is True:
+                    self.ui.trainingLoadFish1LineEdit.setText(self.ui.trainingSaveFish1LineEdit.text())
+                    self.ui.crossLoadFish1LineEdit.setText(self.ui.crossSaveFish1LineEdit.text())
+                    self.ui.testingLoadFish1LineEdit.setText(self.ui.testingSaveFish1LineEdit.text())
+            
+            QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('finished(int)'), sliceRandomFinish)
+            QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+            QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        else:
+            QtGui.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities and their sum must be on the interval [0,1]', QtGui.QMessageBox.Ok)
+    
+    def sliceRandom2(self):
+        featuresName = self.ui.loadFeatures2LineEdit.text()
+        probTrain = float(self.ui.trainingProbabilityFish2LineEdit.text())
+        saveTrain = self.ui.trainingSaveFish2LineEdit.text()
+        probCross = float(self.ui.crossProbabilityFish2LineEdit.text())
+        saveCross = self.ui.crossSaveFish2LineEdit.text()
+        probTest = float(self.ui.testingProbabilityFish2LineEdit.text())
+        saveTest = self.ui.testingSaveFish2LineEdit.text()
+        
+        if (0 <= probTrain <= 1) and \
+           (0 <= probCross <= 1) and \
+           (0 <= probTest <= 1) and \
+           (0 <= probTrain + probCross + probTest <= 1):
+            print 'slice random'
+            self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+            
+            self.programName = 'slice random'
+            
+            self.sliceRandom2Program = QtCore.QProcess()
+            self.sliceRandom2Program.start('./../slice/slice', \
+                                           ['random', \
+                                            featuresName, \
+                                            str(probTrain), saveTrain, \
+                                            str(probCross), saveCross, \
+                                            str(probTest), saveTest])
+            
+            def sliceRandomFinish(ret):
+                self.app.restoreOverrideCursor()
+                if self.isReturnCodeOk(ret) is True:
+                    self.ui.trainingLoadFish2LineEdit.setText(self.ui.trainingSaveFish2LineEdit.text())
+                    self.ui.crossLoadFish2LineEdit.setText(self.ui.crossSaveFish2LineEdit.text())
+                    self.ui.testingLoadFish2LineEdit.setText(self.ui.testingSaveFish2LineEdit.text())
+            
+            QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('finished(int)'), sliceRandomFinish)
+            QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+            QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        else:
+            QtGui.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities and their sum must be on the interval [0,1]', QtGui.QMessageBox.Ok)
+    
+    def formatInfoText(self,text):
+        NWindows = int(text.split('\n')[-3].split(' ')[-1])
+        output = ''
+        for line in text.split('\n')[-5:]:
+            output = output + line + '\n'
+        output = output.strip()
+        return (output, NWindows)
     
     def fileFieldHandler(self):
         field = self.sender()
@@ -384,6 +713,37 @@ class TrainingWindow(QtGui.QDialog):
             field.setText(filename)
         else:
             pass
+    
+    def raiseLongTimeInformation(self):
+        dialog = QtGui.QMessageBox()
+        dialog.setWindowTitle('Information')
+        dialog.setText("This may take a while...\nTime for a coffee!\n")
+        dialog.setModal(True)
+        self.CancelBut = dialog.addButton(QtGui.QMessageBox.Cancel)
+        QtCore.QObject.connect(self.CancelBut, QtCore.SIGNAL('clicked()'), self.cancelApp)
+        dialog.show()
+        return dialog
+    
+    def raiseParameterError(self, text):
+        QtGui.QMessageBox.critical(self, "ERROR", text + "Please check your parameters.", QtGui.QMessageBox.Ok )
+    
+    def cancelApp(self):
+        self.cancelled = True
+        self.filterAssist1Program.terminate()
+        self.filterAssist2Program.terminate()
+        self.thresholdAssist1Program.terminate()
+        self.thresholdAssist2Program.terminate()
+        self.verifySpikes1Program.terminate()
+        self.verifySpikes2Program.terminate()
+        self.detectSpikes1Program.terminate()
+        self.detectSpikes2Program.terminate()
+        self.featuresCompute1Program.terminate()
+        self.featuresCompute2Program.terminate()
+        self.featuresRescalePrepareProgram.terminate()
+        self.featuresRescaleApplyProgram.terminate()
+        self.featuresFilterPrepareProgram.terminate()
+        self.featuresFilterApply1Program.terminate()
+        self.featuresFilterApply2Program.terminate()
     
     def defineFieldsType(self):
         self.fieldsType = {self.ui.loadTS1LineEdit: 'load', \
@@ -499,6 +859,133 @@ class TrainingWindow(QtGui.QDialog):
             self.ui.saveSVMLineEdit: 'SVM Model File (*.svmmodel) (*.svmmodel)', \
             self.ui.loadSVMLineEdit: 'SVM Model File (*.svmmodel) (*.svmmodel)', \
             }
+    
+    def connectSliceFields(self):
+        fish1Fields = (self.ui.trainingNumberSamplesFish1LineEdit, \
+                       self.ui.crossNumberSamplesFish1LineEdit, \
+                       self.ui.testingNumberSamplesFish1LineEdit, \
+                       self.ui.trainingProbabilityFish1LineEdit, \
+                       self.ui.crossProbabilityFish1LineEdit, \
+                       self.ui.testingProbabilityFish1LineEdit, \
+                       )
+        fish2Fields = (self.ui.trainingNumberSamplesFish2LineEdit, \
+                       self.ui.crossNumberSamplesFish2LineEdit, \
+                       self.ui.testingNumberSamplesFish2LineEdit, \
+                       self.ui.trainingProbabilityFish2LineEdit, \
+                       self.ui.crossProbabilityFish2LineEdit, \
+                       self.ui.testingProbabilityFish2LineEdit, \
+                       )
+        
+        self.testingDependency = (self.ui.trainingNumberSamplesFish1LineEdit, 
+                                   self.ui.crossNumberSamplesFish1LineEdit, \
+                                   self.ui.trainingProbabilityFish1LineEdit, \
+                                   self.ui.crossProbabilityFish1LineEdit, \
+                                   self.ui.trainingNumberSamplesFish2LineEdit, 
+                                   self.ui.crossNumberSamplesFish2LineEdit, \
+                                   self.ui.trainingProbabilityFish2LineEdit, \
+                                   self.ui.crossProbabilityFish2LineEdit)
+        
+        self.sliceFieldsNSamples_Prob = { \
+        self.ui.trainingNumberSamplesFish1LineEdit: self.ui.trainingProbabilityFish1LineEdit, \
+        self.ui.trainingNumberSamplesFish2LineEdit: self.ui.trainingProbabilityFish2LineEdit, \
+        self.ui.crossNumberSamplesFish1LineEdit: self.ui.crossProbabilityFish1LineEdit, \
+        self.ui.crossNumberSamplesFish2LineEdit: self.ui.crossProbabilityFish2LineEdit, \
+        self.ui.testingNumberSamplesFish1LineEdit: self.ui.testingProbabilityFish1LineEdit, \
+        self.ui.testingNumberSamplesFish2LineEdit: self.ui.testingProbabilityFish2LineEdit, \
+        }
+        
+        self.sliceFieldsProb_NSamples = {v:k for k,v in self.sliceFieldsNSamples_Prob.items()}
+        
+        def numberSamplesConnection(text):
+            NSamplesField = self.sender()
+            
+            ProbField = self.sliceFieldsNSamples_Prob[NSamplesField]
+            ProbField.blockSignals(True)
+            
+            if NSamplesField in fish1Fields:
+                fish = 1
+            else:
+                fish = 2
+            
+            if fish == 1:
+                prob = float(text) / float(self.NWindows1)
+            else:
+                prob = float(text) / float(self.NWindows2)
+            
+            if prob < 0 or prob > 1:
+                NSamplesField.setStyleSheet('QLineEdit { background-color: #ff0000; }')
+                ProbField.setStyleSheet('QLineEdit { background-color: #ff0000; }')
+            else:
+                NSamplesField.setStyleSheet('QLineEdit { background-color: #ffffff; }')
+                ProbField.setStyleSheet('QLineEdit { background-color: #ffffff; }')
+            
+            ProbField.setText(str(prob))
+            ProbField.blockSignals(False)
+        
+        def probabilityConnection(prob):
+            ProbField = self.sender()
+            # If the string is incomplete, do not print error message
+            try:
+                prob = float(prob)
+            except:
+                return None
+            
+            NSamplesField = self.sliceFieldsProb_NSamples[ProbField]
+            NSamplesField.blockSignals(True)
+            
+            if ProbField in fish1Fields:
+                fish = 1
+            else:
+                fish = 2
+            
+            if prob < 0 or prob > 1:
+                NSamplesField.setStyleSheet('QLineEdit { background-color: #ff0000; }')
+                ProbField.setStyleSheet('QLineEdit { background-color: #ff0000; }')
+            else:
+                NSamplesField.setStyleSheet('QLineEdit { background-color: #ffffff; }')
+                ProbField.setStyleSheet('QLineEdit { background-color: #ffffff; }')
+            
+            if fish == 1:
+                NSamples = int(round(prob * float(self.NWindows1)))
+            else:
+                NSamples = int(round(prob * float(self.NWindows2)))
+            
+            NSamplesField.setText(str(NSamples))
+            NSamplesField.blockSignals(False)
+        
+        for field in self.sliceFieldsNSamples_Prob.keys():
+            QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), numberSamplesConnection)
+        for field in self.sliceFieldsProb_NSamples.keys():
+            QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), probabilityConnection)
+        
+        def updateTesting(text):
+            sender = self.sender()
+            if sender in fish1Fields:
+                fish = 1
+            else:
+                fish = 2
+            
+            if fish == 1:
+                trainingNSamples = self.ui.trainingNumberSamplesFish1LineEdit.text()
+                crossNSamples = self.ui.crossNumberSamplesFish1LineEdit.text()
+                totalSamples = self.NWindows1
+                outField = self.ui.testingNumberSamplesFish1LineEdit
+            else:
+                trainingNSamples = self.ui.trainingNumberSamplesFish2LineEdit.text()
+                crossNSamples = self.ui.crossNumberSamplesFish2LineEdit.text()
+                totalSamples = self.NWindows2
+                outField = self.ui.testingNumberSamplesFish2LineEdit
+            
+            if trainingNSamples == '' or crossNSamples == '' or totalSamples == '':
+                outField.setText('')
+                return None
+            
+            output = str(int(totalSamples) - (int(trainingNSamples) + int(crossNSamples)))
+            outField.setText(output)
+            
+        for field in self.testingDependency:
+            QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), updateTesting)
+        
     
     def connectUnlockFields(self):
         
@@ -653,11 +1140,9 @@ class TrainingWindow(QtGui.QDialog):
                  ), \
                 (self.ui.trainingNumberSamplesFish1LineEdit, \
                 self.ui.crossNumberSamplesFish1LineEdit, \
-                self.ui.testingNumberSamplesFish1LineEdit, \
                 
                 self.ui.trainingProbabilityFish1LineEdit, \
                 self.ui.crossProbabilityFish1LineEdit, \
-                self.ui.testingProbabilityFish1LineEdit, \
                 
                 self.ui.trainingSaveFish1LineEdit, \
                 self.ui.crossSaveFish1LineEdit, \
@@ -672,11 +1157,9 @@ class TrainingWindow(QtGui.QDialog):
                  ), \
                 (self.ui.trainingNumberSamplesFish2LineEdit, \
                 self.ui.crossNumberSamplesFish2LineEdit, \
-                self.ui.testingNumberSamplesFish2LineEdit, \
                 
                 self.ui.trainingProbabilityFish2LineEdit, \
                 self.ui.crossProbabilityFish2LineEdit, \
-                self.ui.testingProbabilityFish2LineEdit, \
                 
                 self.ui.trainingSaveFish2LineEdit, \
                 self.ui.crossSaveFish2LineEdit, \
@@ -946,7 +1429,14 @@ class TrainingWindow(QtGui.QDialog):
         
     
     def initialClickState(self):
-        # Step 1 LineEdits
+        # Manually locks tesing line fields
+        self.switchLockState(
+            (self.ui.testingNumberSamplesFish1LineEdit, \
+            self.ui.testingNumberSamplesFish2LineEdit, \
+            self.ui.testingProbabilityFish1LineEdit, \
+            self.ui.testingProbabilityFish2LineEdit
+            ), \
+            False)
         for tup in self.Fields.values():
             for locker,locked in tup:
                 self.switchLockState(locked, False)

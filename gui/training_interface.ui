@@ -618,7 +618,7 @@
              <item row="0" column="0">
               <widget class="QLabel" name="sliceInfoFish1Label">
                <property name="text">
-                <string>Total number of windows: </string>
+                <string/>
                </property>
               </widget>
              </item>
@@ -749,7 +749,7 @@
              <item row="0" column="0">
               <widget class="QLabel" name="sliceInfoFish2Label">
                <property name="text">
-                <string>Total number of windows: </string>
+                <string/>
                </property>
               </widget>
              </item>
@@ -1075,7 +1075,7 @@
             </sizepolicy>
            </property>
            <property name="pixmap">
-            <pixmap>../../../Dropbox/LogoClaro_comLogo_w300.png</pixmap>
+            <pixmap>../../../../Dropbox/LogoClaro_comLogo_w300.png</pixmap>
            </property>
           </widget>
          </item>
@@ -1194,11 +1194,11 @@
   <tabstop>saveFeatures1LineEdit</tabstop>
   <tabstop>saveFeatures2LineEdit</tabstop>
   <tabstop>saveFilterLineEdit</tabstop>
+  <tabstop>saveRescaleLineEdit</tabstop>
   <tabstop>numberFeaturesLineEdit</tabstop>
   <tabstop>extractFeaturesBut</tabstop>
   <tabstop>loadFeatures1LineEdit</tabstop>
   <tabstop>loadFeatures2LineEdit</tabstop>
-  <tabstop>tabWidget</tabstop>
   <tabstop>trainingNumberSamplesFish1LineEdit</tabstop>
   <tabstop>trainingProbabilityFish1LineEdit</tabstop>
   <tabstop>trainingSaveFish1LineEdit</tabstop>
@@ -1212,6 +1212,20 @@
   <tabstop>testingSaveFish1LineEdit</tabstop>
   <tabstop>testingLoadFish1LineEdit</tabstop>
   <tabstop>sliceFish1But</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>trainingNumberSamplesFish2LineEdit</tabstop>
+  <tabstop>trainingProbabilityFish2LineEdit</tabstop>
+  <tabstop>trainingSaveFish2LineEdit</tabstop>
+  <tabstop>trainingLoadFish2LineEdit</tabstop>
+  <tabstop>crossNumberSamplesFish2LineEdit</tabstop>
+  <tabstop>crossProbabilityFish2LineEdit</tabstop>
+  <tabstop>crossSaveFish2LineEdit</tabstop>
+  <tabstop>crossLoadFish2LineEdit</tabstop>
+  <tabstop>testingNumberSamplesFish2LineEdit</tabstop>
+  <tabstop>testingProbabilityFish2LineEdit</tabstop>
+  <tabstop>testingSaveFish2LineEdit</tabstop>
+  <tabstop>testingLoadFish2LineEdit</tabstop>
+  <tabstop>sliceFish2But</tabstop>
   <tabstop>defaultValuesBut</tabstop>
   <tabstop>cStartLineEdit</tabstop>
   <tabstop>cStopLineEdit</tabstop>
@@ -1226,19 +1240,6 @@
   <tabstop>trainSVMBut</tabstop>
   <tabstop>loadSVMLineEdit</tabstop>
   <tabstop>generateROCBut</tabstop>
-  <tabstop>trainingNumberSamplesFish2LineEdit</tabstop>
-  <tabstop>sliceFish2But</tabstop>
-  <tabstop>crossNumberSamplesFish2LineEdit</tabstop>
-  <tabstop>trainingLoadFish2LineEdit</tabstop>
-  <tabstop>testingLoadFish2LineEdit</tabstop>
-  <tabstop>testingNumberSamplesFish2LineEdit</tabstop>
-  <tabstop>crossProbabilityFish2LineEdit</tabstop>
-  <tabstop>trainingProbabilityFish2LineEdit</tabstop>
-  <tabstop>trainingSaveFish2LineEdit</tabstop>
-  <tabstop>crossLoadFish2LineEdit</tabstop>
-  <tabstop>testingProbabilityFish2LineEdit</tabstop>
-  <tabstop>testingSaveFish2LineEdit</tabstop>
-  <tabstop>crossSaveFish2LineEdit</tabstop>
  </tabstops>
  <resources/>
  <connections/>
