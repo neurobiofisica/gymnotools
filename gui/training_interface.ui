@@ -39,8 +39,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>1099</width>
-        <height>1131</height>
+        <width>1168</width>
+        <height>1112</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -57,7 +57,7 @@
             </font>
            </property>
            <property name="text">
-            <string>1. Select parameters for spike detection v</string>
+            <string>1. Select parameters for spike detection &gt;</string>
            </property>
           </widget>
          </item>
@@ -320,7 +320,7 @@
             </font>
            </property>
            <property name="text">
-            <string>2. Detect Spikes v</string>
+            <string>2. Detect Spikes &gt;</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -462,7 +462,7 @@
             </font>
            </property>
            <property name="text">
-            <string>3. Rescale and extract features v</string>
+            <string>3. Rescale and extract features &gt;</string>
            </property>
           </widget>
          </item>
@@ -595,14 +595,14 @@
             </font>
            </property>
            <property name="text">
-            <string>4. Slice series to make training, cross validation and testing sets v</string>
+            <string>4. Slice series to make training, cross validation and testing sets &gt;</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QTabWidget" name="tabWidget">
            <property name="currentIndex">
-            <number>0</number>
+            <number>1</number>
            </property>
            <widget class="QWidget" name="tabFish1">
             <property name="sizePolicy">
@@ -665,7 +665,7 @@
              <item row="2" column="0">
               <widget class="QLabel" name="trainingFish1Label">
                <property name="text">
-                <string>Training set: </string>
+                <string>Training set (About 10000 samples):</string>
                </property>
               </widget>
              </item>
@@ -684,7 +684,7 @@
              <item row="3" column="0">
               <widget class="QLabel" name="crossValidationFish1Label">
                <property name="text">
-                <string>Cross validation set: </string>
+                <string>Cross validation set (About prob. 0.3):</string>
                </property>
               </widget>
              </item>
@@ -809,7 +809,7 @@
              <item row="2" column="0">
               <widget class="QLabel" name="trainingFish2Label">
                <property name="text">
-                <string>Training set: </string>
+                <string>Training set (About 10000 samples):</string>
                </property>
               </widget>
              </item>
@@ -828,7 +828,7 @@
              <item row="3" column="0">
               <widget class="QLabel" name="crossValidationFish2Label">
                <property name="text">
-                <string>Cross validation set: </string>
+                <string>Cross validation set (About prob. 0.3):</string>
                </property>
               </widget>
              </item>
@@ -903,7 +903,7 @@
             </font>
            </property>
            <property name="text">
-            <string>5. Train SVM v</string>
+            <string>5. Train SVM &gt;</string>
            </property>
           </widget>
          </item>
@@ -923,7 +923,7 @@
             </spacer>
            </item>
            <item row="0" column="0" colspan="5">
-            <widget class="QPushButton" name="defaultValuesBut">
+            <widget class="QPushButton" name="defaultSVMValuesBut">
              <property name="text">
               <string>Default values</string>
              </property>
@@ -994,7 +994,7 @@
             </widget>
            </item>
            <item row="2" column="4">
-            <widget class="QLineEdit" name="cValueLineEdit"/>
+            <widget class="ClickQLineEdit" name="cValueLineEdit"/>
            </item>
            <item row="3" column="1">
             <widget class="QLineEdit" name="gStartLineEdit">
@@ -1021,7 +1021,7 @@
             </widget>
            </item>
            <item row="3" column="4">
-            <widget class="QLineEdit" name="gValueLineEdit"/>
+            <widget class="ClickQLineEdit" name="gValueLineEdit"/>
            </item>
            <item row="2" column="1">
             <widget class="QLineEdit" name="cStartLineEdit">
@@ -1075,7 +1075,7 @@
             </sizepolicy>
            </property>
            <property name="pixmap">
-            <pixmap>../../../../Dropbox/LogoClaro_comLogo_w300.png</pixmap>
+            <pixmap>../../../Dropbox/LogoClaro_comLogo_w580.png</pixmap>
            </property>
           </widget>
          </item>
@@ -1226,7 +1226,7 @@
   <tabstop>testingSaveFish2LineEdit</tabstop>
   <tabstop>testingLoadFish2LineEdit</tabstop>
   <tabstop>sliceFish2But</tabstop>
-  <tabstop>defaultValuesBut</tabstop>
+  <tabstop>defaultSVMValuesBut</tabstop>
   <tabstop>cStartLineEdit</tabstop>
   <tabstop>cStopLineEdit</tabstop>
   <tabstop>cStepLineEdit</tabstop>

@@ -1,5 +1,6 @@
 from PyQt4 import QtGui, QtCore
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 
 from matplotlib.figure import Figure
 
@@ -7,6 +8,9 @@ class CanvasROC(FigureCanvas):
     def __init__(self):
         self.fig = Figure()
         self.ax = self.fig.add_subplot(111)
+        self.ax.set_xlabel('False positive rate')
+        self.ax.set_ylabel('True positive rate')
+        self.ax.set_title('ROC Curve')
 
         FigureCanvas.__init__(self, self.fig)
         FigureCanvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
@@ -16,7 +20,12 @@ class ROCWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.canvas = CanvasROC()
+
         self.vbl = QtGui.QVBoxLayout()
         self.setLayout(self.vbl)
         self.vbl.addWidget(self.canvas)
-        self.setLayout(self.vbl)
+
+        self.toolbar = NavigationToolbar(self.canvas, self, coordinates=True)
+        self.vbl.addWidget(self.toolbar)
+
+        self.canvas.fig.subplots_adjust(bottom=0.18)

@@ -170,14 +170,14 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
 
     for(double g = gStart; g <= gStop; g += gStep) {
         for(double c = cStart; c <= cStop; c += cStep) {
-            printf("=> Trying c=%.1f, g=%.1f\n", c, g);
+            fprintf(stderr, "=> Trying c=%.1f, g=%.1f\n", c, g);
             param.setcg(c, g);
 
             svm_model *model = svm_train(&problem, &param);
             const int errors = countErrors(model, crossA, crossB);
             svm_free_and_destroy_model(&model);
 
-            printf("=> Errors: %d\n", errors);
+            fprintf(stderr, "=> Errors: %d\n", errors);
             if((errors  < bestErrors) || (errors == bestErrors && fabs(g-bestg)<=eps && c<bestc)) {
                 bestErrors = errors;
                 bestc = c;
@@ -186,8 +186,8 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
         }
     }
 
-    printf("\n\n=> Best: c=%.1f, g=%.1f\n", bestc, bestg);
-    printf("=> Errors: %d (%.2f%%)\n", bestErrors, (100.*bestErrors)/problem.l);
+    fprintf(stderr, "\n\n=> Best: c=%.1f, g=%.1f\n", bestc, bestg);
+    fprintf(stderr, "=> Errors: %d (%.2f%%)\n", bestErrors, (100.*bestErrors)/problem.l);
 }
 
 static void cmd_train(const char *modelfile, double cParam, double gParam,
@@ -216,7 +216,7 @@ static void cmd_cross(int nFold, double cParam, double gParam,
 
     delete [] target;
 
-    printf("Cross Validation Accuracy = %g%%\n",(100.*correct)/problem.l);
+    fprintf(stderr, "Cross Validation Accuracy = %g%%\n",(100.*correct)/problem.l);
 }
 
 static void cmd_test_count(svm_model *model, WindowFile &testFile)
@@ -224,8 +224,8 @@ static void cmd_test_count(svm_model *model, WindowFile &testFile)
     int nA = 0, nB = 0;
     predictAndCount(model, testFile, nA, nB);
     double total = nA + nB;
-    printf("A: %d (%g%%)\n", nA, (100.*nA)/total);
-    printf("B: %d (%g%%)\n", nB, (100.*nB)/total);
+    fprintf(stderr, "A: %d (%g%%)\n", nA, (100.*nA)/total);
+    fprintf(stderr, "B: %d (%g%%)\n", nB, (100.*nB)/total);
 }
 
 static void cmd_test_list(svm_model *model, WindowFile &testFile)
@@ -300,7 +300,7 @@ static void cmd_roc(svm_model *model, WindowFile &testA, WindowFile &testB)
         else
             falsePositives += 1.;
 
-        printf("%.12f %.12f\n",
+        fprintf(stderr, "%.12f %.12f\n",
                falsePositives/negativeLabels,
                truePositives/positiveLabels);
     }

@@ -1,9 +1,20 @@
 import os, sys
+import re
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore, QtGui
 from training_interface import Ui_trainingWindow
+
+# Default SVM values TODO: pegar de aquivo externo
+defcStart = -5.0
+defcStep = 2.0
+defcStop = 15.0
+
+defgStart = -15.0
+defgStep = 2.0
+defgStop = 3.0
 
 class TrainingWindow(QtGui.QDialog):
 
@@ -23,7 +34,69 @@ class TrainingWindow(QtGui.QDialog):
 
         self.fig = self.ui.ROCWidget.canvas.fig
         self.ax = self.ui.ROCWidget.canvas.ax
-       
+        self.plotData, = self.ui.ROCWidget.canvas.ax.plot([],[],'k.')
+        
+        # LineFields List -> for saving parameters
+        self.lineFieldsList = (self.ui.loadTS1LineEdit, \
+                               self.ui.loadTS2LineEdit, \
+                               self.ui.lowSaturation1LineEdit, \
+                               self.ui.lowSaturation2LineEdit, \
+                               self.ui.highSaturation1LineEdit, \
+                               self.ui.highSaturation2LineEdit, \
+                               self.ui.taps1LineEdit, \
+                               self.ui.taps2LineEdit, \
+                               self.ui.cutoff1LineEdit, \
+                               self.ui.cutoff2LineEdit, \
+                               self.ui.thresholdLevel1LineEdit, \
+                               self.ui.thresholdLevel2LineEdit, \
+                               self.ui.saveSpikes1LineEdit, \
+                               self.ui.saveSpikes2LineEdit, \
+                               self.ui.saveWindowLengths1LineEdit, \
+                               self.ui.saveWindowLengths2LineEdit, \
+                               self.ui.loadSpikes1LineEdit, \
+                               self.ui.loadSpikes2LineEdit, \
+                               self.ui.saveFeatures1LineEdit, \
+                               self.ui.saveFeatures2LineEdit, \
+                               self.ui.saveFilterLineEdit, \
+                               self.ui.saveRescaleLineEdit, \
+                               self.ui.loadFeatures1LineEdit, \
+                               self.ui.loadFeatures2LineEdit, \
+                               self.ui.trainingNumberSamplesFish1LineEdit, \
+                               self.ui.trainingNumberSamplesFish2LineEdit, \
+                               self.ui.trainingProbabilityFish1LineEdit, \
+                               self.ui.trainingProbabilityFish2LineEdit, \
+                               self.ui.trainingSaveFish1LineEdit, \
+                               self.ui.trainingSaveFish2LineEdit, \
+                               self.ui.trainingLoadFish1LineEdit, \
+                               self.ui.trainingLoadFish2LineEdit, \
+                               self.ui.crossNumberSamplesFish1LineEdit, \
+                               self.ui.crossNumberSamplesFish2LineEdit, \
+                               self.ui.crossProbabilityFish1LineEdit, \
+                               self.ui.crossProbabilityFish2LineEdit, \
+                               self.ui.crossSaveFish1LineEdit, \
+                               self.ui.crossSaveFish2LineEdit, \
+                               self.ui.crossLoadFish1LineEdit, \
+                               self.ui.crossLoadFish2LineEdit, \
+                               self.ui.testingNumberSamplesFish1LineEdit, \
+                               self.ui.testingNumberSamplesFish2LineEdit, \
+                               self.ui.testingProbabilityFish1LineEdit, \
+                               self.ui.testingProbabilityFish2LineEdit, \
+                               self.ui.testingSaveFish1LineEdit, \
+                               self.ui.testingSaveFish2LineEdit, \
+                               self.ui.testingLoadFish1LineEdit, \
+                               self.ui.testingLoadFish2LineEdit, \
+                               self.ui.cStartLineEdit, \
+                               self.ui.cStepLineEdit, \
+                               self.ui.cStopLineEdit, \
+                               self.ui.cValueLineEdit, \
+                               self.ui.gStartLineEdit, \
+                               self.ui.gStepLineEdit, \
+                               self.ui.gStopLineEdit, \
+                               self.ui.gValueLineEdit, \
+                               self.ui.saveSVMLineEdit, \
+                               self.ui.loadSVMLineEdit, \
+                               )
+        
         # Program objects -> they must be parameters for the GarbageCollector
         # do not clean them
         # If you insert a new item, it must be inserted on cancelApp method too!
@@ -46,23 +119,30 @@ class TrainingWindow(QtGui.QDialog):
         self.sliceInfo2Program = QtCore.QProcess()
         self.sliceRandom1Program = QtCore.QProcess()
         self.sliceRandom2Program = QtCore.QProcess()
+        self.svmtoolOptimProgram = QtCore.QProcess()
+        self.svmtoolTrainProgram = QtCore.QProcess()
+        self.svmtoolROCProgram = QtCore.QProcess()
         
         self.dicProgram = {'paramchooser lowpass': (self.filterAssist1Program, self.filterAssist2Program), \
                            'paramchooser threshold': (self.thresholdAssist1Program, self.thresholdAssist2Program), \
                            'winview': (self.verifySpikes1Program, self.verifySpikes2Program), \
-                           'spikes Fish 1': (self.detectSpikes1Program), \
-                           'spikes Fish 2': (self.detectSpikes2Program), \
+                           'spikes Fish 1': (self.detectSpikes1Program, ), \
+                           'spikes Fish 2': (self.detectSpikes2Program, ), \
                            'features compute': (self.featuresCompute1Program, self.featuresCompute2Program), \
-                           'features rescale prepare': (self.featuresRescalePrepareProgram), \
-                           'features rescale apply': (self.featuresRescaleApplyProgram), \
-                           'features filter prepare': (self.featuresFilterPrepareProgram), \
+                           'features rescale prepare': (self.featuresRescalePrepareProgram, ), \
+                           'features rescale apply': (self.featuresRescaleApplyProgram, ), \
+                           'features filter prepare': (self.featuresFilterPrepareProgram, ), \
                            'features filter apply': (self.featuresFilterApply1Program, self.featuresFilterApply2Program), \
                            'slice info': (self.sliceInfo1Program, self.sliceInfo2Program), \
                            'slice random': (self.sliceRandom1Program, self.sliceRandom2Program), \
+                           'svmtool optim': (self.svmtoolOptimProgram, ), \
+                           'svmtool train': (self.svmtoolTrainProgram, ), \
+                           'svmtool roc': (self.svmtoolROCProgram, ), \
                            }
         
         self.cancelled = False
-        self.finish = False
+        self.finish1 = False
+        self.finish2 = False
 
         self.ParametersLayout = [self.ui.step1ParametersLayout, \
                 self.ui.step2ParametersLayout, \
@@ -80,14 +160,15 @@ class TrainingWindow(QtGui.QDialog):
 
         self.defineFieldsType()
 
+        # Esconder campos do layout (deixar isLayoutShown = False, False, ...)
         # TODO: Pensar melhor de acordo com os lockers
-        self.isLayoutShown = [False, \
-        False, \
-        False, \
-        False, \
-        False, \
+        self.isLayoutShown = [True, \
+        True, \
+        True, \
+        True, \
+        True, \
         ]
-        for layout in self.ParametersLayout:
+        '''for layout in self.ParametersLayout:
             if isinstance(layout, QtGui.QLayout):
                 for i in xrange(layout.count()):
                     try:
@@ -95,7 +176,7 @@ class TrainingWindow(QtGui.QDialog):
                     except:
                         pass
             elif isinstance(layout, QtGui.QWidget):
-                layout.hide()
+                layout.hide()'''
         
         for label in self.titleLabels:
             QtCore.QObject.connect(label, QtCore.SIGNAL('clicked()'), self.expandLayout)
@@ -103,6 +184,10 @@ class TrainingWindow(QtGui.QDialog):
         # Connect load features file to load slice info
         QtCore.QObject.connect(self.ui.loadFeatures1LineEdit, QtCore.SIGNAL('textChanged(QString)'), self.sliceInfo)
         QtCore.QObject.connect(self.ui.loadFeatures2LineEdit, QtCore.SIGNAL('textChanged(QString)'), self.sliceInfo)
+        
+        # Connect cValue and gValue to warning window
+        QtCore.QObject.connect(self.ui.cValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
+        QtCore.QObject.connect(self.ui.gValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
         
         self.connectFileFields(self.fileFieldHandler)
         self.connectUnlockFields()
@@ -114,7 +199,30 @@ class TrainingWindow(QtGui.QDialog):
         
         self.initialClickState()
     
+    def saveParameters(self):
+        saveFilename = QtGui.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.parameters) (*.parameters);;All files (*.*) (*.*)')
+        saveFile = open(saveFilename, 'w')
+        for element in self.lineFieldsList:
+            if isinstance(element, QtGui.QLineEdit):
+                saveFile.write( '%s\t%s\n'%(element.objectName(), element.text()) )
+        saveFile.close()
+
+    def loadParameters(self):
+        loadFilename = QtGui.QFileDialog.getOpenFileName(self, 'Load Parameters File', '', 'Parameters File (*.parameters) (*.parameters);;All files (*.*) (*.*)')
+        loadFile = open(loadFilename, 'r')
+        for line in loadFile.xreadlines():
+            objectName, Value = line.split('\t')
+            Value = Value.strip()
+            if Value != '':
+                for element in self.lineFieldsList:
+                    if element.objectName() == objectName:
+                        element.setText(Value)
+                        break
+    
     def connectButtons(self):
+        QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
+        QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
+        
         QtCore.QObject.connect(self.ui.filterAssist1But, QtCore.SIGNAL('clicked()'), self.filterAssist1)
         QtCore.QObject.connect(self.ui.filterAssist2But, QtCore.SIGNAL('clicked()'), self.filterAssist2)
         
@@ -131,6 +239,14 @@ class TrainingWindow(QtGui.QDialog):
         
         QtCore.QObject.connect(self.ui.sliceFish1But, QtCore.SIGNAL('clicked()'), self.sliceRandom1)
         QtCore.QObject.connect(self.ui.sliceFish2But, QtCore.SIGNAL('clicked()'), self.sliceRandom2)
+        
+        QtCore.QObject.connect(self.ui.defaultSVMValuesBut, QtCore.SIGNAL('clicked()'), self.defaultSVMValues)
+        
+        QtCore.QObject.connect(self.ui.optimizeSVMBut, QtCore.SIGNAL('clicked()'), self.SVMToolOptim)
+        
+        QtCore.QObject.connect(self.ui.trainSVMBut, QtCore.SIGNAL('clicked()'), self.SVMToolTrain)
+        
+        QtCore.QObject.connect(self.ui.generateROCBut, QtCore.SIGNAL('clicked()'), self.generateROC)
     
     def isReturnCodeOk(self, ret):
         if ret != 0:
@@ -144,20 +260,22 @@ class TrainingWindow(QtGui.QDialog):
     
     def printAllStandardOutput(self):
         print '%s\n'%self.programname
-        print self.dicProgram[self.programname].readAllStandardOutput()
+        for program in self.dicProgram[self.programname]:
+            print program.readAllStandardOutput()
     
     def printAllStandardError(self):
         print '%s\n'%self.programname
-        print self.dicProgram[self.programname].readAllStandardError()
+        for program in self.dicProgram[self.programname]:
+            program.readAllStandardError()
     
     def filterAssist1(self):
         TSName = self.ui.loadTS1LineEdit.text()
         
         # Same name of self.dicProgram
         self.programname = 'paramchooser lowpass'
-        self.filterAssist1Program = QtCore.QProcess()
         self.filterAssist1Program.start('./../paramchooser/paramchooser', ['lowpass', TSName])
         
+        self.cancelled = False
         def filterAssist1Finish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 out = self.filterAssist1Program.readAllStandardOutput()
@@ -171,7 +289,6 @@ class TrainingWindow(QtGui.QDialog):
                 self.ui.taps1LineEdit.setText(numtaps)
                 self.ui.cutoff1LineEdit.setText(cutoff)
             else:
-                self.cancelled = False
                 return None
         
         QtCore.QObject.connect(self.filterAssist1Program, QtCore.SIGNAL('finished(int)'), filterAssist1Finish)
@@ -181,9 +298,9 @@ class TrainingWindow(QtGui.QDialog):
        
         # Same name of self.dicProgram
         self.programname = 'paramchooser lowpass'
-        self.filterAssist2Program = QtCore.QProcess()
         self.filterAssist2Program.start('./../paramchooser/paramchooser', ['lowpass', TSName])
         
+        self.cancelled = False
         def filterAssist2Finish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 out = self.filterAssist2Program.readAllStandardOutput()
@@ -197,7 +314,6 @@ class TrainingWindow(QtGui.QDialog):
                 self.ui.taps2LineEdit.setText(numtaps)
                 self.ui.cutoff2LineEdit.setText(cutoff)
             else:
-                self.cancelled = False
                 return None
         
         QtCore.QObject.connect(self.filterAssist2Program, QtCore.SIGNAL('finished(int)'), filterAssist2Finish)
@@ -209,9 +325,9 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'paramchooser threshold'
-        self.thresholdAssist1Program = QtCore.QProcess()
         self.thresholdAssist1Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
         
+        self.cancelled = False
         def thresholdAssist1Finish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 out = self.thresholdAssist1Program.readAllStandardOutput()
@@ -222,7 +338,6 @@ class TrainingWindow(QtGui.QDialog):
                 threshold = out.split('threshold = ')[1].split('\n')[0]
                 self.ui.thresholdLevel1LineEdit.setText(threshold)
             else:
-                self.cancelled = False
                 return None
         
         QtCore.QObject.connect(self.thresholdAssist1Program, QtCore.SIGNAL('finished(int)'), thresholdAssist1Finish)
@@ -235,9 +350,9 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'paramchooser threshold'
-        self.thresholdAssist2Program = QtCore.QProcess()
         self.thresholdAssist2Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
         
+        self.cancelled = False
         def thresholdAssist2Finish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 out = self.thresholdAssist2Program.readAllStandardOutput()
@@ -248,7 +363,6 @@ class TrainingWindow(QtGui.QDialog):
                 threshold = out.split('threshold = ')[1].split('\n')[0]
                 self.ui.thresholdLevel2LineEdit.setText(threshold)
             else:
-                self.cancelled = False
                 return None
         
         QtCore.QObject.connect(self.thresholdAssist2Program, QtCore.SIGNAL('finished(int)'), thresholdAssist2Finish)
@@ -259,17 +373,16 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'winview'
-        self.verifySpikes1Program = QtCore.QProcess()
         if TSName != '':
             self.verifySpikes1Program.start('./../winview/winview', [spikesName, TSName])
         else:
             self.verifySpikes1Program.start('./../winview/winview', [spikesName])
         
+        self.cancelled = False
         def verifySpikes1Finish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 pass
             else:
-                self.cancelled = False
                 return None
             
         QtCore.QObject.connect(self.verifySpikes1Program, QtCore.SIGNAL('finished(int)'), verifySpikes1Finish)
@@ -280,17 +393,16 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'winview'
-        self.verifySpikes2Program = QtCore.QProcess()
         if TSName != '':
             self.verifySpikes2Program.start('./../winview/winview', [spikesName, TSName])
         else:
             self.verifySpikes2Program.start('./../winview/winview', [spikesName])
         
+        self.cancelled = False
         def verifySpikes2Finish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 pass
             else:
-                self.cancelled = False
                 return None
             
         QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int)'), verifySpikes2Finish)
@@ -310,7 +422,6 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'spikes Fish 1'
-        self.detectSpikes1Program = QtCore.QProcess()
         self.detectSpikes1Program.start('./../spikes/spikes', \
                            ['--fixedwin', \
                             '--saturation=%s,%s'%(lowSat,highSat), \
@@ -321,13 +432,13 @@ class TrainingWindow(QtGui.QDialog):
                             TSName, \
                             saveSpikes])
         
+        self.cancelled = False
         def detectSpikes1Finish(ret):
             self.app.restoreOverrideCursor()
             dialog.hide()
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 self.ui.loadSpikes1LineEdit.setText(saveSpikes)
             else:
-                self.cancelled = False
                 return None
             
         QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('finished(int)'), detectSpikes1Finish)
@@ -350,7 +461,6 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'spikes Fish 2'
-        self.detectSpikes2Program = QtCore.QProcess()
         self.detectSpikes2Program.start('./../spikes/spikes', \
                            ['--fixedwin', \
                             '--saturation=%s,%s'%(lowSat,highSat), \
@@ -361,13 +471,13 @@ class TrainingWindow(QtGui.QDialog):
                             TSName, \
                             saveSpikes])
         
+        self.cancelled = False
         def detectSpikes2Finish(ret):
             self.app.restoreOverrideCursor()
             dialog.hide()
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 self.ui.loadSpikes2LineEdit.setText(saveSpikes)
             else:
-                self.cancelled = False
                 return None
             
         QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('finished(int)'), detectSpikes2Finish)
@@ -389,7 +499,7 @@ class TrainingWindow(QtGui.QDialog):
         self.dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
-        # Will call the other functions sequentally using listeners
+        # Will call the other functions sequentially using listeners
         self.featuresCompute() 
         
     def featuresCompute(self):
@@ -398,30 +508,38 @@ class TrainingWindow(QtGui.QDialog):
         # Same name of self.dicProgram
         self.programname = 'features compute'
         
-        self.finish = False
+        self.finish1 = False
+        self.finish2 = False
         
-        self.featuresCompute1Program = QtCore.QProcess()
         self.featuresCompute1Program.start('./../features/features', \
                            ['compute', \
                             self.spikesName1, \
                             self.unfilteredFeaturesName1])
         
-        self.featuresCompute2Program = QtCore.QProcess()
         self.featuresCompute2Program.start('./../features/features', \
                            ['compute', \
                             self.spikesName2, \
                             self.unfilteredFeaturesName2])
         
+        self.cancelled = False
         def featuresComputeFinish(ret):
+            sender = self.sender()
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
-                if self.finish == False:
-                    self.finish = True
-                else:
-                    self.finish = False
+                if sender == self.featuresCompute1Program:
+                    self.finish1 = True
+                elif sender == self.featuresCompute2Program:
+                    self.finish2 = True
+                if self.finish1 == True and self.finish2 == True:
+                    self.finish1 = False
+                    self.finish2 = False
                     self.featuresRescalePrepare()
             else:
-                self.cancelled = False
-                self.finish = False
+                self.finish1 = False
+                self.finish2 = False
+                if os.path.isfile(self.unfilteredFeaturesName1):
+                    os.remove(self.unfilteredFeaturesName1)
+                if os.path.isfile(self.unfilteredFeaturesName2):
+                    os.remove(self.unfilteredFeaturesName2)
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
@@ -438,7 +556,6 @@ class TrainingWindow(QtGui.QDialog):
         # Same name of self.dicProgram
         self.programname = 'features rescale prepare'
         
-        self.featuresRescalePrepareProgram = QtCore.QProcess()
         self.featuresRescalePrepareProgram.start('./../features/features', \
                            ['rescale', \
                             'prepare', \
@@ -446,11 +563,15 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName1, \
                             self.unfilteredFeaturesName2])
         
+        self.cancelled = False
         def featuresRescalePrepareFinish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 self.featuresRescaleApply()
             else:
-                self.cancelled = False
+                if os.path.isfile(self.unfilteredFeaturesName1):
+                    os.remove(self.unfilteredFeaturesName1)
+                if os.path.isfile(self.unfilteredFeaturesName2):
+                    os.remove(self.unfilteredFeaturesName2)
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
                 
@@ -464,7 +585,6 @@ class TrainingWindow(QtGui.QDialog):
         # Same name of self.dicProgram
         self.programname = 'features rescale apply'
         
-        self.featuresRescaleApplyProgram = QtCore.QProcess()
         self.featuresRescaleApplyProgram.start('./../features/features', \
                            ['rescale', \
                             'apply', \
@@ -472,11 +592,15 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName1, \
                             self.unfilteredFeaturesName2])
         
+        self.cancelled = False
         def featuresRescaleApplyFinish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 self.featuresFilterPrepare()
             else:
-                self.cancelled = False
+                if os.path.isfile(self.unfilteredFeaturesName1):
+                    os.remove(self.unfilteredFeaturesName1)
+                if os.path.isfile(self.unfilteredFeaturesName2):
+                    os.remove(self.unfilteredFeaturesName2)
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
@@ -490,7 +614,6 @@ class TrainingWindow(QtGui.QDialog):
         # Same name of self.dicProgram
         self.programname = 'features filter prepare'
         
-        self.featuresFilterPrepareProgram = QtCore.QProcess()
         self.featuresFilterPrepareProgram.start('./../features/features', \
                            ['filter', \
                             'prepare', \
@@ -499,11 +622,15 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName1, \
                             self.unfilteredFeaturesName2])
         
+        self.cancelled = False
         def featuresFilterPrepareFinish(ret):
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
                 self.featuresFilterApply()
             else:
-                self.cancelled = False
+                if os.path.isfile(self.unfilteredFeaturesName1):
+                    os.remove(self.unfilteredFeaturesName1)
+                if os.path.isfile(self.unfilteredFeaturesName2):
+                    os.remove(self.unfilteredFeaturesName2)
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
                 
@@ -518,9 +645,9 @@ class TrainingWindow(QtGui.QDialog):
         # Same name of self.dicProgram
         self.programname = 'features filter apply'
         
-        self.finish = False
+        self.finish1 = False
+        self.finish2 = False
         
-        self.featuresFilterApply1Program = QtCore.QProcess()
         self.featuresFilterApply1Program.start('./../features/features', \
                            ['filter', \
                             'apply', \
@@ -528,7 +655,6 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName1, \
                             self.featuresName1])
         
-        self.featuresFilterApply2Program = QtCore.QProcess()
         self.featuresFilterApply2Program.start('./../features/features', \
                            ['filter', \
                             'apply', \
@@ -536,16 +662,25 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName2, \
                             self.featuresName2])
         
+        self.cancelled = False
         def featuresFilterApplyFinish(ret):
+            sender = self.sender()
             if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
-                if self.finish == False:
-                    self.finish = True
-                else:
-                    self.finish = False
+                if sender == self.featuresFilterApply1Program:
+                    self.finish1 = True
+                elif sender == self.featuresFilterApply2Program:
+                    self.finish2 = True
+                if self.finish1 == True and self.finish2 == True:
+                    self.finish1 = False
+                    self.finish2 = False
                     self.featuresFinish()
             else:
-                self.cancelled = False
-                self.finish = False
+                self.finish1 = False
+                self.finish2 = False
+                if os.path.isfile(self.unfilteredFeaturesName1):
+                    os.remove(self.unfilteredFeaturesName1)
+                if os.path.isfile(self.unfilteredFeaturesName2):
+                    os.remove(self.unfilteredFeaturesName2)
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
@@ -560,8 +695,10 @@ class TrainingWindow(QtGui.QDialog):
         print 'end features'
         self.ui.loadFeatures1LineEdit.setText(self.featuresName1)
         self.ui.loadFeatures2LineEdit.setText(self.featuresName2)
-        os.remove(self.unfilteredFeaturesName1)
-        os.remove(self.unfilteredFeaturesName2)
+        if os.path.isfile(self.unfilteredFeaturesName1):
+            os.remove(self.unfilteredFeaturesName1)
+        if os.path.isfile(self.unfilteredFeaturesName2):
+            os.remove(self.unfilteredFeaturesName2)
         self.app.restoreOverrideCursor()
         self.dialog.hide()
     
@@ -602,13 +739,11 @@ class TrainingWindow(QtGui.QDialog):
         # by the Garbage Collector
         if os.path.isfile(featuresName):
             if field == self.ui.loadFeatures1LineEdit:
-                self.sliceInfo1Program = QtCore.QProcess()
                 self.sliceInfo1Program.start('./../slice/slice', \
                                              ['info', \
                                               featuresName])
                 QtCore.QObject.connect(self.sliceInfo1Program, QtCore.SIGNAL('finished(int)'), fillInfoLabel1)
             else:
-                self.sliceInfo2Program = QtCore.QProcess()
                 self.sliceInfo2Program.start('./../slice/slice', \
                                              ['info', \
                                               featuresName])
@@ -623,16 +758,15 @@ class TrainingWindow(QtGui.QDialog):
         probTest = float(self.ui.testingProbabilityFish1LineEdit.text())
         saveTest = self.ui.testingSaveFish1LineEdit.text()
         
-        if (0 <= probTrain <= 1) and \
-           (0 <= probCross <= 1) and \
-           (0 <= probTest <= 1) and \
-           (0 <= probTrain + probCross + probTest <= 1):
+        if (0 < probTrain < 1.0) and \
+           (0 < probCross < 1.0) and \
+           (0 < probTest < 1.0) and \
+           (0 <= probTrain + probCross + probTest <= 1.0):
             print 'slice random'
             self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
             
-            self.programName = 'slice random'
+            self.programname = 'slice random'
             
-            self.sliceRandom1Program = QtCore.QProcess()
             self.sliceRandom1Program.start('./../slice/slice', \
                                            ['random', \
                                             featuresName, \
@@ -651,7 +785,7 @@ class TrainingWindow(QtGui.QDialog):
             QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
             QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         else:
-            QtGui.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities and their sum must be on the interval [0,1]', QtGui.QMessageBox.Ok)
+            QtGui.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities must be on the interval (0,1), and their sum on the interval [0,1]', QtGui.QMessageBox.Ok)
     
     def sliceRandom2(self):
         featuresName = self.ui.loadFeatures2LineEdit.text()
@@ -669,9 +803,8 @@ class TrainingWindow(QtGui.QDialog):
             print 'slice random'
             self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
             
-            self.programName = 'slice random'
+            self.programname = 'slice random'
             
-            self.sliceRandom2Program = QtCore.QProcess()
             self.sliceRandom2Program.start('./../slice/slice', \
                                            ['random', \
                                             featuresName, \
@@ -708,7 +841,7 @@ class TrainingWindow(QtGui.QDialog):
         if self.fieldsType[field] == 'load':
             filename = QtGui.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
         elif self.fieldsType[field] == 'save':
-            filename = QtGui.QFileDialog.getSaveFileName( self, 'Save file', path, fileFilter )
+            filename = QtGui.QFileDialog.getSaveFileName(self, 'Save file', path, fileFilter )
         if filename != '':
             field.setText(filename)
         else:
@@ -728,22 +861,31 @@ class TrainingWindow(QtGui.QDialog):
         QtGui.QMessageBox.critical(self, "ERROR", text + "Please check your parameters.", QtGui.QMessageBox.Ok )
     
     def cancelApp(self):
+        print 'Cancelled.'
         self.cancelled = True
-        self.filterAssist1Program.terminate()
-        self.filterAssist2Program.terminate()
-        self.thresholdAssist1Program.terminate()
-        self.thresholdAssist2Program.terminate()
-        self.verifySpikes1Program.terminate()
-        self.verifySpikes2Program.terminate()
-        self.detectSpikes1Program.terminate()
-        self.detectSpikes2Program.terminate()
-        self.featuresCompute1Program.terminate()
-        self.featuresCompute2Program.terminate()
-        self.featuresRescalePrepareProgram.terminate()
-        self.featuresRescaleApplyProgram.terminate()
-        self.featuresFilterPrepareProgram.terminate()
-        self.featuresFilterApply1Program.terminate()
-        self.featuresFilterApply2Program.terminate()
+        self.app.restoreOverrideCursor()
+        self.filterAssist1Program.close()
+        self.filterAssist2Program.close()
+        self.thresholdAssist1Program.close()
+        self.thresholdAssist2Program.close()
+        self.verifySpikes1Program.close()
+        self.verifySpikes2Program.close()
+        self.detectSpikes1Program.close()
+        self.detectSpikes2Program.close()
+        self.featuresCompute1Program.close()
+        self.featuresCompute2Program.close()
+        self.featuresRescalePrepareProgram.close()
+        self.featuresRescaleApplyProgram.close()
+        self.featuresFilterPrepareProgram.close()
+        self.featuresFilterApply1Program.close()
+        self.featuresFilterApply2Program.close()
+        self.sliceInfo1Program.close()
+        self.sliceInfo2Program.close()
+        self.sliceRandom1Program.close()
+        self.sliceRandom2Program.close()
+        self.svmtoolOptimProgram.close()
+        self.svmtoolTrainProgram.close()
+        self.svmtoolROCProgram.close()
     
     def defineFieldsType(self):
         self.fieldsType = {self.ui.loadTS1LineEdit: 'load', \
@@ -908,9 +1050,9 @@ class TrainingWindow(QtGui.QDialog):
                 fish = 2
             
             if fish == 1:
-                prob = float(text) / float(self.NWindows1)
+                prob = np.floor(1e6*(float(text) / float(self.NWindows1)))/1e6
             else:
-                prob = float(text) / float(self.NWindows2)
+                prob = np.floor(1e6*(float(text) / float(self.NWindows2)))/1e6
             
             if prob < 0 or prob > 1:
                 NSamplesField.setStyleSheet('QLineEdit { background-color: #ff0000; }')
@@ -966,26 +1108,224 @@ class TrainingWindow(QtGui.QDialog):
                 fish = 2
             
             if fish == 1:
-                trainingNSamples = self.ui.trainingNumberSamplesFish1LineEdit.text()
-                crossNSamples = self.ui.crossNumberSamplesFish1LineEdit.text()
-                totalSamples = self.NWindows1
-                outField = self.ui.testingNumberSamplesFish1LineEdit
+                trainingProb = self.ui.trainingProbabilityFish1LineEdit.text()
+                crossProb = self.ui.crossProbabilityFish1LineEdit.text()
+                outField = self.ui.testingProbabilityFish1LineEdit
             else:
-                trainingNSamples = self.ui.trainingNumberSamplesFish2LineEdit.text()
-                crossNSamples = self.ui.crossNumberSamplesFish2LineEdit.text()
-                totalSamples = self.NWindows2
-                outField = self.ui.testingNumberSamplesFish2LineEdit
+                trainingProb = self.ui.trainingProbabilityFish2LineEdit.text()
+                crossProb = self.ui.crossProbabilityFish2LineEdit.text()
+                outField = self.ui.testingProbabilityFish2LineEdit
             
-            if trainingNSamples == '' or crossNSamples == '' or totalSamples == '':
+            if trainingProb == '' or crossProb == '':
                 outField.setText('')
                 return None
             
-            output = str(int(totalSamples) - (int(trainingNSamples) + int(crossNSamples)))
+            output = str( np.floor(1e6*(1 - (float(trainingProb) + float(crossProb))))/1e6 )
             outField.setText(output)
             
         for field in self.testingDependency:
             QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), updateTesting)
         
+    
+    def defaultSVMValues(self):
+        self.ui.cStartLineEdit.setText(str(defcStart))
+        self.ui.cStopLineEdit.setText(str(defcStop))
+        self.ui.cStepLineEdit.setText(str(defcStep))
+        
+        self.ui.gStartLineEdit.setText(str(defgStart))
+        self.ui.gStopLineEdit.setText(str(defgStop))
+        self.ui.gStepLineEdit.setText(str(defgStep))
+    
+    def SVMValuesWarningWindow(self):
+        field = self.sender()
+        
+        if field.text() == '':
+            QtGui.QMessageBox.critical(self, "WARNING", 'We recommend that you optimize the parameters instead of selecting them directly.\n' + 
+                                       'If you with the select them directly, do it at your own risk.', QtGui.QMessageBox.Ok)
+    
+    def SVMToolOptim(self):
+        train1Name = self.ui.trainingLoadFish1LineEdit.text()
+        train2Name = self.ui.trainingLoadFish2LineEdit.text()
+        cross1Name = self.ui.crossLoadFish1LineEdit.text()
+        cross2Name = self.ui.crossLoadFish2LineEdit.text()
+        
+        cStart = self.ui.cStartLineEdit.text()
+        cStop = self.ui.cStopLineEdit.text()
+        cStep = self.ui.cStepLineEdit.text()
+        
+        gStart = self.ui.gStartLineEdit.text()
+        gStop = self.ui.gStopLineEdit.text()
+        gStep = self.ui.gStepLineEdit.text()
+        
+        if cStart == '' or \
+           cStop == '' or \
+           cStep == '' or \
+           gStart == '' or \
+           gStop == '' or \
+           gStep == '':
+            QtGui.QMessageBox.critical(self, "ERROR", 'Please complete all Start, Stop, Step value to optimize parameters\n(Or click on the default values)', QtGui.QMessageBox.Ok)
+            return None
+        
+        if float(cStop) <= float(cStart) or \
+           float(gStop) <= float(gStart):
+            QtGui.QMessageBox.critical(self, "ERROR", 'cStop and gStop must be greater than cStart and gStart ', QtGui.QMessageBox.Ok)
+            return None
+        
+        if float(cStep) <= 0 or \
+           float(gStep) <= 0:
+            QtGui.QMessageBox.critical(self, "ERROR", 'cStep and gStep must be greater than 0', QtGui.QMessageBox.Ok)
+            return None
+        
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        self.svmOutput = ''
+        
+        # Same name of self.dicProgram
+        self.programname = 'svmtool optim'
+        self.svmtoolOptimProgram.start('./../svmtool/svmtool', \
+                                       ['optim', \
+                                        '-c %s,%s,%s'%(cStart,cStop,cStep), \
+                                        '-g %s,%s,%s'%(gStart,gStop,gStep), \
+                                        train1Name, \
+                                        train2Name, \
+                                        cross1Name, \
+                                        cross2Name])
+        
+        def getOuput():
+            stdout = self.svmtoolOptimProgram.readAllStandardOutput()
+            self.svmOutput = self.svmOutput + stdout
+            if stdout != '':
+                print 'stdout:\t%s'%str(stdout).strip()
+            stderr = self.svmtoolOptimProgram.readAllStandardError()
+            self.svmOutput = self.svmOutput + stderr
+            if stderr != '':
+                print 'stderr:\t%s'%str(stderr).strip()
+        
+        self.cancelled = False
+        def svmtoolOptimFinish(ret):
+            self.app.restoreOverrideCursor()
+            dialog.hide()
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                
+                stdout = self.svmtoolOptimProgram.readAllStandardOutput()
+                self.svmOutput = self.svmOutput + stdout
+                stderr = self.svmtoolOptimProgram.readAllStandardError()
+                self.svmOutput = self.svmOutput + stderr
+                
+                parse = re.search('(.*)Best: c=(.*), g=(.*)\n(.*)', self.svmOutput)
+                self.ui.cValueLineEdit.setText(str(parse.group(2)))
+                self.ui.gValueLineEdit.setText(str(parse.group(3)))
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOuput)
+        QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardError()'), getOuput)
+        QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('finished(int)'), svmtoolOptimFinish)
+        
+    def SVMToolTrain(self):
+        SVMModelName = self.ui.saveSVMLineEdit.text()
+        cValue = self.ui.cValueLineEdit.text()
+        gValue = self.ui.gValueLineEdit.text()
+        train1Name = self.ui.trainingLoadFish1LineEdit.text()
+        train2Name = self.ui.trainingLoadFish2LineEdit.text()
+        
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        # Same name of self.dicProgram
+        self.programname = 'svmtool train'
+        self.svmtoolTrainProgram.start('./../svmtool/svmtool', \
+                                       ['train', \
+                                        SVMModelName, \
+                                        cValue, \
+                                        gValue, \
+                                        train1Name, \
+                                        train2Name])
+        
+        self.cancelled = False
+        def SVMToolTrainFinish(ret):
+            self.app.restoreOverrideCursor()
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                self.ui.loadSVMLineEdit.setText(self.ui.saveSVMLineEdit.text())
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('finished(int)'), SVMToolTrainFinish)
+        QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardOutput()'),self.printAllStandardOutput)
+        QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardError()'),self.printAllStandardError)
+    
+    def generateROC(self):
+        self.svmModelName = self.ui.loadSVMLineEdit.text()
+        self.testingName1 = self.ui.testingLoadFish1LineEdit.text()
+        self.testingName2 = self.ui.testingLoadFish2LineEdit.text()
+        
+        self.dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        # Will call the other functions sequentially using listeners
+        self.SVMToolROC()
+    
+    def SVMToolROC(self):
+        print 'svmtool roc'
+        
+        self.svmOutput = ''
+        self.FalsePositive = []
+        self.TruePositive = []
+        
+        # Same name of self.dicProgram
+        self.programname = 'svmtool roc'
+        
+        self.svmtoolROCProgram.start('./../svmtool/svmtool', \
+                                       ['roc', \
+                                       self.svmModelName, \
+                                       self.testingName1, \
+                                       self.testingName2])
+        
+        def getOutput():
+            stdout = self.svmtoolROCProgram.readAllStandardOutput()
+            self.svmOutput = self.svmOutput + stdout
+            if stdout != '':
+                print 'stdout:\t%s'%str(stdout).strip()
+            stderr = self.svmtoolROCProgram.readAllStandardError()
+            self.svmOutput = self.svmOutput + stderr
+            if stderr != '':
+                print 'stderr:\t%s'%str(stderr).strip()
+        
+        self.cancelled = False
+        def svmtoolROCFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                stdout = self.svmtoolROCProgram.readAllStandardOutput()
+                self.svmOutput = self.svmOutput + stdout
+                stderr = self.svmtoolROCProgram.readAllStandardError()
+                self.svmOutput = self.svmOutput + stderr
+                
+                ROCList = self.svmOutput.split('\n')
+                Tam = len(ROCList)
+                self.FalsePositive = np.zeros(Tam)
+                self.TruePositive = np.zeros(Tam)
+                
+                # [:-1] to take off empty string from the last '\n'
+                for n,tup in enumerate(ROCList[:-1]):
+                    self.FalsePositive[n] = float(tup.split(' ')[0])
+                    self.TruePositive[n] = float(tup.split(' ')[1])
+                
+                self.plotROC()
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOutput)
+        QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardError()'), getOutput)
+        QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('finished(int)'), svmtoolROCFinish)
+    
+    def plotROC(self):
+        self.plotData.set_xdata(self.FalsePositive)
+        self.plotData.set_ydata(self.TruePositive)
+        self.ax.axis([0., 1., 0., 1.])
+        self.ax.grid()
+        self.fig.canvas.draw()
+        
+        self.dialog.hide()
+        self.app.restoreOverrideCursor()
     
     def connectUnlockFields(self):
         
@@ -1210,7 +1550,7 @@ class TrainingWindow(QtGui.QDialog):
                  self.ui.crossLoadFish2LineEdit, \
                  
                  ), \
-                (self.ui.defaultValuesBut, \
+                (self.ui.defaultSVMValuesBut, \
                  self.ui.cStartLineEdit, \
                  self.ui.cStepLineEdit, \
                  self.ui.cStopLineEdit, \
@@ -1219,6 +1559,7 @@ class TrainingWindow(QtGui.QDialog):
                  self.ui.gStepLineEdit, \
                  self.ui.gStopLineEdit, \
                  self.ui.gValueLineEdit, \
+                 self.ui.optimizeSVMBut, \
                 ) \
             ), \
         )
