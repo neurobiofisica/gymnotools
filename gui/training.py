@@ -144,19 +144,19 @@ class TrainingWindow(QtGui.QDialog):
         self.finish1 = False
         self.finish2 = False
 
-        self.ParametersLayout = [self.ui.step1ParametersLayout, \
+        self.ParametersLayout = (self.ui.step1ParametersLayout, \
                 self.ui.step2ParametersLayout, \
                 self.ui.step3ParametersLayout, \
                 self.ui.tabWidget, \
                 self.ui.step5ParametersLayout, \
-                ]
+                )
 
-        self.titleLabels = [self.ui.step1TitleLabel, \
+        self.titleLabels = (self.ui.step1TitleLabel, \
                 self.ui.step2TitleLabel, \
                 self.ui.step3TitleLabel, \
                 self.ui.step4TitleLabel, \
                 self.ui.step5TitleLabel, \
-                ]
+                )
 
         self.defineFieldsType()
 
@@ -189,7 +189,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.cValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
         QtCore.QObject.connect(self.ui.gValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
         
-        self.connectFileFields(self.fileFieldHandler)
+        self.connectFileFields()
         self.connectUnlockFields()
         self.connectButtons()
         
@@ -200,7 +200,7 @@ class TrainingWindow(QtGui.QDialog):
         self.initialClickState()
     
     def saveParameters(self):
-        saveFilename = QtGui.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.parameters) (*.parameters);;All files (*.*) (*.*)')
+        saveFilename = QtGui.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.trainparameters) (*.trainparameters);;All files (*.*) (*.*)')
         saveFile = open(saveFilename, 'w')
         for element in self.lineFieldsList:
             if isinstance(element, QtGui.QLineEdit):
@@ -208,7 +208,7 @@ class TrainingWindow(QtGui.QDialog):
         saveFile.close()
 
     def loadParameters(self):
-        loadFilename = QtGui.QFileDialog.getOpenFileName(self, 'Load Parameters File', '', 'Parameters File (*.parameters) (*.parameters);;All files (*.*) (*.*)')
+        loadFilename = QtGui.QFileDialog.getOpenFileName(self, 'Load Parameters File', '', 'Parameters File (*.trainparameters) (*.trainparameters);;All files (*.*) (*.*)')
         loadFile = open(loadFilename, 'r')
         for line in loadFile.xreadlines():
             objectName, Value = line.split('\t')
@@ -1612,6 +1612,7 @@ class TrainingWindow(QtGui.QDialog):
             ), \
         )
         
+        # Connects each field to its unlocker (dependencies and unlockers)
         self.Fields = {self.ui.loadTS1LineEdit: self.loadTSFish1Unlocker, \
                        
                        self.ui.loadTS2LineEdit: self.loadTSFish2Unlocker, \
@@ -1693,7 +1694,7 @@ class TrainingWindow(QtGui.QDialog):
         for field in self.Fields.keys():
             QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
     
-    def connectFileFields(self, handler):
+    def connectFileFields(self):
         
         FileFields = [self.ui.loadTS1LineEdit, \
                            self.ui.loadTS2LineEdit, \
@@ -1770,7 +1771,7 @@ class TrainingWindow(QtGui.QDialog):
         
     
     def initialClickState(self):
-        # Manually locks tesing line fields
+        # Manually locks testing line fields
         self.switchLockState(
             (self.ui.testingNumberSamplesFish1LineEdit, \
             self.ui.testingNumberSamplesFish2LineEdit, \
@@ -1778,6 +1779,7 @@ class TrainingWindow(QtGui.QDialog):
             self.ui.testingProbabilityFish2LineEdit
             ), \
             False)
+        
         for tup in self.Fields.values():
             for locker,locked in tup:
                 self.switchLockState(locked, False)
