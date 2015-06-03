@@ -38,6 +38,7 @@ class DiscriminateWindow(QtGui.QDialog):
                                self.ui.saveSinglefishLineEdit, \
                                self.ui.saveProbLineEdit, \
                                self.ui.minWinLineEdit, \
+                               self.ui.onlyAboveLineEdit, \
                                self.ui.loadSinglefishLineEdit, \
                                self.ui.loadProbLineEdit, \
                                self.ui.saveDBLineEdit, \
@@ -241,6 +242,7 @@ class DiscriminateWindow(QtGui.QDialog):
     def applySVM(self):
         print 'singlefish'
         minWin = self.ui.minWinLineEdit.text()
+        onlyAbove = self.ui.onlyAboveLineEdit.text()
         winLen1 = self.ui.loadWinlen1LineEdit.text()
         winLen2 = self.ui.loadWinlen2LineEdit.text()
         lowSaturation = self.ui.lowSaturationLineEdit.text()
@@ -263,6 +265,7 @@ class DiscriminateWindow(QtGui.QDialog):
         self.applySVMProgram.start('./../singlefish/singlefish', \
                                    ['--maxsize=%d'%winlen, \
                                     '--minwins=%s'%minWin, \
+                                    '--onlyabove=%s'%onlyAbove, \
                                     '--saturation=%s,%s'%(lowSaturation,highSaturation), \
                                     TSName, \
                                     spikesName, \
@@ -532,6 +535,7 @@ class DiscriminateWindow(QtGui.QDialog):
                            self.ui.saveSinglefishLineEdit: 'save', \
                            self.ui.saveProbLineEdit: 'save', \
                            self.ui.minWinLineEdit: 'int', \
+                           self.ui.onlyAboveLineEdit: 'float', \
                            
                            self.ui.loadSinglefishLineEdit: 'load', \
                            self.ui.loadProbLineEdit: 'load', \
@@ -676,6 +680,7 @@ class DiscriminateWindow(QtGui.QDialog):
                 (self.ui.saveSinglefishLineEdit, \
                  self.ui.saveProbLineEdit, \
                  self.ui.minWinLineEdit, \
+                 self.ui.onlyAboveLineEdit, \
                 )
             ), \
         )
@@ -688,6 +693,7 @@ class DiscriminateWindow(QtGui.QDialog):
                  self.ui.saveSinglefishLineEdit, \
                  self.ui.saveProbLineEdit, \
                  self.ui.minWinLineEdit, \
+                 self.ui.onlyAboveLineEdit, \
                 ), \
                 (self.ui.applySVMBut, \
                 )
@@ -762,6 +768,7 @@ class DiscriminateWindow(QtGui.QDialog):
                        self.ui.saveSinglefishLineEdit: self.SVMSaveParametersUnlocker, \
                        self.ui.saveProbLineEdit: self.SVMSaveParametersUnlocker, \
                        self.ui.minWinLineEdit: self.SVMSaveParametersUnlocker, \
+                       self.ui.onlyAboveLineEdit: self.SVMSaveParametersUnlocker, \
                        self.ui.loadSinglefishLineEdit: self.loadContinuityParametersUnlocker, \
                        self.ui.loadProbLineEdit: self.loadContinuityParametersUnlocker, \
                        self.ui.saveDBLineEdit: self.saveDBUnlocker, \

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'discriminate_interface.ui'
 #
-# Created: Wed Jun  3 15:46:39 2015
+# Created: Wed Jun  3 18:15:09 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -63,6 +63,11 @@ class Ui_discriminateWindow(object):
         self.step2Layout.addWidget(self.step2TitleLabel)
         self.step2ParametersLayout = QtGui.QGridLayout()
         self.step2ParametersLayout.setObjectName(_fromUtf8("step2ParametersLayout"))
+        self.saveSinglefishLineEdit = ClickQLineEdit(self.scrollAreaWidgetContents)
+        self.saveSinglefishLineEdit.setObjectName(_fromUtf8("saveSinglefishLineEdit"))
+        self.step2ParametersLayout.addWidget(self.saveSinglefishLineEdit, 8, 1, 1, 2)
+        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.step2ParametersLayout.addItem(spacerItem, 7, 0, 1, 3)
         self.loadSpikesLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
         self.loadSpikesLabel.setObjectName(_fromUtf8("loadSpikesLabel"))
         self.step2ParametersLayout.addWidget(self.loadSpikesLabel, 0, 0, 1, 1)
@@ -78,8 +83,6 @@ class Ui_discriminateWindow(object):
         self.saveProbLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
         self.saveProbLabel.setObjectName(_fromUtf8("saveProbLabel"))
         self.step2ParametersLayout.addWidget(self.saveProbLabel, 9, 0, 1, 1)
-        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.step2ParametersLayout.addItem(spacerItem, 7, 0, 1, 3)
         self.loadRescaleLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
         self.loadRescaleLabel.setObjectName(_fromUtf8("loadRescaleLabel"))
         self.step2ParametersLayout.addWidget(self.loadRescaleLabel, 5, 0, 1, 1)
@@ -105,9 +108,6 @@ class Ui_discriminateWindow(object):
         self.loadSVMModelLineEdit.setText(_fromUtf8(""))
         self.loadSVMModelLineEdit.setObjectName(_fromUtf8("loadSVMModelLineEdit"))
         self.step2ParametersLayout.addWidget(self.loadSVMModelLineEdit, 6, 1, 1, 2)
-        self.saveSinglefishLineEdit = ClickQLineEdit(self.scrollAreaWidgetContents)
-        self.saveSinglefishLineEdit.setObjectName(_fromUtf8("saveSinglefishLineEdit"))
-        self.step2ParametersLayout.addWidget(self.saveSinglefishLineEdit, 8, 1, 1, 2)
         self.saveProbLineEdit = ClickQLineEdit(self.scrollAreaWidgetContents)
         self.saveProbLineEdit.setObjectName(_fromUtf8("saveProbLineEdit"))
         self.step2ParametersLayout.addWidget(self.saveProbLineEdit, 9, 1, 1, 2)
@@ -115,7 +115,7 @@ class Ui_discriminateWindow(object):
         self.step2ParametersLayout.addItem(spacerItem1, 2, 0, 1, 3)
         self.applySVMBut = QtGui.QPushButton(self.scrollAreaWidgetContents)
         self.applySVMBut.setObjectName(_fromUtf8("applySVMBut"))
-        self.step2ParametersLayout.addWidget(self.applySVMBut, 11, 0, 1, 3)
+        self.step2ParametersLayout.addWidget(self.applySVMBut, 12, 0, 1, 3)
         self.loadSpikesLineEdit = ClickQLineEdit(self.scrollAreaWidgetContents)
         self.loadSpikesLineEdit.setObjectName(_fromUtf8("loadSpikesLineEdit"))
         self.step2ParametersLayout.addWidget(self.loadSpikesLineEdit, 0, 1, 1, 2)
@@ -125,6 +125,12 @@ class Ui_discriminateWindow(object):
         self.minWinLineEdit = QtGui.QLineEdit(self.scrollAreaWidgetContents)
         self.minWinLineEdit.setObjectName(_fromUtf8("minWinLineEdit"))
         self.step2ParametersLayout.addWidget(self.minWinLineEdit, 10, 1, 1, 2)
+        self.onlyAboveLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
+        self.onlyAboveLabel.setObjectName(_fromUtf8("onlyAboveLabel"))
+        self.step2ParametersLayout.addWidget(self.onlyAboveLabel, 11, 0, 1, 1)
+        self.onlyAboveLineEdit = QtGui.QLineEdit(self.scrollAreaWidgetContents)
+        self.onlyAboveLineEdit.setObjectName(_fromUtf8("onlyAboveLineEdit"))
+        self.step2ParametersLayout.addWidget(self.onlyAboveLineEdit, 11, 1, 1, 2)
         self.step2Layout.addLayout(self.step2ParametersLayout)
         self.gridLayout_2.addLayout(self.step2Layout, 3, 2, 1, 1)
         self.step1Layout = QtGui.QVBoxLayout()
@@ -402,6 +408,7 @@ class Ui_discriminateWindow(object):
         self.applySVMBut.setText(_translate("discriminateWindow", "Apply SVM", None))
         self.minWinLabel.setText(_translate("discriminateWindow", "Minimum windows needed to analyze with SVM:", None))
         self.minWinLineEdit.setText(_translate("discriminateWindow", "2", None))
+        self.onlyAboveLabel.setText(_translate("discriminateWindow", "Only apply on spikes above (V) (same used for training):", None))
         self.step1TitleLabel.setText(_translate("discriminateWindow", "1. Select parameters and detect spikes >", None))
         self.cutoffLabel.setText(_translate("discriminateWindow", "Cutoff frequency (cycles/sample):", None))
         self.tapsLabel.setText(_translate("discriminateWindow", "Number of taps:", None))
