@@ -39,7 +39,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>1168</width>
+        <width>1272</width>
         <height>1112</height>
        </rect>
       </property>
@@ -328,49 +328,51 @@
           </widget>
          </item>
          <item>
-          <layout class="QGridLayout" name="step2ParametersLayout" rowstretch="0,0,0,0,0,0,0,0,0,0" columnstretch="4,0,4">
+          <layout class="QGridLayout" name="step2ParametersLayout" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="4,0,4">
            <property name="horizontalSpacing">
             <number>6</number>
            </property>
            <property name="verticalSpacing">
             <number>0</number>
            </property>
-           <item row="2" column="2">
-            <widget class="ClickQLineEdit" name="saveSpikes2LineEdit"/>
+           <item row="1" column="0" colspan="3">
+            <widget class="QLabel" name="saveSpikesLabel">
+             <property name="text">
+              <string>Save detected spikes as: </string>
+             </property>
+            </widget>
            </item>
-           <item row="9" column="0" colspan="2">
-            <widget class="QPushButton" name="verifySpikes1But">
+           <item row="4" column="0" colspan="2">
+            <widget class="ClickQLineEdit" name="saveWindowLengths1LineEdit"/>
+           </item>
+           <item row="3" column="0" colspan="3">
+            <widget class="QLabel" name="saveWindowLengthsLabel">
+             <property name="text">
+              <string>Save window lengths as:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="11" column="2">
+            <widget class="QPushButton" name="verifySpikes2But">
              <property name="text">
               <string>Verify detection</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="0" colspan="2">
-            <widget class="QPushButton" name="detectSpikes1But">
+           <item row="9" column="0" colspan="3">
+            <widget class="QLabel" name="loadSpikesLabel">
              <property name="text">
-              <string>Detect Spikes</string>
+              <string>Load spikes file:</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="0" colspan="2">
-            <widget class="ClickQLineEdit" name="saveSpikes1LineEdit"/>
-           </item>
-           <item row="4" column="0" colspan="2">
-            <widget class="ClickQLineEdit" name="saveWindowLengths1LineEdit"/>
-           </item>
-           <item row="8" column="0" colspan="2">
-            <widget class="ClickQLineEdit" name="loadSpikes1LineEdit"/>
-           </item>
-           <item row="8" column="2">
+           <item row="10" column="2">
             <widget class="ClickQLineEdit" name="loadSpikes2LineEdit"/>
            </item>
-           <item row="4" column="2">
-            <widget class="ClickQLineEdit" name="saveWindowLengths2LineEdit"/>
-           </item>
-           <item row="5" column="2">
-            <widget class="QPushButton" name="detectSpikes2But">
+           <item row="5" column="0" colspan="3">
+            <widget class="QLabel" name="onlyAboveLabel">
              <property name="text">
-              <string>Detect Spikes</string>
+              <string>Only detect spikes above (V) (Needed to avoid noise)</string>
              </property>
             </widget>
            </item>
@@ -384,6 +386,29 @@
              </property>
             </widget>
            </item>
+           <item row="4" column="2">
+            <widget class="ClickQLineEdit" name="saveWindowLengths2LineEdit"/>
+           </item>
+           <item row="11" column="0" colspan="2">
+            <widget class="QPushButton" name="verifySpikes1But">
+             <property name="text">
+              <string>Verify detection</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="ClickQLineEdit" name="saveSpikes2LineEdit"/>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <widget class="ClickQLineEdit" name="saveSpikes1LineEdit"/>
+           </item>
+           <item row="7" column="0" colspan="2">
+            <widget class="QPushButton" name="detectSpikes1But">
+             <property name="text">
+              <string>Detect Spikes</string>
+             </property>
+            </widget>
+           </item>
            <item row="0" column="0" colspan="2">
             <widget class="QLabel" name="detectFish1Label">
              <property name="text">
@@ -394,21 +419,7 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="0" colspan="3">
-            <widget class="QLabel" name="saveSpikesLabel">
-             <property name="text">
-              <string>Save detected spikes as: </string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0" colspan="3">
-            <widget class="QLabel" name="saveWindowLengthsLabel">
-             <property name="text">
-              <string>Save window lengths as:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0" colspan="3">
+           <item row="8" column="0" colspan="3">
             <spacer name="step2ParametersSpacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -424,19 +435,21 @@
              </property>
             </spacer>
            </item>
-           <item row="7" column="0" colspan="3">
-            <widget class="QLabel" name="loadSpikesLabel">
+           <item row="7" column="2">
+            <widget class="QPushButton" name="detectSpikes2But">
              <property name="text">
-              <string>Load spikes file:</string>
+              <string>Detect Spikes</string>
              </property>
             </widget>
            </item>
-           <item row="9" column="2">
-            <widget class="QPushButton" name="verifySpikes2But">
-             <property name="text">
-              <string>Verify detection</string>
-             </property>
-            </widget>
+           <item row="10" column="0" colspan="2">
+            <widget class="ClickQLineEdit" name="loadSpikes1LineEdit"/>
+           </item>
+           <item row="6" column="2">
+            <widget class="QLineEdit" name="onlyAbove2LineEdit"/>
+           </item>
+           <item row="6" column="0" colspan="2">
+            <widget class="QLineEdit" name="onlyAbove1LineEdit"/>
            </item>
           </layout>
          </item>
@@ -1145,12 +1158,6 @@
    <header>kpixmapregionselectorwidget.h</header>
   </customwidget>
   <customwidget>
-   <class>ROCWidget</class>
-   <extends>QWidget</extends>
-   <header>ROCAux</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>ClickQLabel</class>
    <extends>QLabel</extends>
    <header>clickAux</header>
@@ -1159,6 +1166,12 @@
    <class>ClickQLineEdit</class>
    <extends>QLineEdit</extends>
    <header>clickAux</header>
+  </customwidget>
+  <customwidget>
+   <class>ROCWidget</class>
+   <extends>QWidget</extends>
+   <header>ROCAux</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>

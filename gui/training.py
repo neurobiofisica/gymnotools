@@ -53,6 +53,8 @@ class TrainingWindow(QtGui.QDialog):
                                self.ui.saveSpikes2LineEdit, \
                                self.ui.saveWindowLengths1LineEdit, \
                                self.ui.saveWindowLengths2LineEdit, \
+                               self.ui.onlyAbove1LineEdit, \
+                               self.ui.onlyAbove2LineEdit, \
                                self.ui.loadSpikes1LineEdit, \
                                self.ui.loadSpikes2LineEdit, \
                                self.ui.saveFeatures1LineEdit, \
@@ -99,7 +101,6 @@ class TrainingWindow(QtGui.QDialog):
         
         # Program objects -> they must be parameters for the GarbageCollector
         # do not clean them
-        # If you insert a new item, it must be inserted on cancelApp method too!
         self.filterAssist1Program = QtCore.QProcess()
         self.filterAssist2Program = QtCore.QProcess()
         self.thresholdAssist1Program = QtCore.QProcess()
@@ -251,8 +252,9 @@ class TrainingWindow(QtGui.QDialog):
     def isReturnCodeOk(self, ret):
         if ret != 0:
             print '\n---\tERROR (%s): %d\t---\n'%(self.programname, ret)
-            print self.dicProgram[self.programname].readAllStandardOutput()
-            print self.printProgramStandardError()
+            for program in self.dicProgram[self.programname]:
+                print program.readAllStandardOutput()
+                print program.readAllStandardError()
             self.raiseParameterError('%s ERROR!\n'%self.programname)
             return False
         else:
@@ -269,6 +271,7 @@ class TrainingWindow(QtGui.QDialog):
             program.readAllStandardError()
     
     def filterAssist1(self):
+        print 'paramchooser lowpass 1'
         TSName = self.ui.loadTS1LineEdit.text()
         
         # Same name of self.dicProgram
@@ -294,6 +297,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.filterAssist1Program, QtCore.SIGNAL('finished(int)'), filterAssist1Finish)
         
     def filterAssist2(self):
+        print 'paramchooser lowpass 2'
         TSName = self.ui.loadTS2LineEdit.text()
        
         # Same name of self.dicProgram
@@ -319,6 +323,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.filterAssist2Program, QtCore.SIGNAL('finished(int)'), filterAssist2Finish)
     
     def thresholdAssist1(self):
+        print 'paramchooser threshold 1'
         TSName = self.ui.loadTS1LineEdit.text()
         taps = self.ui.taps1LineEdit.text()
         cutoff = self.ui.cutoff1LineEdit.text()
@@ -344,6 +349,7 @@ class TrainingWindow(QtGui.QDialog):
         
     
     def thresholdAssist2(self):
+        print 'paramchooser threshold 2'
         TSName = self.ui.loadTS2LineEdit.text()
         taps = self.ui.taps2LineEdit.text()
         cutoff = self.ui.cutoff2LineEdit.text()
@@ -368,6 +374,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.thresholdAssist2Program, QtCore.SIGNAL('finished(int)'), thresholdAssist2Finish)
     
     def verifySpikes1(self):
+        print 'winview 1'
         spikesName = self.ui.loadSpikes1LineEdit.text()
         TSName = self.ui.loadTS1LineEdit.text()
         
@@ -388,6 +395,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.verifySpikes1Program, QtCore.SIGNAL('finished(int)'), verifySpikes1Finish)
         
     def verifySpikes2(self):
+        print 'winview 2'
         spikesName = self.ui.loadSpikes2LineEdit.text()
         TSName = self.ui.loadTS2LineEdit.text()
         
@@ -408,6 +416,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int)'), verifySpikes2Finish)
     
     def detectSpikes1(self):
+        print 'spikes 1'
         TSName = self.ui.loadTS1LineEdit.text()
         lowSat = self.ui.lowSaturation1LineEdit.text()
         highSat = self.ui.highSaturation1LineEdit.text()
@@ -416,6 +425,7 @@ class TrainingWindow(QtGui.QDialog):
         threshold = self.ui.thresholdLevel1LineEdit.text()
         saveSpikes = self.ui.saveSpikes1LineEdit.text()
         saveWindowLengths = self.ui.saveWindowLengths1LineEdit.text()
+        onlyAbove = self.ui.onlyAbove1LineEdit.text()
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -429,6 +439,7 @@ class TrainingWindow(QtGui.QDialog):
                             '--cutoff=%s'%cutoff, \
                             '--detection=%s'%threshold, \
                             '--winlen=%s'%saveWindowLengths, \
+                            '--onlyabove=%s'%onlyAbove, \
                             TSName, \
                             saveSpikes])
         
@@ -447,6 +458,7 @@ class TrainingWindow(QtGui.QDialog):
         
         
     def detectSpikes2(self):
+        print 'spikes 2'
         TSName = self.ui.loadTS2LineEdit.text()
         lowSat = self.ui.lowSaturation2LineEdit.text()
         highSat = self.ui.highSaturation2LineEdit.text()
@@ -455,6 +467,7 @@ class TrainingWindow(QtGui.QDialog):
         threshold = self.ui.thresholdLevel2LineEdit.text()
         saveSpikes = self.ui.saveSpikes2LineEdit.text()
         saveWindowLengths = self.ui.saveWindowLengths2LineEdit.text()
+        onlyAbove = self.ui.onlyAbove2LineEdit.text()
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -468,6 +481,7 @@ class TrainingWindow(QtGui.QDialog):
                             '--cutoff=%s'%cutoff, \
                             '--detection=%s'%threshold, \
                             '--winlen=%s'%saveWindowLengths, \
+                            '--onlyabove=%s'%onlyAbove, \
                             TSName, \
                             saveSpikes])
         
@@ -864,28 +878,9 @@ class TrainingWindow(QtGui.QDialog):
         print 'Cancelled.'
         self.cancelled = True
         self.app.restoreOverrideCursor()
-        self.filterAssist1Program.close()
-        self.filterAssist2Program.close()
-        self.thresholdAssist1Program.close()
-        self.thresholdAssist2Program.close()
-        self.verifySpikes1Program.close()
-        self.verifySpikes2Program.close()
-        self.detectSpikes1Program.close()
-        self.detectSpikes2Program.close()
-        self.featuresCompute1Program.close()
-        self.featuresCompute2Program.close()
-        self.featuresRescalePrepareProgram.close()
-        self.featuresRescaleApplyProgram.close()
-        self.featuresFilterPrepareProgram.close()
-        self.featuresFilterApply1Program.close()
-        self.featuresFilterApply2Program.close()
-        self.sliceInfo1Program.close()
-        self.sliceInfo2Program.close()
-        self.sliceRandom1Program.close()
-        self.sliceRandom2Program.close()
-        self.svmtoolOptimProgram.close()
-        self.svmtoolTrainProgram.close()
-        self.svmtoolROCProgram.close()
+        for l in self.dicProgram.values():
+            for program in l:
+                program.close()
     
     def defineFieldsType(self):
         self.fieldsType = {self.ui.loadTS1LineEdit: 'load', \
@@ -906,9 +901,11 @@ class TrainingWindow(QtGui.QDialog):
                        
                        self.ui.saveSpikes1LineEdit: 'save', \
                        self.ui.saveWindowLengths1LineEdit: 'save', \
+                       self.ui.onlyAbove1LineEdit: 'float', \
                        
                        self.ui.saveSpikes2LineEdit: 'save', \
                        self.ui.saveWindowLengths2LineEdit: 'save', \
+                       self.ui.onlyAbove2LineEdit: 'float', \
                        
                        self.ui.loadSpikes1LineEdit: 'load', \
                        
@@ -1367,6 +1364,7 @@ class TrainingWindow(QtGui.QDialog):
                  ), \
                 (self.ui.saveSpikes1LineEdit, \
                  self.ui.saveWindowLengths1LineEdit, \
+                 self.ui.onlyAbove1LineEdit, \
                 ) \
             ), \
             ( \
@@ -1389,6 +1387,7 @@ class TrainingWindow(QtGui.QDialog):
                  ), \
                 (self.ui.saveSpikes2LineEdit, \
                  self.ui.saveWindowLengths2LineEdit, \
+                 self.ui.onlyAbove2LineEdit, \
                 ) \
             ), \
             ( \
@@ -1405,6 +1404,7 @@ class TrainingWindow(QtGui.QDialog):
             ( \
                 (self.ui.saveSpikes1LineEdit, \
                  self.ui.saveWindowLengths1LineEdit, \
+                 self.ui.onlyAbove1LineEdit, \
                  ), \
                 (self.ui.detectSpikes1But, \
                 ) \
@@ -1415,6 +1415,7 @@ class TrainingWindow(QtGui.QDialog):
             ( \
                 (self.ui.saveSpikes2LineEdit, \
                  self.ui.saveWindowLengths2LineEdit, \
+                 self.ui.onlyAbove2LineEdit, \
                  ), \
                 (self.ui.detectSpikes2But, \
                  ) \
@@ -1631,9 +1632,11 @@ class TrainingWindow(QtGui.QDialog):
                        
                        self.ui.saveSpikes1LineEdit: self.spikeSavefilesFish1Unlocker, \
                        self.ui.saveWindowLengths1LineEdit: self.spikeSavefilesFish1Unlocker, \
+                       self.ui.onlyAbove1LineEdit: self.spikeSavefilesFish1Unlocker, \
                        
                        self.ui.saveSpikes2LineEdit: self.spikeSavefilesFish2Unlocker, \
                        self.ui.saveWindowLengths2LineEdit: self.spikeSavefilesFish2Unlocker, \
+                       self.ui.onlyAbove2LineEdit: self.spikeSavefilesFish2Unlocker, \
                        
                        self.ui.loadSpikes1LineEdit: self.loadSpikesFish1Unlocker, \
                        

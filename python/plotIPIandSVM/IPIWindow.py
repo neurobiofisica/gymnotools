@@ -7,7 +7,10 @@ import random
 import numpy as np
 
 import sys, os
-sys.path.append( os.path.realpath('../') )
+if os.getcwd().split('/')[-1] == 'gui':
+    sys.path.append( os.path.realpath('../python') )
+elif os.getcwd().split('/')[-1] == 'plotIPIandSVM':
+    sys.path.append( os.path.realpath('../') )
 import recogdb
 
 try:

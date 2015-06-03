@@ -1,7 +1,12 @@
 import os, sys
 
+import numpy as np
+
 from PyQt4 import QtCore, QtGui
 from discriminate_interface import Ui_discriminateWindow
+
+sys.path.append( os.path.realpath('../') )
+from python.plotIPIandSVM import plotIPIandSVM
 
 class DiscriminateWindow(QtGui.QDialog):
     def __init__(self, app, parent=None):
@@ -32,6 +37,7 @@ class DiscriminateWindow(QtGui.QDialog):
                                self.ui.loadSVMModelLineEdit, \
                                self.ui.saveSinglefishLineEdit, \
                                self.ui.saveProbLineEdit, \
+                               self.ui.minWinLineEdit, \
                                self.ui.loadSinglefishLineEdit, \
                                self.ui.loadProbLineEdit, \
                                self.ui.saveDBLineEdit, \
@@ -39,6 +45,29 @@ class DiscriminateWindow(QtGui.QDialog):
                                self.ui.saveTimestampsLineEdit, \
                                self.ui.loadTimestampsLineEdit, \
                                )
+        
+        # Program objects -> they must be parameters for the GarbageCollector
+        # do not clean them
+        self.filterAssistProgram = QtCore.QProcess()
+        self.thresholdAssistProgram = QtCore.QProcess()
+        self.verifySpikesProgram = QtCore.QProcess()
+        self.detectSpikesProgram = QtCore.QProcess()
+        self.applySVMProgram = QtCore.QProcess()
+        self.applyContinuityProgram = QtCore.QProcess()
+        self.detectTimestampsProgram = QtCore.QProcess()
+        self.verifyAndCorrectProgram = QtCore.QProcess()
+        
+        self.dicProgram = {'paramchooser lowpass': (self.filterAssistProgram, ), \
+                           'paramchooser threshold': (self.thresholdAssistProgram, ), \
+                           'winview': (self.verifySpikesProgram, ), \
+                           'spikes': (self.detectSpikesProgram, ), \
+                           'singlefish': (self.applySVMProgram, ), \
+                           'recog': (self.applyContinuityProgram, ), \
+                           'detectIPI': (self.detectTimestampsProgram, ), \
+                           'plotIPIandSVM': (self.verifyAndCorrectProgram, ), \
+                           }
+        
+        self.cancelled = False
         
         self.ParametersLayout = (self.ui.step1ParametersLayout, \
                             self.ui.step2ParametersLayout, \
@@ -80,6 +109,358 @@ class DiscriminateWindow(QtGui.QDialog):
     def connectButtons(self):
         QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
         QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
+        
+        QtCore.QObject.connect(self.ui.filterAssistBut, QtCore.SIGNAL('clicked()'), self.filterAssist)
+        QtCore.QObject.connect(self.ui.thresholdAssistBut, QtCore.SIGNAL('clicked()'), self.thresholdAssist)
+        
+        QtCore.QObject.connect(self.ui.detectSpikesBut, QtCore.SIGNAL('clicked()'), self.detectSpikes)
+        QtCore.QObject.connect(self.ui.verifySpikesBut, QtCore.SIGNAL('clicked()'), self.verifySpikes)
+        
+        QtCore.QObject.connect(self.ui.applySVMBut, QtCore.SIGNAL('clicked()'), self.applySVM)
+        
+        QtCore.QObject.connect(self.ui.applyContinuityBut, QtCore.SIGNAL('clicked()'), self.applyContinuity)
+        
+        QtCore.QObject.connect(self.ui.detectTimestampsBut, QtCore.SIGNAL('clicked()'), self.detectTimestamps)
+        
+        QtCore.QObject.connect(self.ui.verifyCorrectTimestampsBut, QtCore.SIGNAL('clicked()'), self.verifyAndCorrect)
+    
+    def filterAssist(self):
+        print 'paramchooser lowpass'
+        TSName = self.ui.loadTimeseriesLineEdit.text()
+        
+        # Same name of self.dicProgram
+        self.programname = 'paramchooser lowpass'
+        self.filterAssistProgram.start('./../paramchooser/paramchooser', \
+                                       ['lowpass', \
+                                        TSName])
+        
+        self.cancelled = False
+        def filterAssistFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                out = self.filterAssistProgram.readAllStandardOutput()
+                out = out + '\n' + self.filterAssistProgram.readAllStandardError()
+                
+                out = str(out)
+                
+                numtaps = out.split('numtaps = ')[1].split('\n')[0]
+                cutoff = out.split('cutoff = ')[1].split('\n')[0]
+                
+                self.ui.tapsLineEdit.setText(numtaps)
+                self.ui.cutoffLineEdit.setText(cutoff)
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.filterAssistProgram, QtCore.SIGNAL('finished(int)'), filterAssistFinish)
+    
+    def thresholdAssist(self):
+        print 'paramchooser threshold'
+        TSName = self.ui.loadTimeseriesLineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        cutoff = self.ui.cutoffLineEdit.text()
+        
+        # Same name of self.dicprogram
+        self.programname = 'paramchooser threshold'
+        self.thresholdAssistProgram.start('./../paramchooser/paramchooser', \
+                                          ['threshold', \
+                                           TSName, \
+                                           taps, \
+                                           cutoff])
+        
+        self.cancelled = False
+        def thresholdAssistFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                out = self.thresholdAssistProgram.readAllStandardOutput()
+                out = out + '\n' + self.thresholdAssistProgram.readAllStandardError()
+                
+                out = str(out)
+                
+                threshold = out.split('threshold = ')[1].split('\n')[0]
+                self.ui.thresholdLevelLineEdit.setText(threshold)
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.thresholdAssistProgram, QtCore.SIGNAL('finished(int)'), thresholdAssistFinish)
+    
+    def detectSpikes(self):
+        print 'spikes'
+        TSName = self.ui.loadTimeseriesLineEdit.text()
+        lowSat = self.ui.lowSaturationLineEdit.text()
+        highSat = self.ui.highSaturationLineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        cutoff = self.ui.cutoffLineEdit.text()
+        threshold = self.ui.thresholdLevelLineEdit.text()
+        saveSpikes = self.ui.saveSpikesLineEdit.text()
+        
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        # Same name of self.dicProgram
+        self.programname = 'spikes'
+        self.detectSpikesProgram.start('./../spikes/spikes', \
+                                       # Saturation will exclude windows -> can only be used on training
+                                       ['--numtaps=%s'%taps, \
+                                        '--cutoff=%s'%cutoff, \
+                                        '--detection=%s'%threshold, \
+                                        TSName, \
+                                        saveSpikes])
+        
+        self.cancelled = False
+        def detectSpikesFinish(ret):
+            self.app.restoreOverrideCursor()
+            dialog.hide()
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                self.ui.loadSpikesLineEdit.setText(saveSpikes)
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('finished(int)'), detectSpikesFinish)
+        QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+    
+    def verifySpikes(self):
+        print 'winview'
+        spikesName = self.ui.loadSpikesLineEdit.text()
+        TSName = self.ui.loadTimeseriesLineEdit.text()
+        
+        # Same name of self.dicProgram
+        self.programname = 'winview'
+        if TSName != '':
+            self.verifySpikesProgram.start('./../winview/winview', [spikesName, TSName])
+        else:
+            self.verifySpikesProgram.start('./../winview/winview', [spikesName])
+        
+        self.cancelled = False
+        def verifySpikesFinish(ret):
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                pass
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.verifySpikesProgram, QtCore.SIGNAL('finished(int)'), verifySpikesFinish)
+    
+    def applySVM(self):
+        print 'singlefish'
+        minWin = self.ui.minWinLineEdit.text()
+        winLen1 = self.ui.loadWinlen1LineEdit.text()
+        winLen2 = self.ui.loadWinlen2LineEdit.text()
+        lowSaturation = self.ui.lowSaturationLineEdit.text()
+        highSaturation = self.ui.highSaturationLineEdit.text()
+        TSName = self.ui.loadTimeseriesLineEdit.text()
+        spikesName = self.ui.loadSpikesLineEdit.text()
+        scaleName = self.ui.loadRescaleLineEdit.text()
+        filterName = self.ui.loadFilterLineEdit.text()
+        svmName = self.ui.loadSVMModelLineEdit.text()
+        saveSinglefish = self.ui.saveSinglefishLineEdit.text()
+        saveProb = self.ui.saveProbLineEdit.text()
+        
+        winlen = max( (self.mean_stdWinLen(winLen1), self.mean_stdWinLen(winLen2)) )
+        
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        # Same name of self.dicProgram
+        self.programname = 'singlefish'
+        self.applySVMProgram.start('./../singlefish/singlefish', \
+                                   ['--maxsize=%d'%winlen, \
+                                    '--minwins=%s'%minWin, \
+                                    '--saturation=%s,%s'%(lowSaturation,highSaturation), \
+                                    TSName, \
+                                    spikesName, \
+                                    scaleName, \
+                                    filterName, \
+                                    svmName, \
+                                    saveSinglefish, \
+                                    saveProb])
+        
+        self.cancelled = False
+        def applySVMFinish(ret):
+            self.app.restoreOverrideCursor()
+            dialog.hide()
+            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+                self.ui.loadSinglefishLineEdit.setText(saveSinglefish)
+                self.ui.loadProbLineEdit.setText(saveProb)
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('finished(int)'), applySVMFinish)
+        QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+    
+    def applyContinuity(self):
+        print 'recog'
+        self.lowSaturation = self.ui.lowSaturationLineEdit.text()
+        self.highSaturation = self.ui.highSaturationLineEdit.text()
+        self.TSName = self.ui.loadTimeseriesLineEdit.text()
+        self.spikesName = self.ui.loadSpikesLineEdit.text()
+        self.singlefishName = self.ui.loadSinglefishLineEdit.text()
+        self.probName = self.ui.loadProbLineEdit.text()
+        self.saveDBName = self.ui.saveDBLineEdit.text()
+       
+        if os.path.isfile(self.saveDBName):
+            dialog = QtGui.QMessageBox()
+            dialog.setModal(True)
+            dialog.setWindowTitle('Warning')
+            dialog.setText('You want to override the original DB or apply over it?\n' + \
+                           '(when applying over it, it will only substitute the spikes that' + \
+                           'had euclidean distance inferior to the stored on the DB)')
+            dialog.addButton(QtGui.QPushButton('Override'), QtGui.QMessageBox.YesRole) #0
+            dialog.addButton(QtGui.QPushButton('Apply over'), QtGui.QMessageBox.NoRole) #1
+            dialog.addButton(QtGui.QMessageBox.Cancel)
+            
+            ret = dialog.exec_()
+            
+            if ret == QtGui.QMessageBox.Cancel:
+                return None
+            elif ret == 0: #Override
+                print 'Removing DB file...'
+                os.remove(self.saveDBName)
+            else: #ret == 1 -> Apply over
+                pass
+        
+        self.recogPassed = False
+        self.recog(1)
+    
+    def recog(self, d):
+        # TODO: saturation level??
+        print 'direction = %d'%d
+        
+        self.dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+    
+        self.programname = 'recog'
+        self.applyContinuityProgram.start('./../recog/recog', \
+                                          ['iterate', \
+                                           '--saturation=%s,%s'%(self.lowSaturation, self.highSaturation), \
+                                           '--direction=%d'%d, \
+                                           self.saveDBName, \
+                                           self.spikesName, \
+                                           self.singlefishName, \
+                                           self.probName])
+        
+        self.cancelled = False
+        def recogFinish(ret, exitStatus):
+            print 'recog finished (%d,%s)'%(ret, repr(exitStatus))
+            self.dialog.hide()
+            self.app.restoreOverrideCursor()
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
+                if (self.recogPassed == False):
+                    self.recogPassed = True
+                    if d == 1:
+                        self.recog(-1)
+                    else:
+                        self.recog(1)
+                else:
+                    self.ui.loadDBLineEdit.setText(self.saveDBName)
+            else:
+                print self.applyContinuityProgram.readAllStandardOutput()
+                print self.applyContinuityProgram.readAllStandardError()
+                return None
+        
+        
+        QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), recogFinish)
+        QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        
+    
+    def mean_stdWinLen(self, winlenFilename):
+        data = np.loadtxt(str(winlenFilename))
+        m = np.mean(data)
+        s = np.std(data)
+        return int(np.ceil(m+s))
+    
+    def detectTimestamps(self):
+        print 'detectIPI'
+        DBName = self.ui.loadDBLineEdit.text()
+        saveTimestamps = self.ui.saveTimestampsLineEdit.text()
+        
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        self.programname = 'detectIPI'
+        self.detectTimestampsProgram.start('python', \
+                                           ['./../detectIPI/detectIPI.py', \
+                                            DBName, \
+                                            saveTimestamps])
+        
+        self.cancelled = False
+        def detectTimestampsFinish(ret, exitStatus):
+            print 'detectIPI finished (%d,%s)'%(ret, repr(exitStatus))
+            dialog.hide()
+            self.app.restoreOverrideCursor()
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
+                self.ui.loadTimestampsLineEdit.setText(saveTimestamps)
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectTimestampsFinish)
+        QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+    
+    def verifyAndCorrect(self):
+        print 'plotIPIandSVM'
+        lowSaturation = self.ui.lowSaturationLineEdit.text()
+        highSaturation = self.ui.highSaturationLineEdit.text()
+        DBName = self.ui.loadDBLineEdit.text()
+        timeseriesFile = open(self.ui.loadTimeseriesLineEdit.text(),'r')
+        spikesFile = open(self.ui.loadSpikesLineEdit.text(), 'r')
+        
+        self.programname = 'plotIPIandSVM'
+        
+        timeseriesName = timeseriesFile.name.split('/')[-1].split('.')[0]
+        if os.path.isdir(timeseriesName) == False:
+            os.makedirs(str(timeseriesName))
+        dbname = DBName.split('/')[-1].split('.')[0] + '_undo.keys'
+        undoFilename = timeseriesName + '/' + dbname
+        open(undoFilename,'a').close()
+        
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        plotVerify = plotIPIandSVM.PlotData(self.app, str(DBName), spikesFile, timeseriesFile, str(undoFilename), str(timeseriesName), (lowSaturation, highSaturation), 120., 90.)
+        pickVerify = plotIPIandSVM.PickPoints(plotVerify)
+        self.app.restoreOverrideCursor()
+        
+        plotVerify.show()
+        
+    def printAllStandardOutput(self):
+        print '%s\n'%self.programname
+        for program in self.dicProgram[self.programname]:
+            print program.readAllStandardOutput()
+    
+    def printAllStandardError(self):
+        print '%s\n'%self.programname
+        for program in self.dicProgram[self.programname]:
+            program.readAllStandardError()
+    
+    def raiseLongTimeInformation(self):
+        dialog = QtGui.QMessageBox()
+        dialog.setWindowTitle('Information')
+        dialog.setText("This may take a while...\nTime for a coffee!\n")
+        dialog.setModal(True)
+        self.CancelBut = dialog.addButton(QtGui.QMessageBox.Cancel)
+        QtCore.QObject.connect(self.CancelBut, QtCore.SIGNAL('clicked()'), self.cancelApp)
+        dialog.show()
+        return dialog
+    
+    def cancelApp(self):
+        print 'Cancelled.'
+        self.cancelled = True
+        self.app.restoreOverrideCursor()
+        for l in self.dicProgram.values():
+            for program in l:
+                program.close()
+    
+    def isReturnCodeOk(self, ret):
+        if ret != 0:
+            print '\n---\tERROR (%s): %d\t---\n'%(self.programname, ret)
+            for program in self.dicProgram[self.programname]:
+                print program.readAllStandardOutput()
+                print program.readAllStandardError()
+            self.raiseParameterError('%s ERROR!\n'%self.programname)
+            return False
+        else:
+            return True
+    
+    def raiseParameterError(self, text):
+        QtGui.QMessageBox.critical(self, "ERROR", text + "Please check your parameters.", QtGui.QMessageBox.Ok )
     
     def saveParameters(self):
         saveFilename = QtGui.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.discparameters) (*.discparameters);;All files (*.*) (*.*)')
@@ -150,6 +531,7 @@ class DiscriminateWindow(QtGui.QDialog):
                            
                            self.ui.saveSinglefishLineEdit: 'save', \
                            self.ui.saveProbLineEdit: 'save', \
+                           self.ui.minWinLineEdit: 'int', \
                            
                            self.ui.loadSinglefishLineEdit: 'load', \
                            self.ui.loadProbLineEdit: 'load', \
@@ -243,7 +625,8 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.spikeParametersUnlocker = ( \
             ( \
-                (self.ui.lowSaturationLineEdit, \
+                (self.ui.loadTimeseriesLineEdit, \
+                 self.ui.lowSaturationLineEdit, \
                  self.ui.highSaturationLineEdit, \
                  self.ui.tapsLineEdit, \
                  self.ui.cutoffLineEdit, \
@@ -264,7 +647,10 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.spikeSavefileUnlocker = ( \
             ( \
-                (self.ui.saveSpikesLineEdit, \
+                (self.ui.loadTimeseriesLineEdit, \
+                 self.ui.lowSaturationLineEdit, \
+                 self.ui.highSaturationLineEdit, \
+                 self.ui.saveSpikesLineEdit, \
                 ), \
                 (self.ui.detectSpikesBut, \
                 ) \
@@ -279,7 +665,8 @@ class DiscriminateWindow(QtGui.QDialog):
                 ) \
             ), \
             ( \
-                (self.ui.loadSpikesLineEdit, \
+                (self.ui.loadTimeseriesLineEdit, \
+                 self.ui.loadSpikesLineEdit, \
                  self.ui.loadWinlen1LineEdit, \
                  self.ui.loadWinlen2LineEdit, \
                  self.ui.loadFilterLineEdit, \
@@ -288,14 +675,19 @@ class DiscriminateWindow(QtGui.QDialog):
                 ), \
                 (self.ui.saveSinglefishLineEdit, \
                  self.ui.saveProbLineEdit, \
+                 self.ui.minWinLineEdit, \
                 )
             ), \
         )
         
         self.SVMSaveParametersUnlocker = ( \
             ( \
-                (self.ui.saveSinglefishLineEdit, \
+                (self.ui.loadTimeseriesLineEdit, \
+                 self.ui.lowSaturationLineEdit, \
+                 self.ui.highSaturationLineEdit, \
+                 self.ui.saveSinglefishLineEdit, \
                  self.ui.saveProbLineEdit, \
+                 self.ui.minWinLineEdit, \
                 ), \
                 (self.ui.applySVMBut, \
                 )
@@ -314,7 +706,10 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.saveDBUnlocker = ( \
             ( \
-                (self.ui.saveDBLineEdit, \
+                (self.ui.loadTimeseriesLineEdit, \
+                 self.ui.lowSaturationLineEdit, \
+                 self.ui.highSaturationLineEdit, \
+                 self.ui.saveDBLineEdit, \
                 ), \
                 (self.ui.applyContinuityBut, \
                 )
@@ -332,7 +727,8 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.saveTimestampsUnlocker = ( \
             ( \
-                (self.ui.saveTimestampsLineEdit, \
+                (self.ui.loadTimeseriesLineEdit, \
+                 self.ui.saveTimestampsLineEdit, \
                 ), \
                 (self.ui.detectTimestampsBut, \
                 )
@@ -341,7 +737,8 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.loadTimestampsUnlocker = ( \
             ( \
-                (self.ui.loadTimestampsLineEdit, \
+                (self.ui.loadTimeseriesLineEdit, \
+                 self.ui.loadTimestampsLineEdit, \
                 ), \
                 (self.ui.verifyCorrectTimestampsBut, \
                 )
@@ -364,6 +761,7 @@ class DiscriminateWindow(QtGui.QDialog):
                        self.ui.loadSVMModelLineEdit: self.SVMLoadParametersUnlocker, \
                        self.ui.saveSinglefishLineEdit: self.SVMSaveParametersUnlocker, \
                        self.ui.saveProbLineEdit: self.SVMSaveParametersUnlocker, \
+                       self.ui.minWinLineEdit: self.SVMSaveParametersUnlocker, \
                        self.ui.loadSinglefishLineEdit: self.loadContinuityParametersUnlocker, \
                        self.ui.loadProbLineEdit: self.loadContinuityParametersUnlocker, \
                        self.ui.saveDBLineEdit: self.saveDBUnlocker, \
