@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1117</width>
-    <height>1149</height>
+    <height>719</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -39,8 +39,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>1272</width>
-        <height>1112</height>
+        <width>1273</width>
+        <height>1110</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -63,6 +63,12 @@
          </item>
          <item>
           <layout class="QGridLayout" name="step1ParametersLayout">
+           <item row="13" column="2">
+            <widget class="QLineEdit" name="minlevel2LineEdit"/>
+           </item>
+           <item row="13" column="1">
+            <widget class="QLineEdit" name="minlevel1LineEdit"/>
+           </item>
            <item row="11" column="0">
             <widget class="QLabel" name="thresholdLevelLabel">
              <property name="text">
@@ -265,6 +271,30 @@
              </property>
             </widget>
            </item>
+           <item row="13" column="0">
+            <widget class="QLabel" name="minlevelLabel">
+             <property name="text">
+              <string>MinLevel (just above noise) (V):</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="12" column="1">
+            <widget class="QPushButton" name="minlevel1But">
+             <property name="text">
+              <string>MinLevel Assistant</string>
+             </property>
+            </widget>
+           </item>
+           <item row="12" column="2">
+            <widget class="QPushButton" name="minlevel2But">
+             <property name="text">
+              <string>MinLevel Assistant</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
          <item>
@@ -372,7 +402,7 @@
            <item row="5" column="0" colspan="3">
             <widget class="QLabel" name="onlyAboveLabel">
              <property name="text">
-              <string>Only detect spikes above (V) (Needed to avoid noise)</string>
+              <string>Only output spikes above (V) (Needed to avoid noise)</string>
              </property>
             </widget>
            </item>

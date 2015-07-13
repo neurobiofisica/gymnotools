@@ -234,13 +234,10 @@
          </item>
          <item>
           <layout class="QGridLayout" name="step1ParametersLayout">
-           <item row="3" column="0">
-            <widget class="QLabel" name="cutoffLabel">
+           <item row="8" column="0">
+            <widget class="QLabel" name="minlevelLabel">
              <property name="text">
-              <string>Cutoff frequency (cycles/sample):</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
+              <string>MinLevel (same used for training) (V):</string>
              </property>
             </widget>
            </item>
@@ -254,29 +251,21 @@
              </property>
             </widget>
            </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="thresholdLevelLabel">
-             <property name="text">
-              <string>Threshold level (V):</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
+           <item row="9" column="1">
+            <widget class="ClickQLineEdit" name="saveSpikesLineEdit"/>
            </item>
-           <item row="5" column="1">
-            <widget class="QPushButton" name="thresholdAssistBut">
-             <property name="text">
-              <string>Threshold Assistant</string>
+           <item row="11" column="0" colspan="2">
+            <spacer name="verticalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
              </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLineEdit" name="cutoffLineEdit">
-             <property name="text">
-              <string/>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
              </property>
-            </widget>
+            </spacer>
            </item>
            <item row="2" column="1">
             <widget class="QLineEdit" name="tapsLineEdit">
@@ -285,20 +274,20 @@
              </property>
             </widget>
            </item>
-           <item row="6" column="1">
-            <widget class="QLineEdit" name="thresholdLevelLineEdit"/>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="thresholdLabel">
-             <property name="font">
-              <font>
-               <family>Sans Serif</family>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="filterAssistBut">
              <property name="text">
-              <string>Threshold:</string>
+              <string>Filter Assistant</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="thresholdLevelLabel">
+             <property name="text">
+              <string>Threshold level (V):</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
              </property>
             </widget>
            </item>
@@ -316,14 +305,45 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="QPushButton" name="filterAssistBut">
+           <item row="5" column="1">
+            <widget class="QPushButton" name="thresholdAssistBut">
              <property name="text">
-              <string>Filter Assistant</string>
+              <string>Threshold Assistant</string>
              </property>
             </widget>
            </item>
-           <item row="7" column="0">
+           <item row="4" column="0">
+            <widget class="QLabel" name="thresholdLabel">
+             <property name="font">
+              <font>
+               <family>Sans Serif</family>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Threshold:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="0" colspan="2">
+            <widget class="QPushButton" name="detectSpikesBut">
+             <property name="text">
+              <string>Detect Spikes</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="cutoffLabel">
+             <property name="text">
+              <string>Cutoff frequency (cycles/sample):</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="0">
             <widget class="QLabel" name="saveSpikesLabel">
              <property name="text">
               <string>Save detected spikes as: </string>
@@ -333,28 +353,25 @@
              </property>
             </widget>
            </item>
-           <item row="7" column="1">
-            <widget class="ClickQLineEdit" name="saveSpikesLineEdit"/>
+           <item row="6" column="1">
+            <widget class="QLineEdit" name="thresholdLevelLineEdit"/>
            </item>
-           <item row="8" column="0" colspan="2">
-            <widget class="QPushButton" name="detectSpikesBut">
+           <item row="8" column="1">
+            <widget class="QLineEdit" name="minlevelLineEdit"/>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="cutoffLineEdit">
              <property name="text">
-              <string>Detect Spikes</string>
+              <string/>
              </property>
             </widget>
            </item>
-           <item row="9" column="0" colspan="2">
-            <spacer name="verticalSpacer_5">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
+           <item row="7" column="1">
+            <widget class="QPushButton" name="minlevelAssistBut">
+             <property name="text">
+              <string>MinLevel Assistant</string>
              </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>40</height>
-              </size>
-             </property>
-            </spacer>
+            </widget>
            </item>
           </layout>
          </item>

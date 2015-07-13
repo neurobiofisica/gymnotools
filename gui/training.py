@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, inspect
 import re
 
 import numpy as np
@@ -49,6 +49,8 @@ class TrainingWindow(QtGui.QDialog):
                                self.ui.cutoff2LineEdit, \
                                self.ui.thresholdLevel1LineEdit, \
                                self.ui.thresholdLevel2LineEdit, \
+                               self.ui.minlevel1LineEdit, \
+                               self.ui.minlevel2LineEdit, \
                                self.ui.saveSpikes1LineEdit, \
                                self.ui.saveSpikes2LineEdit, \
                                self.ui.saveWindowLengths1LineEdit, \
@@ -105,6 +107,8 @@ class TrainingWindow(QtGui.QDialog):
         self.filterAssist2Program = QtCore.QProcess()
         self.thresholdAssist1Program = QtCore.QProcess()
         self.thresholdAssist2Program = QtCore.QProcess()
+        self.minlevelAssist1Program = QtCore.QProcess()
+        self.minlevelAssist2Program = QtCore.QProcess()
         self.verifySpikes1Program = QtCore.QProcess()
         self.verifySpikes2Program = QtCore.QProcess()
         self.detectSpikes1Program = QtCore.QProcess()
@@ -125,7 +129,7 @@ class TrainingWindow(QtGui.QDialog):
         self.svmtoolROCProgram = QtCore.QProcess()
         
         self.dicProgram = {'paramchooser lowpass': (self.filterAssist1Program, self.filterAssist2Program), \
-                           'paramchooser threshold': (self.thresholdAssist1Program, self.thresholdAssist2Program), \
+                           'paramchooser threshold': (self.thresholdAssist1Program, self.thresholdAssist2Program, self.minlevelAssist1Program, self.minlevelAssist2Program), \
                            'winview': (self.verifySpikes1Program, self.verifySpikes2Program), \
                            'spikes Fish 1': (self.detectSpikes1Program, ), \
                            'spikes Fish 2': (self.detectSpikes2Program, ), \
@@ -230,6 +234,9 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.thresholdAssist1But, QtCore.SIGNAL('clicked()'), self.thresholdAssist1)
         QtCore.QObject.connect(self.ui.thresholdAssist2But, QtCore.SIGNAL('clicked()'), self.thresholdAssist2)
         
+        QtCore.QObject.connect(self.ui.minlevel1But, QtCore.SIGNAL('clicked()'), self.minlevelAssist1)
+        QtCore.QObject.connect(self.ui.minlevel2But, QtCore.SIGNAL('clicked()'), self.minlevelAssist2)
+        
         QtCore.QObject.connect(self.ui.verifySpikes1But, QtCore.SIGNAL('clicked()'), self.verifySpikes1)
         QtCore.QObject.connect(self.ui.verifySpikes2But, QtCore.SIGNAL('clicked()'), self.verifySpikes2)
         
@@ -276,11 +283,13 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'paramchooser lowpass'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.filterAssist1Program.start('./../paramchooser/paramchooser', ['lowpass', TSName])
         
         self.cancelled = False
-        def filterAssist1Finish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def filterAssist1Finish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 out = self.filterAssist1Program.readAllStandardOutput()
                 out = out + '\n' + self.filterAssist1Program.readAllStandardError()
                 
@@ -294,7 +303,7 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
         
-        QtCore.QObject.connect(self.filterAssist1Program, QtCore.SIGNAL('finished(int)'), filterAssist1Finish)
+        QtCore.QObject.connect(self.filterAssist1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), filterAssist1Finish)
         
     def filterAssist2(self):
         print 'paramchooser lowpass 2'
@@ -302,11 +311,13 @@ class TrainingWindow(QtGui.QDialog):
        
         # Same name of self.dicProgram
         self.programname = 'paramchooser lowpass'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.filterAssist2Program.start('./../paramchooser/paramchooser', ['lowpass', TSName])
         
         self.cancelled = False
-        def filterAssist2Finish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def filterAssist2Finish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 out = self.filterAssist2Program.readAllStandardOutput()
                 out = out + '\n' + self.filterAssist2Program.readAllStandardError()
                 
@@ -320,7 +331,7 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
         
-        QtCore.QObject.connect(self.filterAssist2Program, QtCore.SIGNAL('finished(int)'), filterAssist2Finish)
+        QtCore.QObject.connect(self.filterAssist2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), filterAssist2Finish)
     
     def thresholdAssist1(self):
         print 'paramchooser threshold 1'
@@ -330,11 +341,13 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'paramchooser threshold'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )        
         self.thresholdAssist1Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
         
         self.cancelled = False
-        def thresholdAssist1Finish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def thresholdAssist1Finish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 out = self.thresholdAssist1Program.readAllStandardOutput()
                 out = out + '\n' + self.thresholdAssist1Program.readAllStandardError()
                 
@@ -345,7 +358,7 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
         
-        QtCore.QObject.connect(self.thresholdAssist1Program, QtCore.SIGNAL('finished(int)'), thresholdAssist1Finish)
+        QtCore.QObject.connect(self.thresholdAssist1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), thresholdAssist1Finish)
         
     
     def thresholdAssist2(self):
@@ -356,11 +369,13 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'paramchooser threshold'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )        
         self.thresholdAssist2Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
         
         self.cancelled = False
-        def thresholdAssist2Finish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def thresholdAssist2Finish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 out = self.thresholdAssist2Program.readAllStandardOutput()
                 out = out + '\n' + self.thresholdAssist2Program.readAllStandardError()
                 
@@ -371,7 +386,61 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
         
-        QtCore.QObject.connect(self.thresholdAssist2Program, QtCore.SIGNAL('finished(int)'), thresholdAssist2Finish)
+        QtCore.QObject.connect(self.thresholdAssist2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), thresholdAssist2Finish)
+    
+    def minlevelAssist1(self):
+        print 'paramchooser threshold 1'
+        TSName = self.ui.loadTS1LineEdit.text()
+        taps = self.ui.taps1LineEdit.text()
+        cutoff = self.ui.cutoff1LineEdit.text()
+        
+        # Same name of self.dicProgram
+        self.programname = 'paramchooser threshold'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        self.minlevelAssist1Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
+        
+        self.cancelled = False
+        def minlevelAssist1Finish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
+                out = self.minlevelAssist1Program.readAllStandardOutput()
+                out = out + '\n' + self.minlevelAssist1Program.readAllStandardError()
+                
+                out = str(out)
+                
+                threshold = out.split('threshold = ')[1].split('\n')[0]
+                self.ui.minlevel1LineEdit.setText(threshold)
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.minlevelAssist1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), minlevelAssist1Finish)
+    
+    def minlevelAssist2(self):
+        print 'paramchooser threshold 2'
+        TSName = self.ui.loadTS2LineEdit.text()
+        taps = self.ui.taps2LineEdit.text()
+        cutoff = self.ui.cutoff2LineEdit.text()
+        
+        # Same name of self.dicProgram
+        self.programname = 'paramchooser threshold'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        self.minlevelAssist2Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
+        
+        self.cancelled = False
+        def minlevelAssist2Finish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
+                out = self.minlevelAssist2Program.readAllStandardOutput()
+                out = out + '\n' + self.minlevelAssist2Program.readAllStandardError()
+                
+                out = str(out)
+                
+                threshold = out.split('threshold = ')[1].split('\n')[0]
+                self.ui.minlevel2LineEdit.setText(threshold)
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.minlevelAssist2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), minlevelAssist2Finish)
     
     def verifySpikes1(self):
         print 'winview 1'
@@ -380,19 +449,21 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'winview'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         if TSName != '':
             self.verifySpikes1Program.start('./../winview/winview', [spikesName, TSName])
         else:
             self.verifySpikes1Program.start('./../winview/winview', [spikesName])
         
         self.cancelled = False
-        def verifySpikes1Finish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def verifySpikes1Finish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 pass
             else:
                 return None
             
-        QtCore.QObject.connect(self.verifySpikes1Program, QtCore.SIGNAL('finished(int)'), verifySpikes1Finish)
+        QtCore.QObject.connect(self.verifySpikes1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes1Finish)
         
     def verifySpikes2(self):
         print 'winview 2'
@@ -401,19 +472,21 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'winview'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         if TSName != '':
             self.verifySpikes2Program.start('./../winview/winview', [spikesName, TSName])
         else:
             self.verifySpikes2Program.start('./../winview/winview', [spikesName])
         
         self.cancelled = False
-        def verifySpikes2Finish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def verifySpikes2Finish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 pass
             else:
                 return None
             
-        QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int)'), verifySpikes2Finish)
+        QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes2Finish)
     
     def detectSpikes1(self):
         print 'spikes 1'
@@ -426,12 +499,15 @@ class TrainingWindow(QtGui.QDialog):
         saveSpikes = self.ui.saveSpikes1LineEdit.text()
         saveWindowLengths = self.ui.saveWindowLengths1LineEdit.text()
         onlyAbove = self.ui.onlyAbove1LineEdit.text()
+        minlevel = self.ui.minlevel1LineEdit.text()
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
         # Same name of self.dicProgram
         self.programname = 'spikes Fish 1'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectSpikes1Program.start('./../spikes/spikes', \
                            ['--fixedwin', \
                             '--saturation=%s,%s'%(lowSat,highSat), \
@@ -440,19 +516,21 @@ class TrainingWindow(QtGui.QDialog):
                             '--detection=%s'%threshold, \
                             '--winlen=%s'%saveWindowLengths, \
                             '--onlyabove=%s'%onlyAbove, \
+                            '--minlevel=%s'%minlevel, \
+                            '--minratio=0.0', \
                             TSName, \
                             saveSpikes])
         
         self.cancelled = False
-        def detectSpikes1Finish(ret):
+        def detectSpikes1Finish(ret, exitStatus):
             self.app.restoreOverrideCursor()
             dialog.hide()
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadSpikes1LineEdit.setText(saveSpikes)
             else:
                 return None
             
-        QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('finished(int)'), detectSpikes1Finish)
+        QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikes1Finish)
         QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
@@ -468,12 +546,15 @@ class TrainingWindow(QtGui.QDialog):
         saveSpikes = self.ui.saveSpikes2LineEdit.text()
         saveWindowLengths = self.ui.saveWindowLengths2LineEdit.text()
         onlyAbove = self.ui.onlyAbove2LineEdit.text()
+        minlevel = self.ui.minlevel2LineEdit.text()
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
         # Same name of self.dicProgram
         self.programname = 'spikes Fish 2'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectSpikes2Program.start('./../spikes/spikes', \
                            ['--fixedwin', \
                             '--saturation=%s,%s'%(lowSat,highSat), \
@@ -482,19 +563,21 @@ class TrainingWindow(QtGui.QDialog):
                             '--detection=%s'%threshold, \
                             '--winlen=%s'%saveWindowLengths, \
                             '--onlyabove=%s'%onlyAbove, \
+                            '--minlevel=%s'%minlevel, \
+                            '--minratio=0.0', \
                             TSName, \
                             saveSpikes])
         
         self.cancelled = False
-        def detectSpikes2Finish(ret):
+        def detectSpikes2Finish(ret, exitStatus):
             self.app.restoreOverrideCursor()
             dialog.hide()
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadSpikes2LineEdit.setText(saveSpikes)
             else:
                 return None
             
-        QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('finished(int)'), detectSpikes2Finish)
+        QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikes2Finish)
         QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
@@ -524,7 +607,8 @@ class TrainingWindow(QtGui.QDialog):
         
         self.finish1 = False
         self.finish2 = False
-        
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.featuresCompute1Program.start('./../features/features', \
                            ['compute', \
                             self.spikesName1, \
@@ -536,9 +620,9 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName2])
         
         self.cancelled = False
-        def featuresComputeFinish(ret):
+        def featuresComputeFinish(ret, exitStatus):
             sender = self.sender()
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 if sender == self.featuresCompute1Program:
                     self.finish1 = True
                 elif sender == self.featuresCompute2Program:
@@ -557,8 +641,8 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
-        QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('finished(int)'), featuresComputeFinish)
-        QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('finished(int)'), featuresComputeFinish)
+        QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresComputeFinish)
+        QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresComputeFinish)
         QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
@@ -569,7 +653,8 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'features rescale prepare'
-        
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.featuresRescalePrepareProgram.start('./../features/features', \
                            ['rescale', \
                             'prepare', \
@@ -578,8 +663,8 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName2])
         
         self.cancelled = False
-        def featuresRescalePrepareFinish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def featuresRescalePrepareFinish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.featuresRescaleApply()
             else:
                 if os.path.isfile(self.unfilteredFeaturesName1):
@@ -589,7 +674,7 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
                 
-        QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('finished(int)'), featuresRescalePrepareFinish)
+        QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresRescalePrepareFinish)
         QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
@@ -598,7 +683,8 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'features rescale apply'
-        
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.featuresRescaleApplyProgram.start('./../features/features', \
                            ['rescale', \
                             'apply', \
@@ -607,8 +693,8 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName2])
         
         self.cancelled = False
-        def featuresRescaleApplyFinish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def featuresRescaleApplyFinish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.featuresFilterPrepare()
             else:
                 if os.path.isfile(self.unfilteredFeaturesName1):
@@ -618,7 +704,7 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
-        QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('finished(int)'), featuresRescaleApplyFinish)
+        QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresRescaleApplyFinish)
         QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
@@ -627,7 +713,8 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'features filter prepare'
-        
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.featuresFilterPrepareProgram.start('./../features/features', \
                            ['filter', \
                             'prepare', \
@@ -637,8 +724,8 @@ class TrainingWindow(QtGui.QDialog):
                             self.unfilteredFeaturesName2])
         
         self.cancelled = False
-        def featuresFilterPrepareFinish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def featuresFilterPrepareFinish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.featuresFilterApply()
             else:
                 if os.path.isfile(self.unfilteredFeaturesName1):
@@ -648,7 +735,7 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
                 
-        QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('finished(int)'), featuresFilterPrepareFinish)
+        QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterPrepareFinish)
         QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
@@ -661,14 +748,16 @@ class TrainingWindow(QtGui.QDialog):
         
         self.finish1 = False
         self.finish2 = False
-        
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.featuresFilterApply1Program.start('./../features/features', \
                            ['filter', \
                             'apply', \
                             self.filterName, \
                             self.unfilteredFeaturesName1, \
                             self.featuresName1])
-        
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.featuresFilterApply2Program.start('./../features/features', \
                            ['filter', \
                             'apply', \
@@ -677,9 +766,9 @@ class TrainingWindow(QtGui.QDialog):
                             self.featuresName2])
         
         self.cancelled = False
-        def featuresFilterApplyFinish(ret):
+        def featuresFilterApplyFinish(ret, exitStatus):
             sender = self.sender()
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 if sender == self.featuresFilterApply1Program:
                     self.finish1 = True
                 elif sender == self.featuresFilterApply2Program:
@@ -698,8 +787,8 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
-        QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('finished(int)'), featuresFilterApplyFinish)
-        QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('finished(int)'), featuresFilterApplyFinish)
+        QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterApplyFinish)
+        QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterApplyFinish)
         QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
@@ -723,9 +812,9 @@ class TrainingWindow(QtGui.QDialog):
         field = self.sender()
         featuresName = field.text()
         
-        def fillInfoLabel1(ret):
+        def fillInfoLabel1(ret, exitStatus):
             self.app.restoreOverrideCursor()
-            if self.isReturnCodeOk(ret) is True:
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit):
                 stdout = self.sliceInfo1Program.readAllStandardOutput()
                 stderr = self.sliceInfo1Program.readAllStandardError()
                 if stdout != '':
@@ -736,9 +825,9 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
         
-        def fillInfoLabel2(ret):
+        def fillInfoLabel2(ret, exitStatus):
             self.app.restoreOverrideCursor()
-            if self.isReturnCodeOk(ret) is True:
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit):
                 stdout = self.sliceInfo2Program.readAllStandardOutput()
                 stderr = self.sliceInfo2Program.readAllStandardError()
                 if stdout != '':
@@ -752,16 +841,18 @@ class TrainingWindow(QtGui.QDialog):
         # If they are executed at the same time, the program variable cannot be overriden
         # by the Garbage Collector
         if os.path.isfile(featuresName):
+            #Be sure that is on current directory
+            os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
             if field == self.ui.loadFeatures1LineEdit:
                 self.sliceInfo1Program.start('./../slice/slice', \
                                              ['info', \
                                               featuresName])
-                QtCore.QObject.connect(self.sliceInfo1Program, QtCore.SIGNAL('finished(int)'), fillInfoLabel1)
+                QtCore.QObject.connect(self.sliceInfo1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), fillInfoLabel1)
             else:
                 self.sliceInfo2Program.start('./../slice/slice', \
                                              ['info', \
                                               featuresName])
-                QtCore.QObject.connect(self.sliceInfo2Program, QtCore.SIGNAL('finished(int)'), fillInfoLabel2)
+                QtCore.QObject.connect(self.sliceInfo2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), fillInfoLabel2)
    
     def sliceRandom1(self):
         featuresName = self.ui.loadFeatures1LineEdit.text()
@@ -780,7 +871,8 @@ class TrainingWindow(QtGui.QDialog):
             self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
             
             self.programname = 'slice random'
-            
+            #Be sure that is on current directory
+            os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
             self.sliceRandom1Program.start('./../slice/slice', \
                                            ['random', \
                                             featuresName, \
@@ -788,14 +880,14 @@ class TrainingWindow(QtGui.QDialog):
                                             str(probCross), saveCross, \
                                             str(probTest), saveTest])
             
-            def sliceRandomFinish(ret):
+            def sliceRandomFinish(ret, exitStatus):
                 self.app.restoreOverrideCursor()
-                if self.isReturnCodeOk(ret) is True:
+                if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit):
                     self.ui.trainingLoadFish1LineEdit.setText(self.ui.trainingSaveFish1LineEdit.text())
                     self.ui.crossLoadFish1LineEdit.setText(self.ui.crossSaveFish1LineEdit.text())
                     self.ui.testingLoadFish1LineEdit.setText(self.ui.testingSaveFish1LineEdit.text())
             
-            QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('finished(int)'), sliceRandomFinish)
+            QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), sliceRandomFinish)
             QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
             QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         else:
@@ -818,7 +910,8 @@ class TrainingWindow(QtGui.QDialog):
             self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
             
             self.programname = 'slice random'
-            
+            #Be sure that is on current directory
+            os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
             self.sliceRandom2Program.start('./../slice/slice', \
                                            ['random', \
                                             featuresName, \
@@ -826,14 +919,14 @@ class TrainingWindow(QtGui.QDialog):
                                             str(probCross), saveCross, \
                                             str(probTest), saveTest])
             
-            def sliceRandomFinish(ret):
+            def sliceRandomFinish(ret, exitStatus):
                 self.app.restoreOverrideCursor()
-                if self.isReturnCodeOk(ret) is True:
+                if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit):
                     self.ui.trainingLoadFish2LineEdit.setText(self.ui.trainingSaveFish2LineEdit.text())
                     self.ui.crossLoadFish2LineEdit.setText(self.ui.crossSaveFish2LineEdit.text())
                     self.ui.testingLoadFish2LineEdit.setText(self.ui.testingSaveFish2LineEdit.text())
             
-            QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('finished(int)'), sliceRandomFinish)
+            QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), sliceRandomFinish)
             QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
             QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         else:
@@ -892,12 +985,14 @@ class TrainingWindow(QtGui.QDialog):
                        self.ui.taps1LineEdit: 'int', \
                        self.ui.cutoff1LineEdit: 'float', \
                        self.ui.thresholdLevel1LineEdit: 'float', \
+                       self.ui.minlevel1LineEdit: 'float', \
                        
                        self.ui.lowSaturation2LineEdit: 'float', \
                        self.ui.highSaturation2LineEdit: 'float', \
                        self.ui.taps2LineEdit: 'int', \
                        self.ui.cutoff2LineEdit: 'float', \
                        self.ui.thresholdLevel2LineEdit: 'float', \
+                       self.ui.minlevel2LineEdit: 'float', \
                        
                        self.ui.saveSpikes1LineEdit: 'save', \
                        self.ui.saveWindowLengths1LineEdit: 'save', \
@@ -1180,6 +1275,8 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'svmtool optim'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.svmtoolOptimProgram.start('./../svmtool/svmtool', \
                                        ['optim', \
                                         '-c %s,%s,%s'%(cStart,cStop,cStep), \
@@ -1200,10 +1297,10 @@ class TrainingWindow(QtGui.QDialog):
                 print 'stderr:\t%s'%str(stderr).strip()
         
         self.cancelled = False
-        def svmtoolOptimFinish(ret):
+        def svmtoolOptimFinish(ret, exitStatus):
             self.app.restoreOverrideCursor()
             dialog.hide()
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 
                 stdout = self.svmtoolOptimProgram.readAllStandardOutput()
                 self.svmOutput = self.svmOutput + stdout
@@ -1218,7 +1315,7 @@ class TrainingWindow(QtGui.QDialog):
         
         QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOuput)
         QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardError()'), getOuput)
-        QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('finished(int)'), svmtoolOptimFinish)
+        QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolOptimFinish)
         
     def SVMToolTrain(self):
         SVMModelName = self.ui.saveSVMLineEdit.text()
@@ -1231,6 +1328,8 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'svmtool train'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.svmtoolTrainProgram.start('./../svmtool/svmtool', \
                                        ['train', \
                                         SVMModelName, \
@@ -1240,14 +1339,14 @@ class TrainingWindow(QtGui.QDialog):
                                         train2Name])
         
         self.cancelled = False
-        def SVMToolTrainFinish(ret):
+        def SVMToolTrainFinish(ret, exitStatus):
             self.app.restoreOverrideCursor()
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadSVMLineEdit.setText(self.ui.saveSVMLineEdit.text())
             else:
                 return None
         
-        QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('finished(int)'), SVMToolTrainFinish)
+        QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), SVMToolTrainFinish)
         QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardOutput()'),self.printAllStandardOutput)
         QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardError()'),self.printAllStandardError)
     
@@ -1271,7 +1370,8 @@ class TrainingWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'svmtool roc'
-        
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.svmtoolROCProgram.start('./../svmtool/svmtool', \
                                        ['roc', \
                                        self.svmModelName, \
@@ -1289,8 +1389,8 @@ class TrainingWindow(QtGui.QDialog):
                 print 'stderr:\t%s'%str(stderr).strip()
         
         self.cancelled = False
-        def svmtoolROCFinish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def svmtoolROCFinish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 stdout = self.svmtoolROCProgram.readAllStandardOutput()
                 self.svmOutput = self.svmOutput + stdout
                 stderr = self.svmtoolROCProgram.readAllStandardError()
@@ -1312,7 +1412,7 @@ class TrainingWindow(QtGui.QDialog):
         
         QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOutput)
         QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardError()'), getOutput)
-        QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('finished(int)'), svmtoolROCFinish)
+        QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolROCFinish)
     
     def plotROC(self):
         self.plotData.set_xdata(self.FalsePositive)
@@ -1361,6 +1461,7 @@ class TrainingWindow(QtGui.QDialog):
                  self.ui.taps1LineEdit, \
                  self.ui.cutoff1LineEdit, \
                  self.ui.thresholdLevel1LineEdit, \
+                 self.ui.minlevel1LineEdit, \
                  ), \
                 (self.ui.saveSpikes1LineEdit, \
                  self.ui.saveWindowLengths1LineEdit, \
@@ -1373,6 +1474,8 @@ class TrainingWindow(QtGui.QDialog):
                  ), \
                 (self.ui.thresholdAssist1But, \
                  self.ui.thresholdLevel1LineEdit, \
+                 self.ui.minlevel1But, \
+                 self.ui.minlevel1LineEdit, \
                  ) \
             ), \
         )
@@ -1384,6 +1487,7 @@ class TrainingWindow(QtGui.QDialog):
                  self.ui.taps2LineEdit, \
                  self.ui.cutoff2LineEdit, \
                  self.ui.thresholdLevel2LineEdit, \
+                 self.ui.minlevel2LineEdit, \
                  ), \
                 (self.ui.saveSpikes2LineEdit, \
                  self.ui.saveWindowLengths2LineEdit, \
@@ -1396,6 +1500,8 @@ class TrainingWindow(QtGui.QDialog):
                  ), \
                 (self.ui.thresholdAssist2But, \
                  self.ui.thresholdLevel2LineEdit, \
+                 self.ui.minlevel2But, \
+                 self.ui.minlevel2LineEdit, \
                  ) \
             ), \
         )
@@ -1623,12 +1729,14 @@ class TrainingWindow(QtGui.QDialog):
                        self.ui.taps1LineEdit: self.spikeParametersFish1Unlocker, \
                        self.ui.cutoff1LineEdit: self.spikeParametersFish1Unlocker, \
                        self.ui.thresholdLevel1LineEdit: self.spikeParametersFish1Unlocker, \
+                       self.ui.minlevel1LineEdit: self.spikeParametersFish1Unlocker, \
                        
                        self.ui.lowSaturation2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.highSaturation2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.taps2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.cutoff2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.thresholdLevel2LineEdit: self.spikeParametersFish2Unlocker, \
+                       self.ui.minlevel2LineEdit: self.spikeParametersFish2Unlocker, \
                        
                        self.ui.saveSpikes1LineEdit: self.spikeSavefilesFish1Unlocker, \
                        self.ui.saveWindowLengths1LineEdit: self.spikeSavefilesFish1Unlocker, \

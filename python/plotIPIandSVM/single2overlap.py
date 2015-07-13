@@ -1,11 +1,11 @@
 from PyQt4 import QtCore, QtGui
 from single2overlapInterface import *
 
-import sys, os
-if os.getcwd().split('/')[-1] == 'gui':
-    sys.path.append( os.path.realpath('../python') )
-elif os.getcwd().split('/')[-1] == 'plotIPIandSVM':
-    sys.path.append( os.path.realpath('../') )
+import sys, os, inspect
+
+#Be sure that is on current directory (to import and append path correctly)
+os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+sys.path.append( os.path.realpath('../') )
 import recogdb
 
 import numpy as np
@@ -172,29 +172,51 @@ class single2overlap(QtGui.QDialog):
     def plotSignals(self, data, channel=0):
         # Remove old lines
         while len(self.zLine_pB) > 0:
-            self.zLine_pB.pop().remove()
+            aux = self.zLine_pB.pop()
+            aux.remove()
+            del aux
         while len(self.cLine_pB) > 0:
-            self.cLine_pB.pop().remove()
+            aux = self.cLine_pB.pop()
+            aux.remove()
+            del aux
         while len(self.zLine_pR) > 0:
-            self.zLine_pR.pop().remove()
+            aux = self.zLine_pR.pop()
+            aux.remove()
+            del aux
         while len(self.cLine_pR) > 0:
-            self.cLine_pR.pop().remove()
+            aux = self.cLine_pR.pop()
+            aux.remove()
+            del aux
             
         while len(self.zLine_Spk) > 0:
-            self.zLine_Spk.pop().remove()
+            aux = self.zLine_Spk.pop()
+            aux.remove()
+            del aux
         while len(self.cLine_SpkB) > 0:
-            self.cLine_SpkB.pop().remove()
+            aux = self.cLine_SpkB.pop()
+            aux.remove()
+            del aux
         while len(self.cLine_SpkR) > 0:
-            self.cLine_SpkR.pop().remove()
+            aux = self.cLine_SpkR.pop()
+            aux.remove()
+            del aux
         
         while len(self.zLine_nB) > 0:
-            self.zLine_nB.pop().remove()
+            aux = self.zLine_nB.pop()
+            aux.remove()
+            del aux
         while len(self.cLine_nB) > 0:
-            self.cLine_nB.pop().remove()
+            aux = self.cLine_nB.pop()
+            aux.remove()
+            del aux
         while len(self.zLine_nR) > 0:
-            self.zLine_nR.pop().remove()
+            aux = self.zLine_nR.pop()
+            aux.remove()
+            del aux
         while len(self.cLine_nR) > 0:
-            self.cLine_nR.pop().remove()
+            aux = self.cLine_nR.pop()
+            aux.remove()
+            del aux
         
         f = self.datafile
         
@@ -286,7 +308,7 @@ class single2overlap(QtGui.QDialog):
         self.data_nR = np.frombuffer(f.read(4*NSamples_nR*self.NChan), dtype=np.float32)
         
         self.zLine_nR = self.axNext2.plot( (t_nR.min(), t_nR.max()), [0., 0.], 'k-.' )
-        self.cLine_nB = self.axNext2.plot( (sample2plot_nR, sample2plot_nR), (saturationLow, saturationHigh), 'r-')
+        self.cLine_nR = self.axNext2.plot( (sample2plot_nR, sample2plot_nR), (saturationLow, saturationHigh), 'r-')
         self.plotNext2.set_xdata(t_nR)
         self.plotNext2.set_ydata(self.data_nR[channel::self.NChan])
         

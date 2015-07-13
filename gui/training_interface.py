@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'training_interface.ui'
 #
-# Created: Wed Jun  3 13:06:07 2015
+# Created: Tue Jun  9 18:16:00 2015
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -27,7 +27,7 @@ class Ui_trainingWindow(object):
     def setupUi(self, trainingWindow):
         trainingWindow.setObjectName(_fromUtf8("trainingWindow"))
         trainingWindow.setWindowModality(QtCore.Qt.WindowModal)
-        trainingWindow.resize(1117, 1149)
+        trainingWindow.resize(1117, 719)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -41,7 +41,7 @@ class Ui_trainingWindow(object):
         self.scrollArea.setAlignment(QtCore.Qt.AlignCenter)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1272, 1112))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1273, 1110))
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.gridLayout_2 = QtGui.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
@@ -58,6 +58,12 @@ class Ui_trainingWindow(object):
         self.step1Layout.addWidget(self.step1TitleLabel)
         self.step1ParametersLayout = QtGui.QGridLayout()
         self.step1ParametersLayout.setObjectName(_fromUtf8("step1ParametersLayout"))
+        self.minlevel2LineEdit = QtGui.QLineEdit(self.scrollAreaWidgetContents)
+        self.minlevel2LineEdit.setObjectName(_fromUtf8("minlevel2LineEdit"))
+        self.step1ParametersLayout.addWidget(self.minlevel2LineEdit, 13, 2, 1, 1)
+        self.minlevel1LineEdit = QtGui.QLineEdit(self.scrollAreaWidgetContents)
+        self.minlevel1LineEdit.setObjectName(_fromUtf8("minlevel1LineEdit"))
+        self.step1ParametersLayout.addWidget(self.minlevel1LineEdit, 13, 1, 1, 1)
         self.thresholdLevelLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
         self.thresholdLevelLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.thresholdLevelLabel.setObjectName(_fromUtf8("thresholdLevelLabel"))
@@ -166,6 +172,16 @@ class Ui_trainingWindow(object):
         self.filterAssist1But = QtGui.QPushButton(self.scrollAreaWidgetContents)
         self.filterAssist1But.setObjectName(_fromUtf8("filterAssist1But"))
         self.step1ParametersLayout.addWidget(self.filterAssist1But, 6, 1, 1, 1)
+        self.minlevelLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
+        self.minlevelLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.minlevelLabel.setObjectName(_fromUtf8("minlevelLabel"))
+        self.step1ParametersLayout.addWidget(self.minlevelLabel, 13, 0, 1, 1)
+        self.minlevel1But = QtGui.QPushButton(self.scrollAreaWidgetContents)
+        self.minlevel1But.setObjectName(_fromUtf8("minlevel1But"))
+        self.step1ParametersLayout.addWidget(self.minlevel1But, 12, 1, 1, 1)
+        self.minlevel2But = QtGui.QPushButton(self.scrollAreaWidgetContents)
+        self.minlevel2But.setObjectName(_fromUtf8("minlevel2But"))
+        self.step1ParametersLayout.addWidget(self.minlevel2But, 12, 2, 1, 1)
         self.step1Layout.addLayout(self.step1ParametersLayout)
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.step1Layout.addItem(spacerItem)
@@ -734,6 +750,9 @@ class Ui_trainingWindow(object):
         self.thresholdLabel.setText(_translate("trainingWindow", "Threshold:", None))
         self.filterLabel.setText(_translate("trainingWindow", "Low-pass filter parameters:", None))
         self.filterAssist1But.setText(_translate("trainingWindow", "Filter Assistant", None))
+        self.minlevelLabel.setText(_translate("trainingWindow", "MinLevel (just above noise) (V):", None))
+        self.minlevel1But.setText(_translate("trainingWindow", "MinLevel Assistant", None))
+        self.minlevel2But.setText(_translate("trainingWindow", "MinLevel Assistant", None))
         self.saveParametersBut.setText(_translate("trainingWindow", "Save parameters", None))
         self.loadParametersBut.setText(_translate("trainingWindow", "Load parameters", None))
         self.step2TitleLabel.setText(_translate("trainingWindow", "2. Detect Spikes >", None))
@@ -741,7 +760,7 @@ class Ui_trainingWindow(object):
         self.saveWindowLengthsLabel.setText(_translate("trainingWindow", "Save window lengths as:", None))
         self.verifySpikes2But.setText(_translate("trainingWindow", "Verify detection", None))
         self.loadSpikesLabel.setText(_translate("trainingWindow", "Load spikes file:", None))
-        self.onlyAboveLabel.setText(_translate("trainingWindow", "Only detect spikes above (V) (Needed to avoid noise)", None))
+        self.onlyAboveLabel.setText(_translate("trainingWindow", "Only output spikes above (V) (Needed to avoid noise)", None))
         self.detectFish2Label.setText(_translate("trainingWindow", "Fish 2", None))
         self.verifySpikes1But.setText(_translate("trainingWindow", "Verify detection", None))
         self.detectSpikes1But.setText(_translate("trainingWindow", "Detect Spikes", None))

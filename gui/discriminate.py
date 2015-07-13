@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, inspect
 
 import numpy as np
 
@@ -28,6 +28,7 @@ class DiscriminateWindow(QtGui.QDialog):
                                self.ui.tapsLineEdit, \
                                self.ui.cutoffLineEdit, \
                                self.ui.thresholdLevelLineEdit, \
+                               self.ui.minlevelLineEdit, \
                                self.ui.saveSpikesLineEdit, \
                                self.ui.loadSpikesLineEdit, \
                                self.ui.loadWinlen1LineEdit, \
@@ -51,21 +52,20 @@ class DiscriminateWindow(QtGui.QDialog):
         # do not clean them
         self.filterAssistProgram = QtCore.QProcess()
         self.thresholdAssistProgram = QtCore.QProcess()
+        self.minlevelAssistProgram = QtCore.QProcess()
         self.verifySpikesProgram = QtCore.QProcess()
         self.detectSpikesProgram = QtCore.QProcess()
         self.applySVMProgram = QtCore.QProcess()
         self.applyContinuityProgram = QtCore.QProcess()
         self.detectTimestampsProgram = QtCore.QProcess()
-        self.verifyAndCorrectProgram = QtCore.QProcess()
         
         self.dicProgram = {'paramchooser lowpass': (self.filterAssistProgram, ), \
-                           'paramchooser threshold': (self.thresholdAssistProgram, ), \
+                           'paramchooser threshold': (self.thresholdAssistProgram,  self.minlevelAssistProgram), \
                            'winview': (self.verifySpikesProgram, ), \
                            'spikes': (self.detectSpikesProgram, ), \
                            'singlefish': (self.applySVMProgram, ), \
                            'recog': (self.applyContinuityProgram, ), \
                            'detectIPI': (self.detectTimestampsProgram, ), \
-                           'plotIPIandSVM': (self.verifyAndCorrectProgram, ), \
                            }
         
         self.cancelled = False
@@ -106,6 +106,9 @@ class DiscriminateWindow(QtGui.QDialog):
         self.connectButtons()
         
         self.initialClickState()
+        
+        # Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
     
     def connectButtons(self):
         QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
@@ -113,6 +116,7 @@ class DiscriminateWindow(QtGui.QDialog):
         
         QtCore.QObject.connect(self.ui.filterAssistBut, QtCore.SIGNAL('clicked()'), self.filterAssist)
         QtCore.QObject.connect(self.ui.thresholdAssistBut, QtCore.SIGNAL('clicked()'), self.thresholdAssist)
+        QtCore.QObject.connect(self.ui.minlevelAssistBut, QtCore.SIGNAL('clicked()'), self.minlevelAssist)
         
         QtCore.QObject.connect(self.ui.detectSpikesBut, QtCore.SIGNAL('clicked()'), self.detectSpikes)
         QtCore.QObject.connect(self.ui.verifySpikesBut, QtCore.SIGNAL('clicked()'), self.verifySpikes)
@@ -131,13 +135,15 @@ class DiscriminateWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'paramchooser lowpass'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.filterAssistProgram.start('./../paramchooser/paramchooser', \
                                        ['lowpass', \
                                         TSName])
         
         self.cancelled = False
-        def filterAssistFinish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def filterAssistFinish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 out = self.filterAssistProgram.readAllStandardOutput()
                 out = out + '\n' + self.filterAssistProgram.readAllStandardError()
                 
@@ -151,7 +157,7 @@ class DiscriminateWindow(QtGui.QDialog):
             else:
                 return None
         
-        QtCore.QObject.connect(self.filterAssistProgram, QtCore.SIGNAL('finished(int)'), filterAssistFinish)
+        QtCore.QObject.connect(self.filterAssistProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), filterAssistFinish)
     
     def thresholdAssist(self):
         print 'paramchooser threshold'
@@ -161,6 +167,8 @@ class DiscriminateWindow(QtGui.QDialog):
         
         # Same name of self.dicprogram
         self.programname = 'paramchooser threshold'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.thresholdAssistProgram.start('./../paramchooser/paramchooser', \
                                           ['threshold', \
                                            TSName, \
@@ -168,8 +176,8 @@ class DiscriminateWindow(QtGui.QDialog):
                                            cutoff])
         
         self.cancelled = False
-        def thresholdAssistFinish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def thresholdAssistFinish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 out = self.thresholdAssistProgram.readAllStandardOutput()
                 out = out + '\n' + self.thresholdAssistProgram.readAllStandardError()
                 
@@ -180,7 +188,39 @@ class DiscriminateWindow(QtGui.QDialog):
             else:
                 return None
         
-        QtCore.QObject.connect(self.thresholdAssistProgram, QtCore.SIGNAL('finished(int)'), thresholdAssistFinish)
+        QtCore.QObject.connect(self.thresholdAssistProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), thresholdAssistFinish)
+    
+    def minlevelAssist(self):
+        print 'paramchooser threshold'
+        TSName = self.ui.loadTimeseriesLineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        cutoff = self.ui.cutoffLineEdit.text()
+        
+        # Same name of self.dicprogram
+        self.programname = 'paramchooser threshold'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        self.minlevelAssistProgram.start('./../paramchooser/paramchooser', \
+                                          ['threshold', \
+                                           TSName, \
+                                           taps, \
+                                           cutoff])
+        
+        self.cancelled = False
+        def minlevelAssistFinish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
+                out = self.minlevelAssistProgram.readAllStandardOutput()
+                out = out + '\n' + self.minlevelAssistProgram.readAllStandardError()
+                
+                out = str(out)
+                
+                threshold = out.split('threshold = ')[1].split('\n')[0]
+                self.ui.minlevelLineEdit.setText(threshold)
+            else:
+                return None
+        
+        QtCore.QObject.connect(self.minlevelAssistProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), minlevelAssistFinish)
+    
     
     def detectSpikes(self):
         print 'spikes'
@@ -197,24 +237,27 @@ class DiscriminateWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'spikes'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectSpikesProgram.start('./../spikes/spikes', \
                                        # Saturation will exclude windows -> can only be used on training
                                        ['--numtaps=%s'%taps, \
                                         '--cutoff=%s'%cutoff, \
                                         '--detection=%s'%threshold, \
+                                        '--minratio=0.0', \
                                         TSName, \
                                         saveSpikes])
         
         self.cancelled = False
-        def detectSpikesFinish(ret):
+        def detectSpikesFinish(ret, exitStatus):
             self.app.restoreOverrideCursor()
             dialog.hide()
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadSpikesLineEdit.setText(saveSpikes)
             else:
                 return None
         
-        QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('finished(int)'), detectSpikesFinish)
+        QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikesFinish)
         QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
@@ -225,19 +268,23 @@ class DiscriminateWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'winview'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         if TSName != '':
             self.verifySpikesProgram.start('./../winview/winview', [spikesName, TSName])
         else:
             self.verifySpikesProgram.start('./../winview/winview', [spikesName])
         
         self.cancelled = False
-        def verifySpikesFinish(ret):
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+        def verifySpikesFinish(ret, exitStatus):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 pass
             else:
+                print 'stdout:\n' + self.verifySpikesProgram.readAllStandardOutput()
+                print 'stderr:\n' + self.verifySpikesProgram.readAllStandardError()
                 return None
         
-        QtCore.QObject.connect(self.verifySpikesProgram, QtCore.SIGNAL('finished(int)'), verifySpikesFinish)
+        QtCore.QObject.connect(self.verifySpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikesFinish)
     
     def applySVM(self):
         print 'singlefish'
@@ -262,6 +309,8 @@ class DiscriminateWindow(QtGui.QDialog):
         
         # Same name of self.dicProgram
         self.programname = 'singlefish'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.applySVMProgram.start('./../singlefish/singlefish', \
                                    ['--maxsize=%d'%winlen, \
                                     '--minwins=%s'%minWin, \
@@ -276,16 +325,19 @@ class DiscriminateWindow(QtGui.QDialog):
                                     saveProb])
         
         self.cancelled = False
-        def applySVMFinish(ret):
+        def applySVMFinish(ret, exitStatus):
+            print 'singlefish finished (%d,%s)'%(ret, repr(exitStatus))
             self.app.restoreOverrideCursor()
             dialog.hide()
-            if (self.isReturnCodeOk(ret) is True) and (self.cancelled is False):
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadSinglefishLineEdit.setText(saveSinglefish)
                 self.ui.loadProbLineEdit.setText(saveProb)
             else:
+                print 'stdout:\n' + self.applySVMProgram.readAllStandardOutput()
+                print 'stderr:\n' + self.applySVMProgram.readAllStandardError()
                 return None
         
-        QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('finished(int)'), applySVMFinish)
+        QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), applySVMFinish)
         QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
         QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
@@ -331,6 +383,8 @@ class DiscriminateWindow(QtGui.QDialog):
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
     
         self.programname = 'recog'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.applyContinuityProgram.start('./../recog/recog', \
                                           ['iterate', \
                                            '--saturation=%s,%s'%(self.lowSaturation, self.highSaturation), \
@@ -355,8 +409,8 @@ class DiscriminateWindow(QtGui.QDialog):
                 else:
                     self.ui.loadDBLineEdit.setText(self.saveDBName)
             else:
-                print self.applyContinuityProgram.readAllStandardOutput()
-                print self.applyContinuityProgram.readAllStandardError()
+                print 'stdout:\n' + self.applyContinuityProgram.readAllStandardOutput()
+                print 'stderr:\n' + self.applyContinuityProgram.readAllStandardError()
                 return None
         
         
@@ -380,6 +434,8 @@ class DiscriminateWindow(QtGui.QDialog):
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
         self.programname = 'detectIPI'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectTimestampsProgram.start('python', \
                                            ['./../detectIPI/detectIPI.py', \
                                             DBName, \
@@ -393,6 +449,8 @@ class DiscriminateWindow(QtGui.QDialog):
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadTimestampsLineEdit.setText(saveTimestamps)
             else:
+                print 'stdout:\n' + self.detectSpikesProgram.readAllStandardOutput()
+                print 'stderr:\n' + self.detectSpikesProgram.readAllStandardError()
                 return None
         
         QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectTimestampsFinish)
@@ -401,24 +459,25 @@ class DiscriminateWindow(QtGui.QDialog):
     
     def verifyAndCorrect(self):
         print 'plotIPIandSVM'
-        lowSaturation = self.ui.lowSaturationLineEdit.text()
-        highSaturation = self.ui.highSaturationLineEdit.text()
-        DBName = self.ui.loadDBLineEdit.text()
+        lowSaturation = float(self.ui.lowSaturationLineEdit.text())
+        highSaturation = float(self.ui.highSaturationLineEdit.text())
+        DBName = str(self.ui.loadDBLineEdit.text())
         timeseriesFile = open(self.ui.loadTimeseriesLineEdit.text(),'r')
         spikesFile = open(self.ui.loadSpikesLineEdit.text(), 'r')
+        timestampsFile = str(self.ui.loadTimestampsLineEdit.text())
         
         self.programname = 'plotIPIandSVM'
         
-        timeseriesName = timeseriesFile.name.split('/')[-1].split('.')[0]
+        timeseriesName = str(timeseriesFile.name.split('/')[-1].split('.')[0])
         if os.path.isdir(timeseriesName) == False:
             os.makedirs(str(timeseriesName))
-        dbname = DBName.split('/')[-1].split('.')[0] + '_undo.keys'
-        undoFilename = timeseriesName + '/' + dbname
+        dbname = str(DBName.split('/')[-1].split('.')[0] + '_undo.keys')
+        undoFilename = str(timeseriesName + '/' + dbname)
         open(undoFilename,'a').close()
         
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
-        plotVerify = plotIPIandSVM.PlotData(self.app, str(DBName), spikesFile, timeseriesFile, str(undoFilename), str(timeseriesName), (lowSaturation, highSaturation), 120., 90.)
-        pickVerify = plotIPIandSVM.PickPoints(plotVerify)
+        plotVerify = plotIPIandSVM.PlotData(self.app, DBName, spikesFile, timeseriesFile, undoFilename, timeseriesName, (lowSaturation, highSaturation), 120., 90.)
+        pickVerify = plotIPIandSVM.PickPoints(plotVerify, timestampsFile)
         self.app.restoreOverrideCursor()
         
         plotVerify.show()
@@ -522,6 +581,7 @@ class DiscriminateWindow(QtGui.QDialog):
                            self.ui.tapsLineEdit: 'int', \
                            self.ui.cutoffLineEdit: 'float', \
                            self.ui.thresholdLevelLineEdit: 'float', \
+                           self.ui.minlevelLineEdit: 'float', \
                            
                            self.ui.saveSpikesLineEdit: 'save', \
                            
@@ -635,6 +695,7 @@ class DiscriminateWindow(QtGui.QDialog):
                  self.ui.tapsLineEdit, \
                  self.ui.cutoffLineEdit, \
                  self.ui.thresholdLevelLineEdit, \
+                 self.ui.minlevelLineEdit, \
                 ), \
                 (self.ui.saveSpikesLineEdit, \
                 ) \
@@ -645,6 +706,8 @@ class DiscriminateWindow(QtGui.QDialog):
                 ), \
                 (self.ui.thresholdLevelLineEdit, \
                  self.ui.thresholdAssistBut, \
+                 self.ui.minlevelAssistBut, \
+                 self.ui.minlevelLineEdit, \
                 )
             ), \
         )
@@ -758,6 +821,7 @@ class DiscriminateWindow(QtGui.QDialog):
                        self.ui.tapsLineEdit: self.spikeParametersUnlocker, \
                        self.ui.cutoffLineEdit: self.spikeParametersUnlocker, \
                        self.ui.thresholdLevelLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.minlevelLineEdit: self.spikeParametersUnlocker, \
                        self.ui.saveSpikesLineEdit: self.spikeSavefileUnlocker, \
                        self.ui.loadSpikesLineEdit: self.SVMLoadParametersUnlocker, \
                        self.ui.loadWinlen1LineEdit: self.SVMLoadParametersUnlocker, \
