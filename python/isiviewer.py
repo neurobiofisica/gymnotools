@@ -6,7 +6,7 @@ import struct, re, sys, os
 import cPickle as pickle
 
 samplingrate = 45454.54545454
-spksamples = 128
+spksamples = 256
 nchannels = 11
 maxamp = 9
 

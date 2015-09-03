@@ -24,7 +24,7 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
     
-spkSize = 128
+spkSize = 256
 freq = 45454.54545454
 saturationLow = -10
 saturationHigh = 10

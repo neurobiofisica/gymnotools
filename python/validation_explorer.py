@@ -7,7 +7,7 @@ import cPickle as pickle
 import scipy.signal as sig
 
 samplingrate = 50.e3
-spksamples = 128
+spksamples = 256
 nchannels = 7
 maxamp = 9
 

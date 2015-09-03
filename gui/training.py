@@ -1277,6 +1277,9 @@ class TrainingWindow(QtGui.QDialog):
         self.programname = 'svmtool optim'
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+
+        self.f = open('output.txt','w')
+
         self.svmtoolOptimProgram.start('./../svmtool/svmtool', \
                                        ['optim', \
                                         '-c %s,%s,%s'%(cStart,cStop,cStep), \
@@ -1284,22 +1287,27 @@ class TrainingWindow(QtGui.QDialog):
                                         train1Name, \
                                         train2Name, \
                                         cross1Name, \
-                                        cross2Name])
+                                        cross2Name, \
+                                         ])
         
         def getOuput():
             stdout = self.svmtoolOptimProgram.readAllStandardOutput()
             self.svmOutput = self.svmOutput + stdout
             if stdout != '':
                 print 'stdout:\t%s'%str(stdout).strip()
+                self.f.write(str(stdout).strip()+'\n')
             stderr = self.svmtoolOptimProgram.readAllStandardError()
             self.svmOutput = self.svmOutput + stderr
             if stderr != '':
                 print 'stderr:\t%s'%str(stderr).strip()
+                self.f.write(str(stderr).strip()+'\n')
+            self.f.flush()
         
         self.cancelled = False
         def svmtoolOptimFinish(ret, exitStatus):
             self.app.restoreOverrideCursor()
             dialog.hide()
+            self.f.close()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 
                 stdout = self.svmtoolOptimProgram.readAllStandardOutput()

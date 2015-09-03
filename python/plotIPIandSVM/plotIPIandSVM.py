@@ -21,6 +21,8 @@ recogpath = './../../recog/recog'
 detectIPIpath = '../../detectIPI/detectIPI.py'
 import recogdb
 
+SPKSIZE = 256
+
 # Defines (zorder -> used of selecting picker)
 IPIDATABLUE = 100 # The dots will be on top of every other plot
 IPIDATARED = 200
@@ -704,7 +706,7 @@ class PlotData(QtGui.QDialog):
 
         self.lines = []
 
-    def plotSigData(self, spksurroudings=25*128):
+    def plotSigData(self, spksurroudings=25*SPKSIZE):
         while len(self.lines) != 0:
             self.lines.pop().remove()
          

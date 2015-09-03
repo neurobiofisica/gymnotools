@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <QFile>
+#include <QPair>
 
 class WindowFile : public QFile
 {
@@ -41,6 +42,17 @@ public:
     qint32 getEventSamples() const { return curEventSamples; }
     qint32 getEventChannels() const { return curEventChannels; }
     qint32 getChannelId() const { return curChannelId; }
+
+    QPair<qint64, qint64> getNumEventsAndNumWins() 
+    {
+        qint64 numEvents = 0, numWins = 0;
+        do {
+            numEvents++;
+            numWins += getEventChannels();
+        } while( nextEvent() );
+        rewind();
+        return QPair<qint64, qint64>(numEvents, numWins);
+    }
 
     /**
      * Rewinds the file so that it can be read like it was just opened.

@@ -21,7 +21,7 @@ def parsefile(f):
         yield (start, end, chs)
         
 def showdata(f, storminfo):
-    addlen = 128*1000
+    addlen = 256*1000
     
     print(repr(storminfo))
     start, end, chs = storminfo

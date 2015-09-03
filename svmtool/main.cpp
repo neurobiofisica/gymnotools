@@ -163,7 +163,8 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
     SVMProblem problem(trainA, trainB);
     SVMParam param;
 
-    int bestErrors = problem.l;
+    const int totalWins = crossA.getNumEventsAndNumWins().second + crossB.getNumEventsAndNumWins().second;
+    int bestErrors = totalWins;
     double bestg = 0., bestc = 0.;
 
     const double eps = std::numeric_limits<float>::epsilon();
@@ -187,7 +188,7 @@ static void cmd_optim(WindowFile &trainA, WindowFile &trainB,
     }
 
     fprintf(stderr, "\n\n=> Best: c=%.1f, g=%.1f\n", bestc, bestg);
-    fprintf(stderr, "=> Errors: %d (%.2f%%)\n", bestErrors, (100.*bestErrors)/problem.l);
+    fprintf(stderr, "=> Errors: %d (%.2f%%)\n", bestErrors, (100.*bestErrors)/totalWins);
 }
 
 static void cmd_train(const char *modelfile, double cParam, double gParam,

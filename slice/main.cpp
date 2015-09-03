@@ -34,10 +34,9 @@ static void cmd_info(WindowFile &infile)
          .arg(t, 0, 'f', 6)
          .toUtf8());
 
-    do {
-        numEvents++;
-        numWins += infile.getEventChannels();
-    } while(infile.nextEvent());
+    QPair<qint64, qint64> numEventsWins = infile.getNumEventsAndNumWins();
+    numEvents = numEventsWins.first;
+    numWins = numEventsWins.second;
 
     off = infile.getEventOffset();
     t = (off / BytesPerSample)/(double)SamplingRate;
