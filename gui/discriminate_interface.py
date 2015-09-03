@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'discriminate_interface.ui'
 #
-# Created: Thu Sep  3 17:15:35 2015
+# Created: Thu Sep  3 17:32:56 2015
 #      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -358,7 +358,7 @@ class Ui_discriminateWindow(object):
         self.gridLayout_2.addLayout(self.saveLoadParametersLayout, 0, 0, 1, 3)
         self.label = QtGui.QLabel(self.scrollAreaWidgetContents)
         self.label.setText(_fromUtf8(""))
-        self.label.setPixmap(QtGui.QPixmap(_fromUtf8("LogoClaro_comLogo_w580.png")))
+        self.label.setPixmap(QtGui.QPixmap(_fromUtf8(":/Logos/LogoClaro_comLogo_w580.png")))
         self.label.setObjectName(_fromUtf8("label"))
         self.gridLayout_2.addWidget(self.label, 6, 2, 1, 1)
         self.line_2 = QtGui.QFrame(self.scrollAreaWidgetContents)
@@ -450,3 +450,4 @@ class Ui_discriminateWindow(object):
         self.loadParametersBut.setText(_translate("discriminateWindow", "Load parameters", None))
 
 from clickAux import ClickQLineEdit, ClickQLabel
+import resource_rc

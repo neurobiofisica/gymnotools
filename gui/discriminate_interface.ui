@@ -643,7 +643,7 @@
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap>LogoClaro_comLogo_w580.png</pixmap>
+          <pixmap resource="resource.qrc">:/Logos/LogoClaro_comLogo_w580.png</pixmap>
          </property>
         </widget>
        </item>
@@ -707,6 +707,8 @@
   <tabstop>loadTimestampsLineEdit</tabstop>
   <tabstop>verifyCorrectTimestampsBut</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

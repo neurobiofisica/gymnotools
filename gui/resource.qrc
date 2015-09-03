@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="Logos">
+    <file>LogoClaro_comLogo_w580.png</file>
+    <file>LogoClaro_comLogo_w300.png</file>
+  </qresource>
+</RCC>

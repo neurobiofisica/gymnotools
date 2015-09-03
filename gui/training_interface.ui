@@ -38,7 +38,7 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-410</y>
+        <y>-322</y>
         <width>1255</width>
         <height>1092</height>
        </rect>
@@ -1115,7 +1115,7 @@
             <string/>
            </property>
            <property name="pixmap">
-            <pixmap>LogoClaro_comLogo_w580.png</pixmap>
+            <pixmap resource="resource.qrc">:/Logos/LogoClaro_comLogo_w580.png</pixmap>
            </property>
           </widget>
          </item>
@@ -1276,6 +1276,8 @@
   <tabstop>loadSVMLineEdit</tabstop>
   <tabstop>generateROCBut</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="resource.qrc"/>
+ </resources>
  <connections/>
 </ui>
