@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'training_interface.ui'
 #
-# Created: Tue Jun  9 18:16:00 2015
-#      by: PyQt4 UI code generator 4.10.3
+# Created: Thu Sep  3 17:13:51 2015
+#      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -41,7 +41,7 @@ class Ui_trainingWindow(object):
         self.scrollArea.setAlignment(QtCore.Qt.AlignCenter)
         self.scrollArea.setObjectName(_fromUtf8("scrollArea"))
         self.scrollAreaWidgetContents = QtGui.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1273, 1110))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, -410, 1255, 1092))
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.gridLayout_2 = QtGui.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
@@ -615,15 +615,11 @@ class Ui_trainingWindow(object):
         self.optimizeSVMBut.setObjectName(_fromUtf8("optimizeSVMBut"))
         self.step5ParametersLayout.addWidget(self.optimizeSVMBut, 4, 0, 1, 5)
         self.step5Layout.addLayout(self.step5ParametersLayout)
-        self.logoPixMap = KPixmapRegionSelectorWidget(self.scrollAreaWidgetContents)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.logoPixMap.sizePolicy().hasHeightForWidth())
-        self.logoPixMap.setSizePolicy(sizePolicy)
-        self.logoPixMap.setPixmap(QtGui.QPixmap(_fromUtf8("../../../Dropbox/LogoClaro_comLogo_w580.png")))
-        self.logoPixMap.setObjectName(_fromUtf8("logoPixMap"))
-        self.step5Layout.addWidget(self.logoPixMap)
+        self.label = QtGui.QLabel(self.scrollAreaWidgetContents)
+        self.label.setText(_fromUtf8(""))
+        self.label.setPixmap(QtGui.QPixmap(_fromUtf8("LogoClaro_comLogo_w580.png")))
+        self.label.setObjectName(_fromUtf8("label"))
+        self.step5Layout.addWidget(self.label)
         self.gridLayout_2.addLayout(self.step5Layout, 5, 0, 1, 1)
         self.line_5 = QtGui.QFrame(self.scrollAreaWidgetContents)
         self.line_5.setFrameShape(QtGui.QFrame.VLine)
@@ -815,6 +811,5 @@ class Ui_trainingWindow(object):
         self.loadSVMLabel.setText(_translate("trainingWindow", "Load SVM model: ", None))
         self.generateROCBut.setText(_translate("trainingWindow", "Generate ROC Curve", None))
 
-from PyKDE4.kdeui import KPixmapRegionSelectorWidget
 from clickAux import ClickQLineEdit, ClickQLabel
 from ROCAux import ROCWidget

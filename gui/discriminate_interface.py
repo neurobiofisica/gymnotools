@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'discriminate_interface.ui'
 #
-# Created: Tue Jun  9 18:53:33 2015
-#      by: PyQt4 UI code generator 4.10.3
+# Created: Thu Sep  3 17:15:35 2015
+#      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -45,11 +45,6 @@ class Ui_discriminateWindow(object):
         self.scrollAreaWidgetContents.setObjectName(_fromUtf8("scrollAreaWidgetContents"))
         self.gridLayout_2 = QtGui.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
-        self.line_2 = QtGui.QFrame(self.scrollAreaWidgetContents)
-        self.line_2.setFrameShape(QtGui.QFrame.VLine)
-        self.line_2.setFrameShadow(QtGui.QFrame.Sunken)
-        self.line_2.setObjectName(_fromUtf8("line_2"))
-        self.gridLayout_2.addWidget(self.line_2, 3, 1, 3, 1)
         self.step2Layout = QtGui.QVBoxLayout()
         self.step2Layout.setObjectName(_fromUtf8("step2Layout"))
         self.step2TitleLabel = ClickQLabel(self.scrollAreaWidgetContents)
@@ -251,7 +246,7 @@ class Ui_discriminateWindow(object):
         self.applyContinuityBut.setObjectName(_fromUtf8("applyContinuityBut"))
         self.step3ParametersLayout.addWidget(self.applyContinuityBut, 4, 0, 1, 2)
         self.step3Layout.addLayout(self.step3ParametersLayout)
-        self.gridLayout_2.addLayout(self.step3Layout, 7, 0, 1, 1)
+        self.gridLayout_2.addLayout(self.step3Layout, 8, 0, 1, 1)
         self.line_3 = QtGui.QFrame(self.scrollAreaWidgetContents)
         self.line_3.setFrameShape(QtGui.QFrame.VLine)
         self.line_3.setFrameShadow(QtGui.QFrame.Sunken)
@@ -262,25 +257,21 @@ class Ui_discriminateWindow(object):
         self.line_6.setFrameShadow(QtGui.QFrame.Sunken)
         self.line_6.setObjectName(_fromUtf8("line_6"))
         self.gridLayout_2.addWidget(self.line_6, 4, 2, 1, 1)
-        self.logoPixMap = KPixmapRegionSelectorWidget(self.scrollAreaWidgetContents)
-        self.logoPixMap.setPixmap(QtGui.QPixmap(_fromUtf8("../../../Dropbox/LogoClaro_comLogo_w580.png")))
-        self.logoPixMap.setObjectName(_fromUtf8("logoPixMap"))
-        self.gridLayout_2.addWidget(self.logoPixMap, 5, 2, 1, 1)
         self.line = QtGui.QFrame(self.scrollAreaWidgetContents)
         self.line.setFrameShape(QtGui.QFrame.HLine)
         self.line.setFrameShadow(QtGui.QFrame.Sunken)
         self.line.setObjectName(_fromUtf8("line"))
-        self.gridLayout_2.addWidget(self.line, 6, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.line, 7, 0, 1, 1)
         self.line_5 = QtGui.QFrame(self.scrollAreaWidgetContents)
         self.line_5.setFrameShape(QtGui.QFrame.HLine)
         self.line_5.setFrameShadow(QtGui.QFrame.Sunken)
         self.line_5.setObjectName(_fromUtf8("line_5"))
-        self.gridLayout_2.addWidget(self.line_5, 6, 2, 1, 1)
+        self.gridLayout_2.addWidget(self.line_5, 7, 2, 1, 1)
         self.line_4 = QtGui.QFrame(self.scrollAreaWidgetContents)
         self.line_4.setFrameShape(QtGui.QFrame.VLine)
         self.line_4.setFrameShadow(QtGui.QFrame.Sunken)
         self.line_4.setObjectName(_fromUtf8("line_4"))
-        self.gridLayout_2.addWidget(self.line_4, 7, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.line_4, 8, 1, 1, 1)
         self.step4Layout = QtGui.QVBoxLayout()
         self.step4Layout.setObjectName(_fromUtf8("step4Layout"))
         self.step4TitleLabel = ClickQLabel(self.scrollAreaWidgetContents)
@@ -323,7 +314,7 @@ class Ui_discriminateWindow(object):
         spacerItem4 = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.step4ParametersLayout.addItem(spacerItem4, 3, 0, 1, 2)
         self.step4Layout.addLayout(self.step4ParametersLayout)
-        self.gridLayout_2.addLayout(self.step4Layout, 7, 2, 1, 1)
+        self.gridLayout_2.addLayout(self.step4Layout, 8, 2, 1, 1)
         self.gridLayout_6 = QtGui.QGridLayout()
         self.gridLayout_6.setObjectName(_fromUtf8("gridLayout_6"))
         self.lowSaturationLabel = QtGui.QLabel(self.scrollAreaWidgetContents)
@@ -365,6 +356,16 @@ class Ui_discriminateWindow(object):
         self.loadParametersBut.setObjectName(_fromUtf8("loadParametersBut"))
         self.saveLoadParametersLayout.addWidget(self.loadParametersBut)
         self.gridLayout_2.addLayout(self.saveLoadParametersLayout, 0, 0, 1, 3)
+        self.label = QtGui.QLabel(self.scrollAreaWidgetContents)
+        self.label.setText(_fromUtf8(""))
+        self.label.setPixmap(QtGui.QPixmap(_fromUtf8("LogoClaro_comLogo_w580.png")))
+        self.label.setObjectName(_fromUtf8("label"))
+        self.gridLayout_2.addWidget(self.label, 6, 2, 1, 1)
+        self.line_2 = QtGui.QFrame(self.scrollAreaWidgetContents)
+        self.line_2.setFrameShape(QtGui.QFrame.VLine)
+        self.line_2.setFrameShadow(QtGui.QFrame.Sunken)
+        self.line_2.setObjectName(_fromUtf8("line_2"))
+        self.gridLayout_2.addWidget(self.line_2, 3, 1, 4, 1)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout.addWidget(self.scrollArea, 0, 0, 1, 1)
 
@@ -448,5 +449,4 @@ class Ui_discriminateWindow(object):
         self.saveParametersBut.setText(_translate("discriminateWindow", "Save parameters", None))
         self.loadParametersBut.setText(_translate("discriminateWindow", "Load parameters", None))
 
-from PyKDE4.kdeui import KPixmapRegionSelectorWidget
 from clickAux import ClickQLineEdit, ClickQLabel
