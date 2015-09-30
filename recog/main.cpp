@@ -69,7 +69,7 @@ public:
         :dbp(NULL), curp(NULL)
     {
         assert(sizeof(float) == sizeof(qint32));
-        recbuf = new float[10 + 2*NumChannels*EODSamples];
+        recbuf = new float[20 + 2*NumChannels*EODSamples];
 
         db_create(&dbp, NULL, 0);
         dbp->set_bt_compare(dbp, recogdb_compare);
@@ -142,7 +142,7 @@ public:
         const qint32 *p = (const qint32 *)data.data;
         return p[10];
     }
-    qint64 pairsvm() const {
+    qint64 pairsvm() const { // 64 bit field
         const qint64 *p = (const qint64 *)data.data;
         return p[11];
     }
@@ -1184,14 +1184,18 @@ int main(int argc, char **argv)
                 break;
             }
             case 'd':
+            {
                 direction = QString(optarg).toInt() >= 0 ? 1 : -1;
                 break;
+            }
             case 'f':
                 from = QString(optarg).toLongLong();
                 break;
             case 'r':
+            {
                 force = (bool)QString(optarg).toInt() > 0 ? 1 : 0;
                 break;
+            }
             default:
                 return usage(progname);
             }

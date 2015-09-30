@@ -11,6 +11,8 @@
 #include <qwt_plot_panner.h>
 #include <qwt_clipper.h>
 
+#include <qwt_symbol.h>
+
 #include "common/windowfile.h"
 #include "common/sigcfg.h"
 #include "common/sigutil.h"
@@ -66,6 +68,10 @@ WindowViewDialog::WindowViewDialog(WindowFile &infile, const QString &origFilena
         curves[i] = new CustomPlotCurve();
         curves[i]->setRenderHint(QwtPlotItem::RenderAntialiased);
         curves[i]->setPen(QColor(Qt::green));
+
+        QwtSymbol *symbol = new QwtSymbol( QwtSymbol::Ellipse, QBrush(Qt::green), QPen(Qt::green, 1), QSize(2,2) );
+        curves[i]->setSymbol(symbol);
+
         curves[i]->attach(ui->plot);
     }
 

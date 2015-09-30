@@ -243,6 +243,7 @@ class PickPoints:
                     # This is for recreating the local singlefish and probs files
                     self.plotObject.loadDataFromDB()
                     
+                    oldDir = os.getcwd()
                     while len(self.plotObject.dialogIPI.iterate_from) != 0:
                         
                         #Be sure that is on current directory
@@ -250,6 +251,15 @@ class PickPoints:
                         
                         direction, force, key = self.plotObject.dialogIPI.pop_iterate_from()
                         print 'direction %d %d %r'%(direction, key, force)
+                        print([recogpath, 'iterate_from', \
+                                               '--saturation=%f,%f'%(self.plotObject.lowSaturation, self.plotObject.highSaturation), \
+                                               '--from=%d'%key, \
+                                               '--direction=%d'%direction, \
+                                               '--force=%d'%force, \
+                                               self.plotObject.dbname, \
+                                               self.plotObject.spikesname, \
+                                               self.plotObject.singlefishfilename, \
+                                               self.plotObject.probsfilename])
                         ret = subprocess.call([recogpath, 'iterate_from', \
                                                '--saturation=%f,%f'%(self.plotObject.lowSaturation, self.plotObject.highSaturation), \
                                                '--from=%d'%key, \
@@ -275,7 +285,10 @@ class PickPoints:
                         assert ret == 0
                     
                     self.plotObject.db.sync()
-                        
+                    
+                    print os.path.abspath(oldDir)   
+                    os.chdir( os.path.abspath(oldDir) )
+ 
                     self.plotObject.loadDataFromDB()
                     self.plotObject.formatSVM2Plot()
                     self.plotObject.formatModified2Plot()
@@ -501,6 +514,8 @@ class PlotData(QtGui.QDialog):
 
         self.spikesname = spikesf.name
 
+        self.undoFilename = undoFilename
+
         self.dbname = dbf
         self.db = recogdb.openDB(self.dbname,'w')
         
@@ -632,14 +647,13 @@ class PlotData(QtGui.QDialog):
         self.createLocalFiles()
         
     def createLocalFiles(self):
-        datafilename = self.folder
-        self.probsfilename = datafilename + '/local.probs'
+        self.probsfilename = os.path.dirname(os.path.abspath(self.undoFilename)) + '/local.probs'
         probsf = open(self.probsfilename, 'w')
         for s in self.probslist:
             probsf.write( '%s %d %d %f %f\n'%(s['svm'], s['off1'], s['off2'], s['prob1'], s['prob2']) )
         probsf.close()
         
-        self.singlefishfilename = datafilename + '/local.singlefish'
+        self.singlefishfilename = os.path.dirname(os.path.abspath(self.undoFilename)) + '/local.singlefish'
         singlefishf = open(self.singlefishfilename, 'w')
         for s in self.singlefishlist:
             singlefishf.write( '%d %d\n'%(s['off1'], s['off2']) )
@@ -1020,11 +1034,12 @@ if __name__ == '__main__':
     #           key3.undo
     #           ...
     datafilename = datafile.name.split('/')[-1].split('.')[0]
-    if os.path.isdir(datafilename) == False:
-        os.makedirs(datafilename)
-    dbname = dbf.split('/')[-1].split('.')[0] + '_undo.keys'
+    dbfiledir = os.path.dirname(os.path.abspath(dbf))
+    dbname = dbfiledir + '/' + dbf.split('/')[-1].split('.')[0] + '_undo.keys'
+    if os.path.isdir(dbfiledir + '/' + datafilename) == False:
+        os.makedirs(dbfiledir + '/' + datafilename)
     
-    undoFilename = datafilename + '/' + dbname
+    undoFilename = dbfiledir + '/' + datafilename + '/' + dbname
     
     # Create undo file if it does not exists (a for append -> do not erase any data)
     open(undoFilename,'a').close()

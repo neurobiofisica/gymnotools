@@ -518,6 +518,7 @@ class TrainingWindow(QtGui.QDialog):
                             '--onlyabove=%s'%onlyAbove, \
                             '--minlevel=%s'%minlevel, \
                             '--minratio=0.0', \
+                            '--stopsamples=32', \
                             TSName, \
                             saveSpikes])
         
@@ -565,6 +566,7 @@ class TrainingWindow(QtGui.QDialog):
                             '--onlyabove=%s'%onlyAbove, \
                             '--minlevel=%s'%minlevel, \
                             '--minratio=0.0', \
+                            '--stopsamples=32', \
                             TSName, \
                             saveSpikes])
         

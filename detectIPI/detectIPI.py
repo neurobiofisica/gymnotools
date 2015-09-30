@@ -106,7 +106,9 @@ for rec in db.iteritems():
                 IdxMaximos[i] = Derivada[PIdx].argmax()
                 Maximos[i] = Derivada[PIdx][ IdxMaximos[i] ]
 
-            MediaCentro[PIdx] = np.dot(IdxMaximos,Maximos) / sum(Maximos)
+            if sum(Maximos) != 0:
+                MediaCentro[PIdx] = np.dot(IdxMaximos,Maximos) / sum(Maximos)
+                # Da zero se todos os canais estao saturados!
 
         out = int(round(off + offset + MediaCentro[PIdx]))
         allOffs[offraw] = out

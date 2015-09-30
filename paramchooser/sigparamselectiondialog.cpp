@@ -8,6 +8,7 @@
 #include <qwt_plot_panner.h>
 #include <qwt_plot_marker.h>
 #include <qwt_scale_engine.h>
+#include <qwt_symbol.h>
 
 #include "sigparamselectiondialog.h"
 #include "ui_sigparamselectiondialog.h"
@@ -144,12 +145,20 @@ SigParamLowpassDialog::SigParamLowpassDialog(const QString &filename, int numtap
     filtCurve = new QwtPlotCurve();
     filtCurve->setRenderHint(QwtPlotItem::RenderAntialiased);
     filtCurve->setPen(QColor(Qt::green));
+    
+    QwtSymbol *symbolFilt = new QwtSymbol( QwtSymbol::Ellipse, QBrush(Qt::green), QPen(Qt::green, 1), QSize(2,2) );
+    filtCurve->setSymbol(symbolFilt);
+
     filtCurve->setYAxis(QwtPlot::yLeft);
     filtCurve->attach(plot);
 
     diffCurve = new QwtPlotCurve();
     diffCurve->setRenderHint(QwtPlotItem::RenderAntialiased);
     diffCurve->setPen(QColor(Qt::red));
+
+    QwtSymbol *symbolDiff = new QwtSymbol( QwtSymbol::Ellipse, QBrush(Qt::red), QPen(Qt::red, 1), QSize(2,2) );
+    diffCurve->setSymbol(symbolDiff);
+
     diffCurve->setYAxis(QwtPlot::yRight);
     diffCurve->attach(plot);
 

@@ -84,8 +84,10 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         bool winOk[NumChannels];
         double maxAmp[NumChannels];
 
-        for(int ch = 0; ch < NumChannels; ch++)
+        for(int ch = 0; ch < NumChannels; ch++) {
             winOk[ch] = false;
+            maxAmp[ch] = 0.;
+        }
 
         for(int i = 0; i < winfile.getEventChannels(); i++) {
             bool errorless = winfile.nextChannel();
@@ -97,6 +99,7 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
             winfile.read((char*)winbuf.buf(), winSamples*sizeof(float));
 
             bool chOk = false;
+            maxAmp[ch] = 0.;
             for(int j = 0; j < winSamples; j++) {
                 const float sample = winbuf.buf()[j];
                 if(!chOk && fabsf(sample) >= onlyabove)
@@ -169,10 +172,10 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
             //TotalMaxAmp += maxAmp[ch];
 
             // Weighted geometric mean
-            probA *= pow(probEstim[0], 1./maxAmp[ch]);
-            probB *= pow(probEstim[1], 1./maxAmp[ch]);
+            probA *= pow(probEstim[0], maxAmp[ch]);
+            probB *= pow(probEstim[1], maxAmp[ch]);
 
-            TotalMaxAmp += 1./maxAmp[ch];
+            TotalMaxAmp += maxAmp[ch];
         }
 
         // Try to make a geometric mean on the probability
@@ -184,6 +187,7 @@ static AINLINE void findSingleFish(SignalFile &sigfile, WindowFile &winfile,
         //probB = probB / TotalMaxAmp;
 
         // Weighted geometric mean
+        // ( prod_i (p_i)**max(abs(A_i)) ) ** (1./sum_i(A_i))
         probA = pow(probA, 1./TotalMaxAmp);
         probB = pow(probB, 1./TotalMaxAmp);
 

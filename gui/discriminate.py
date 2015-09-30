@@ -230,6 +230,7 @@ class DiscriminateWindow(QtGui.QDialog):
         taps = self.ui.tapsLineEdit.text()
         cutoff = self.ui.cutoffLineEdit.text()
         threshold = self.ui.thresholdLevelLineEdit.text()
+        minLevel = self.ui.minlevelLineEdit.text()
         saveSpikes = self.ui.saveSpikesLineEdit.text()
         
         dialog = self.raiseLongTimeInformation()
@@ -244,7 +245,9 @@ class DiscriminateWindow(QtGui.QDialog):
                                        ['--numtaps=%s'%taps, \
                                         '--cutoff=%s'%cutoff, \
                                         '--detection=%s'%threshold, \
+                                        '--minlevel=%s'%minLevel, \
                                         '--minratio=0.0', \
+                                        '--stopsamples=32', \
                                         TSName, \
                                         saveSpikes])
         
@@ -311,11 +314,25 @@ class DiscriminateWindow(QtGui.QDialog):
         self.programname = 'singlefish'
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        print ['./../singlefish/singlefish', \
+                                    '--maxsize=%d'%winlen, \
+                                    '--minwins=%s'%minWin, \
+                                    '--onlyabove=%s'%onlyAbove, \
+                                    '--saturation=%s,%s'%(lowSaturation,highSaturation), \
+                                    '--minprob=0.80', \
+                                    TSName, \
+                                    spikesName, \
+                                    scaleName, \
+                                    filterName, \
+                                    svmName, \
+                                    saveSinglefish, \
+                                    saveProb]
         self.applySVMProgram.start('./../singlefish/singlefish', \
                                    ['--maxsize=%d'%winlen, \
                                     '--minwins=%s'%minWin, \
                                     '--onlyabove=%s'%onlyAbove, \
                                     '--saturation=%s,%s'%(lowSaturation,highSaturation), \
+                                    '--minprob=0.80', \
                                     TSName, \
                                     spikesName, \
                                     scaleName, \
