@@ -6,6 +6,7 @@
 #include <QRegExp>
 #include <QInputDialog>
 #include <QClipboard>
+#include <qwt_plot_canvas.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_zoomer.h>
 #include <qwt_plot_panner.h>
@@ -50,7 +51,7 @@ WindowViewDialog::WindowViewDialog(WindowFile &infile, const QString &origFilena
     ui->plot->setCanvasBackground(QColor(Qt::black));
     ui->plot->canvas()->setCursor(Qt::ArrowCursor);
 
-    zoomer = new CustomPlotZoomer(ui->plot->canvas());
+    zoomer = new CustomPlotZoomer((QwtPlotCanvas*)ui->plot->canvas());
     zoomer->setRubberBandPen(QColor(Qt::blue));
     zoomer->setTrackerPen(QColor(Qt::white));
     zoomer->setMousePattern(QwtEventPattern::MouseSelect2, Qt::RightButton,
