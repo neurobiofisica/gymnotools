@@ -6,8 +6,8 @@
  */
 
 static const int NumChannels = 11;
-static const double SamplingRate = 45454.454545;
-static const int EODSamples = 256;
+static const double SamplingRate = 50000.0;
+static const int EODSamples = 128;
 
 /*
  * Derived settings

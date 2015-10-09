@@ -8,8 +8,8 @@ static const float defaultMinLevel = 0.0012;
 static const float defaultMinRatio = 0.00037;
 static const int   defaultStopSamples = 16;
 static const float defaultOnlyAbove = 0.85;
-static const float defaultSaturationLow = -9.8;
-static const float defaultSaturationHigh = 9.8;
+static const float defaultSaturationLow = -10;
+static const float defaultSaturationHigh = 10;
 
 static const int   defaultStormGlue = 32;
 static const int   defaultStormSize = 256;
