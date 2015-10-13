@@ -5,8 +5,7 @@
 
 class SVMNodeList
 {
-    svm_node *nodes;
-    int size;
+    svm_node node;
 
 public:
     /**
@@ -15,16 +14,13 @@ public:
      */
     explicit SVMNodeList(int samples)
     {
-        nodes = new svm_node[samples+1];
-        for(int i = 0; i < samples; i++)
-            nodes[i].index = i + 1;
-        nodes[samples].index = -1;
-        size = samples;
+        node.dim = samples;
+        node.values = new double[samples];
     }
 
     ~SVMNodeList()
     {
-        delete[] nodes;
+        delete[] node.values;
     }
 
     /**
@@ -33,14 +29,14 @@ public:
      */
     void fill(float *buf)
     {
-        for(int i = 0; i < size; i++)
-            nodes[i].value = buf[i];
+        for(int i = 0; i < node.dim; i++)
+            node.values[i] = buf[i];
     }
 
     /**
      * Retrieves the SVM node list
      */
-    operator svm_node *() const { return nodes; }
+    operator svm_node *() { return &node; }
 };
 
 #endif // SVMUTIL_H

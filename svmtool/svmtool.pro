@@ -14,5 +14,5 @@ INCLUDEPATH += ..
 LIBS += -L../common -lcommon
 LIBS += -L../svm -lsvm
 
-QMAKE_CXXFLAGS += -fopenmp
+QMAKE_CXXFLAGS += -fopenmp -D_DENSE_REP
 QMAKE_LFLAGS += -fopenmp

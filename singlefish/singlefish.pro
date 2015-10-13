@@ -16,5 +16,5 @@ LIBS += -L../svm -lsvm
 LIBS += -L../dtcwpt -ldtcwpt
 LIBS += -lfftw3f
 
-QMAKE_CXXFLAGS += -fopenmp
+QMAKE_CXXFLAGS += -fopenmp -D_DENSE_REP
 QMAKE_LFLAGS += -fopenmp
