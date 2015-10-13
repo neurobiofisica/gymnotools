@@ -720,7 +720,7 @@ class TrainingWindow(QtGui.QDialog):
         self.featuresFilterPrepareProgram.start('./../features/features', \
                            ['filter', \
                             'prepare', \
-                            '--best=%s'%self.number, \
+                            '--bestw=%s'%self.number, \
                             self.filterName, \
                             self.unfilteredFeaturesName1, \
                             self.unfilteredFeaturesName2])
