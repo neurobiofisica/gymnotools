@@ -243,7 +243,7 @@ static void cmd_rescale_apply(QFile &scalefile, QList<WindowFile*> &outfiles)
     }
 }
 
-static void filter_prepare_best(bool *featureIncl, int n, double *overlap, int samples)
+static void filter_prepare_best(bool *featureIncl, int n, double *overlap, int samples, bool waveletOnly=false)
 {
     typedef QPair<double,int> DoubleIntPair;
     QList<DoubleIntPair> overlapList;
@@ -252,6 +252,8 @@ static void filter_prepare_best(bool *featureIncl, int n, double *overlap, int s
     qSort(overlapList);
     foreach(const DoubleIntPair &pair, overlapList) {
         const int idx = pair.second;
+        if(waveletOnly && idx < NumFFTFeatures)
+            continue;
         if(!featureIncl[idx]) {
             featureIncl[idx] = true;
             if(--n == 0)
@@ -292,7 +294,8 @@ static void filter_prepare_bestbasis(bool *featureIncl, double *overlap)
 enum FiltPrepOpId {
     FILT_PREP_ADD,
     FILT_PREP_BESTBASIS,
-    FILT_PREP_BEST
+    FILT_PREP_BEST,
+    FILT_PREP_BESTW
 };
 struct FiltPrepOp {
     FiltPrepOpId opid;
@@ -337,7 +340,8 @@ static void cmd_filter_prepare(QList<FiltPrepOp> &oplist, int histBars, bool his
             filter_prepare_bestbasis(featureIncl, overlap);
             break;
         case FILT_PREP_BEST:
-            filter_prepare_best(featureIncl, op.arg1, overlap, samples);
+	case FILT_PREP_BESTW:
+            filter_prepare_best(featureIncl, op.arg1, overlap, samples, op.opid == FILT_PREP_BESTW);
             break;
         }
     }
@@ -396,6 +400,7 @@ static int usage(const char *progname)
             "    --fft          add all FFT features (same as --add=0,%d)\n"
             "    --bestbasis    add DT-CWPT bestbasis features\n"
             "    --best=n       add n best (less histogram overlap) features\n"
+            "    --bestw=n      add n best DT-CWPT (less histogram overlap) features\n"
             "    --hist-bars=n  use n bars for the histogram\n"
             "    --hist-std=n   use n bars around an one-sigma range for the histogram\n",
             progname, NumFFTFeatures-1);
@@ -494,8 +499,9 @@ int main(int argc, char **argv)
                     { "fft",       no_argument,       0, 2 },
                     { "bestbasis", no_argument,       0, 3 },
                     { "best",      required_argument, 0, 4 },
-                    { "hist-bars", required_argument, 0, 5 },
-                    { "hist-std",  required_argument, 0, 6 },
+                    { "bestw",     required_argument, 0, 5 },
+                    { "hist-bars", required_argument, 0, 6 },
+                    { "hist-std",  required_argument, 0, 7 },
                     { 0, 0, 0, 0 }
                 };
 
@@ -546,21 +552,22 @@ int main(int argc, char **argv)
                     oplist.append(op);
                     break;
                 case 4:
-                    op.opid = FILT_PREP_BEST;
+                case 5:
+                    op.opid = (c == 4) ? FILT_PREP_BEST : FILT_PREP_BESTW;
                     op.arg1 = QString(optarg).toInt(&ok1);
                     if(!ok1) {
-                        fprintf(stderr, "invalid number '%s' passed as --best argument\n", optarg);
+                        fprintf(stderr, "invalid number '%s' passed as --best/--bestw argument\n", optarg);
                         return 1;
                     }
                     if(op.arg1 < 0 || op.arg1 > NumFeatures) {
-                        fprintf(stderr, "--best: %d is outside the range [0,%d]\n", op.arg1, NumFeatures);
+                        fprintf(stderr, "--best/--bestw: %d is outside the range [0,%d]\n", op.arg1, NumFeatures);
                         return 1;
                     }
                     oplist.append(op);
                     break;
-                case 5:
                 case 6:
-                    histStd = (c == 6);
+                case 7:
+                    histStd = (c == 7);
                     histBars = QString(optarg).toInt(&ok1);
                     if(!ok1) {
                         fprintf(stderr, "invalid number '%s'\n", optarg);
