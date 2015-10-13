@@ -36,13 +36,11 @@ static AINLINE qint32 getNumSamples(WindowFile &file)
     return samples;
 }
 
-static AINLINE void fillNodes(svm_node *nodes, const float *buf, int samples)
+static AINLINE void fillNode(svm_node &node, const float *buf, int samples)
 {
-    for(int i = 0; i < samples; i++) {
-        nodes[i].index = i + 1;
-        nodes[i].value = buf[i];
-    }
-    nodes[samples].index = -1;
+    for(int i = 0; i < samples; i++)
+        node.values[i] = buf[i];
+    node.dim = samples;
 }
 
 struct SVMProblem : svm_problem
@@ -55,11 +53,10 @@ struct SVMProblem : svm_problem
         assert(getNumSamples(trainB) == samples);
 
         y = new double[l];
-        x = new svm_node*[l];
-        x[0] = new svm_node[l*(samples+1)];
-        for(int i = 1; i < l; i++) {
-            x[i] = &x[i-1][samples+1];
-        }
+        x = new svm_node[l];
+        x[0].values = new double[l*samples];
+        for(int i = 1; i < l; i++)
+            x[i].values = &x[i-1].values[samples];
 
         float *buf = new float[samples];
         int cur = 0;
@@ -67,14 +64,14 @@ struct SVMProblem : svm_problem
         while(trainA.nextChannel()) {
             assert(trainA.getEventSamples() == samples);
             trainA.read((char*)buf, samples*sizeof(float));
-            fillNodes(x[cur], buf, samples);
+            fillNode(x[cur], buf, samples);
             y[cur++] = 1.;
         }
 
         while(trainB.nextChannel()) {
             assert(trainB.getEventSamples() == samples);
             trainB.read((char*)buf, samples*sizeof(float));
-            fillNodes(x[cur], buf, samples);
+            fillNode(x[cur], buf, samples);
             y[cur++] = -1.;
         }
 
@@ -83,7 +80,7 @@ struct SVMProblem : svm_problem
     }
     ~SVMProblem()
     {
-        delete[] x[0];
+        delete[] x[0].values;
         delete[] x;
         delete[] y;
     }
