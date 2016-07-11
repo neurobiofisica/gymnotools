@@ -65,8 +65,9 @@ static void cmd_range(WindowFile &infile, qint64 start, qint64 end, WindowFile &
         if(off >= start) {
             const qint32 samples = infile.getEventSamples();
             const qint32 channels = infile.getEventChannels();
+            const qint32 center = infile.getEventCenter();
             buf.reserve(samples);
-            outfile.writeEvent(off, samples, channels);
+            outfile.writeEvent(off, samples, channels, center);
             for(int ch = 0; ch < channels; ch++) {
                 infile.nextChannel();
                 infile.read((char*)buf.buf(), samples*sizeof(float));
@@ -105,6 +106,7 @@ static int cmd_random(WindowFile &infile, QList<double> &probabilities,
         const qint64 off = infile.getEventOffset();
         const qint32 samples = infile.getEventSamples();
         const qint32 channels = infile.getEventChannels();
+        const qint32 center = infile.getEventCenter();
         buf.reserve(samples);
 
         memset(channelsInFile, 0, len*sizeof(int));
@@ -125,7 +127,7 @@ static int cmd_random(WindowFile &infile, QList<double> &probabilities,
 
         int fileno = 0;
         foreach(WindowFile * const outfile, outfiles) {
-            outfile->writeEvent(off, samples, channelsInFile[fileno]);
+            outfile->writeEvent(off, samples, channelsInFile[fileno], center);
             ++fileno;
         }
 
