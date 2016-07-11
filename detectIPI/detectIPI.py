@@ -51,7 +51,17 @@ for rec in db.iteritems():
     # Gambi pra verificar se o spike ja foi classificado
     off, bindata = rec
     read_data = recogdb.parseDBHeader(bindata)
-    correctedPosA = read_data[ recogdb.dicFields['correctedPosA'] ]
+    offraw, direction, distA, distB, distAB, SaturationFlag, svm, pairsvm, prob['A'], prob['B'], fishwins = recogdb.fishrec(rec)
+    off = offraw/4/NumChannels
+
+    for PIdx in fishwins.keys():
+        if PIdx == 'A':
+            f.write('%d %d\n'%(1, off + fishwins[PIdx][0]))
+        if PIdx == 'B':
+            f.write('%d %d\n'%(-1, off + fishwins[PIdx][0]))
+        f.flush()
+
+    '''correctedPosA = read_data[ recogdb.dicFields['correctedPosA'] ]
     correctedPosB = read_data[ recogdb.dicFields['correctedPosB'] ]
 
     if (correctedPosA != -1) and (correctedPosB != -1):
@@ -122,7 +132,7 @@ for rec in db.iteritems():
         else:
             recogdb.updateHeaderEntry(db, offraw, 'correctedPosB', out, change_svm=False, sync=False)
 
-db.sync()
+db.sync()'''
 
 f.close()
 db.close()
