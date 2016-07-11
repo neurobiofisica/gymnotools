@@ -192,9 +192,13 @@ static void cmd_compute(WindowFile &infile, WindowFile &outfile)
     while(infile.nextEvent()) {
         const qint64 off = infile.getEventOffset();
         const qint32 channels = infile.getEventChannels();
+        const qint32 center = infile.getEventCenter();
 
+        if (infile.getEventSamples() != EODSamples)
+            printf("off: %lld\tsamples: %d\tEODSamples: %d\n",off, infile.getEventSamples(), EODSamples);
+            //continue;
         assert(infile.getEventSamples() == EODSamples);
-        outfile.writeEvent(off, NumFeatures, channels);
+        outfile.writeEvent(off, NumFeatures, channels, center);
 
         for(int ch = 0; ch < channels; ch++) {
             infile.nextChannel();
@@ -368,9 +372,10 @@ static void cmd_filter_apply(QFile &filterfile, WindowFile &infile, WindowFile &
     do {
         const qint64 off = infile.getEventOffset();
         const qint32 channels = infile.getEventChannels();
+        const qint32 center = infile.getEventCenter();
 
         assert(infile.getEventSamples() == samples);
-        outfile.writeEvent(off, worker.length(), channels);
+        outfile.writeEvent(off, worker.length(), channels, center);
 
         for(int ch = 0; ch < channels; ch++) {
             infile.nextChannel();
