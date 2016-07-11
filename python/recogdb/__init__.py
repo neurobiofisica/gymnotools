@@ -41,13 +41,13 @@ def compare_fcn(a, b):
 
 def verifyKey(db,k):
     if not (isinstance(k,int) or isinstance(k,str)):
-        print "key must be an integer or an 8 byte (64-bit) binary string\n"
+        print("key must be an integer or an 8 byte (64-bit) binary string\n")
         return None
 
     # string len verification
     elif isinstance(k,str):
         if len(k) != 8:
-            print "The string must be an 8 byte (64-bit) size\n"
+            print("The string must be an 8 byte (64-bit) size\n")
             return None
         key = k
 
@@ -56,7 +56,7 @@ def verifyKey(db,k):
         key = struct.pack('q',k)
 
     if db.has_key(key) == False:
-        print "key not found\n"
+        print( "key not found\n")
         return None
 
     return key
@@ -64,7 +64,7 @@ def verifyKey(db,k):
 
 def openDB(filename, mode):
     if mode not in ('r','w','rw','c','n'):
-        print "mude must be one of 'r','w','rw','c','n'\n"
+        print( "mude must be one of 'r','w','rw','c','n'\n")
         return None
 
     flags = 0
@@ -77,7 +77,7 @@ def openDB(filename, mode):
     elif mode == 'c':
         flags =  bsd.DB_CREATE
     elif mode == 'n':
-        flags = dbsd.DB_CREATE
+        flags = bsd.DB_CREATE
 
     flags |= bsd.DB_THREAD
 
@@ -87,7 +87,7 @@ def openDB(filename, mode):
 
     db = bsd.DB(env)
     db.set_bt_compare(compare_fcn)
-    db.open(filename, bsd.DB_BTREE, flags, 0666)
+    db.open(filename, bsd.DB_BTREE, flags, 0o666)
 
     return _DBWithCursor(db)
 
@@ -121,7 +121,7 @@ def fishrec(tup):
     read_data = parseDBHeader(bindata)
     spkdata = read_data[-1]
     presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = parseDBHeader(bindata)
-    #print '%d\t%d\t%f\t%f\t%f\t%d\t%c\t%d\t%f\t%f\n'%(off,presentFish,distA,distB,distAB,flags,svm,pairsvm,probA,probB)
+    #print( '%d\t%d\t%f\t%f\t%f\t%d\t%c\t%d\t%f\t%f\n'%(off,presentFish,distA,distB,distAB,flags,svm,pairsvm,probA,probB))
     fishwins = {}
     if presentFish & 1:
         fishwins['A'], spkdata = fishwin(spkdata)
@@ -147,7 +147,7 @@ def readHeaderEntry(db,k):
     try:
         tup = db.set_location(key)
     except bsd.DBNotFoundError:
-        print 'set_location failed\n'
+        print( 'set_location failed\n')
         return None
 
     
@@ -211,10 +211,10 @@ def getNearest(db, direction, k, fish, overlap=True):
 def getNearestSVM(db, direction, k):
     key = struct.pack('=q',k)
     if not db.has_key(key):
-        print 'key not found'
+        print('key not found')
         return None
     if direction not in [-1, 1]:
-        print 'direction must be 1 or -1'
+        print('direction must be 1 or -1')
         return None
     
     db.set_location(key)
@@ -252,7 +252,7 @@ def updateHeaderEntry(db, k, field, data, change_svm=True, sync=True):
     dic = dicFields.copy()
     dic.pop('flags')
     if field not in dic.keys():
-        print 'You can only modify one of the fields: ' + str(dic.keys()) + '\n'
+        print('You can only modify one of the fields: ' + str(dic.keys()) + '\n')
         return None
     
     raw = readHeaderEntry(db,key)
@@ -270,5 +270,18 @@ def updateHeaderEntry(db, k, field, data, change_svm=True, sync=True):
     new_data = binarizeDBHeader(new_data) + spkdata
 
     db.update( [(key, new_data), ] )
+    if sync == True:
+        db.sync()
+
+def writeEntry(db, k, presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, signals, sync=True):
+
+    key = struct.pack('=q',k)
+    headerdata = binarizeDBHeader( (presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB) )
+    spkdata = struct.pack('=qi', 0, signals[0].size)
+    for sig in signals:
+        spkdata += sig.astype('float32').tostring()
+    data = headerdata + spkdata
+        
+    db.update( [(key, data), ] )
     if sync == True:
         db.sync()
