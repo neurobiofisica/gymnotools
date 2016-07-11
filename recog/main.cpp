@@ -326,6 +326,7 @@ private:
     static int instances;
 
     static qint32 fishlenA, fishlenB;
+    static qint32 lastCenterA, lastCenterB;
     static float fishA[NumChannels][EODSamples] ALIGN(16);
     static float fishB[NumChannels][EODSamples] ALIGN(16);
 
@@ -357,6 +358,7 @@ public:
     {
         // copy spike
         fishlenA = winfile.getEventSamples();
+        lastCenterA = winfile.getEventCenter();
         for(int ch = 0; ch < NumChannels; ch++) {
             winfile.nextChannel();
             winfile.read((char*)fishvecA[ch], fishlenA*sizeof(float));
@@ -366,13 +368,15 @@ public:
         qint64 off = winfile.getEventOffset();
         db.insert(off, 0, 0., inf, inf, 0,
                   -1, -1,'s', pair, problist[off].probA, problist[off].probB,
-                  0, fishlenA, fishvecA,
+                  //0, fishlenA, fishvecA,
+                  lastCenterA, fishlenA, fishvecA,
                   0, 0, NULL);
     }
     void emitSingleB(qint64 pair)
     {
         // copy spike
         fishlenB = winfile.getEventSamples();
+        lastCenterB = winfile.getEventCenter();
         for(int ch = 0; ch < NumChannels; ch++) {
             winfile.nextChannel();
             winfile.read((char*)fishvecB[ch], fishlenB*sizeof(float));
@@ -383,11 +387,13 @@ public:
         db.insert(off, 0, inf, 0., inf, 0,
                   -1, -1,'s', pair, problist[off].probA, problist[off].probB,
                   0, 0, NULL,
-                  0, fishlenB, fishvecB);
+                  //0, fishlenB, fishvecB);
+                  lastCenterB, fishlenB, fishvecB);
     }
 
     void writeTemplateA(){
         fishlenA = winfile.getEventSamples();
+        lastCenterA = winfile.getEventCenter();
         for (int ch=0; ch<NumChannels; ch++) {
             winfile.nextChannel();
             winfile.read((char*)fishvecA[ch], fishlenA*sizeof(float));
@@ -396,6 +402,7 @@ public:
     }
     void writeTemplateB(){
         fishlenB = winfile.getEventSamples();
+        lastCenterB = winfile.getEventCenter();
         for (int ch=0; ch<NumChannels; ch++) {
             winfile.nextChannel();
             winfile.read((char*)fishvecB[ch], fishlenB*sizeof(float));
@@ -408,6 +415,7 @@ public:
         static float buf[NumChannels][WinWorkerBufLen] ALIGN(16);
 
         const int len = winfile.getEventSamples();
+        const int center = winfile.getEventCenter();
         const int zfilling = qMax(fishlenA, fishlenB);
         //assert(zfilling <= EODSamples);
         assert(len + zfilling <= WinWorkerBufLen);
@@ -571,10 +579,10 @@ public:
 
         if(distA < distB && distA < distAB) {
             // single A fish
-            int copystart = firstpos, copylen = len;
+            int copystart = firstpos + center, copylen = len;
             if(UNLIKELY(len > EODSamples)) {
                 copylen = fishlenA;
-                copystart = singleposA;
+                copystart = singleposA + center;
             }
             // copy spike
             fishlenA = copylen;
@@ -600,18 +608,23 @@ public:
 
 
             // emit to db
-            if(distA < curBestDist || forceSub)
+            if(distA < curBestDist || forceSub) {
+                printf("\nWriting A to db...(%f, %f, %f)\t%lld\n",distA, distB, distAB,off);
                 db.insert(off, direction, distA, distB, distAB, satFlag,
                           -1, -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           copystart - firstpos, fishlenA, fishvecA,
                           0, 0, NULL);
+            }
+            else
+                printf("\tLeaving DB entry as is\n");
+                
         }
         else if(distB < distA && distB < distAB) {
             // single B fish
-            int copystart = firstpos, copylen = len;
+            int copystart = firstpos + center, copylen = len;
             if(UNLIKELY(len > EODSamples)) {
                 copylen = fishlenB;
-                copystart = singleposB;
+                copystart = singleposB + center;
             }
             // copy spike
             fishlenB = copylen;
@@ -636,11 +649,15 @@ public:
             //}
 
             // emit to db
-            if(distB < curBestDist || forceSub)
+            if(distB < curBestDist || forceSub) {
+                printf("\nWriting B to db...(%f, %f, %f)\t%lld\n",distA, distB, distAB,off);
                 db.insert(off, direction, distA, distB, distAB, satFlag,
                           -1, -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
                           0, 0, NULL,
                           copystart - firstpos, fishlenB, fishvecB);
+            }
+            else
+                printf("\tLeaving DB entry as is\n");
         }
         else {
 
@@ -670,17 +687,21 @@ public:
                 }
 
                 // emit to db
+                printf("\nWriting AB to db...(%f, %f, %f)\t%lld\n",distA, distB, distAB,off);
                 db.insert(off, direction, distA, distB, distAB, satFlag,
                           -1, -1,problist[off].svm, problist[off].pairsvm, problist[off].probA, problist[off].probB,
-                          posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
-                          posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
+                          lastCenterA + posAB.first  - firstpos, qMin(realLen - posAB.first,  fishlenA), spkA,
+                          lastCenterB + posAB.second - firstpos, qMin(realLen - posAB.second, fishlenB), spkB);
             }
+            else
+                printf("\tLeaving DB entry as is\n");
         }
     }
 };
 
 int WinWorker::instances = 0;
 qint32 WinWorker::fishlenA, WinWorker::fishlenB;
+qint32 WinWorker::lastCenterA, WinWorker::lastCenterB;
 float WinWorker::fishA[NumChannels][EODSamples] ALIGN(16);
 float WinWorker::fishB[NumChannels][EODSamples] ALIGN(16);
 
@@ -776,6 +797,8 @@ static void iterate_from(RecogDB &db, WindowFile &winfile, SFishPair curpairBeg,
 static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlist, QMap<qint64, probs> &problist,
                     float saturationLow, float saturationHigh, qint32 direction)
 {
+    QPair<long long int, long long int> EvWins = winfile.getNumEventsAndNumWins();
+
     QListIterator<SFishPair> it(sfishlist);
     WinWorker worker(db, winfile, problist, saturationLow, saturationHigh);
     bool foundFirst = false;
@@ -792,12 +815,17 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
         qint64 lookFor = qMax(curpair.first, curpair.second);
 
         // scan backwards over window file
+        qint64 n = 0;
         do {
             const qint64 off = winfile.getEventOffset();
+            printf("common off: %lld-%d----------------------%f%%", off, winfile.getEventSamples(), (100.*n++) / EvWins.first);
+            if (winfile.getEventChannels() != NumChannels)
+                printf("#####################off: %lld\t%d\n",off, winfile.getEventChannels());
             assert(winfile.getEventChannels() == NumChannels);
             if(off == lookFor) {
                 foundFirst = true;
                 if(off == curpair.first) {
+                    printf("\tEmmiting A and B\t%lld\n", off);
                     worker.emitSingleA(curpair.second);
                     bool hasPrevious = winfile.prevEvent();
                     assert(hasPrevious);
@@ -805,6 +833,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
                     worker.emitSingleB(curpair.first);
                 }
                 else {
+                    printf("\tEmmiting B and A\t%lld\n", off);
                     worker.emitSingleB(curpair.first);
                     bool hasPrevious = winfile.prevEvent();
                     assert(hasPrevious);
@@ -818,6 +847,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
                 lookFor = qMax(curpair.first, curpair.second);
             }
             else if(foundFirst) {
+                printf("\tCalling recog");
                 worker.recog(direction, false);
             }
         } while(winfile.prevEvent());
@@ -830,12 +860,17 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
         qint64 lookFor = qMin(curpair.first, curpair.second);
 
         // scan forward over window file
+        qint64 n = 0;
         while(winfile.nextEvent()) {
             const qint64 off = winfile.getEventOffset();
+            printf("common off: %lld-----------------------%f%%", off, (100.*n++) / EvWins.first);
+            if (winfile.getEventChannels() != NumChannels)
+                printf("-------------------off: %lld\t%d\n",off, winfile.getEventChannels());
             assert(winfile.getEventChannels() == NumChannels);
             if(off == lookFor) {
                 foundFirst = true;
                 if(off == curpair.first) {
+                    printf("\tEmmiting A and B\t%lld\n", off);
                     worker.emitSingleA(curpair.second);
                     bool hasNext = winfile.nextEvent();
                     assert(hasNext);
@@ -843,6 +878,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
                     worker.emitSingleB(curpair.first);
                 }
                 else {
+                    printf("\tEmmiting B and A\t%lld\n", off);
                     worker.emitSingleB(curpair.first);
                     bool hasNext = winfile.nextEvent();
                     assert(hasNext);
@@ -856,6 +892,7 @@ static void iterate(RecogDB &db, WindowFile &winfile, QList<SFishPair> &sfishlis
                 lookFor = qMin(curpair.first, curpair.second);
             }
             else if(foundFirst) {
+                printf("\tCalling recog");
                 worker.recog(direction, false);
             }
         }
@@ -913,7 +950,7 @@ static void waveformAdjust(SignalBuffer &buf, WindowFile &outfile,
     }
 
     // save
-    outfile.writeEvent(off, EODSamples, numSavedCh);
+    outfile.writeEvent(off, EODSamples, numSavedCh, 0);
     for(int ch = 0; ch < NumChannels; ch++) {
         if(savedCh[ch])
             outfile.writeChannel(ch, &adjbuf[ch][0]);
