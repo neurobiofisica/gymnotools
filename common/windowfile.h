@@ -9,11 +9,11 @@ class WindowFile : public QFile
 {
 protected:
     qint64 curEventPos, curEventOffset;
-    qint32 curEventLen, curEventSamples, curEventChannels,
+    qint32 curEventLen, curEventSamples, curEventChannels, curEventCenter,
            curChannelId, curChannel, lastEventLen;
 
     static const qint32 EventHdrLen = sizeof(lastEventLen) + sizeof(curEventOffset) +
-            sizeof(curEventSamples) + sizeof(curEventChannels);
+            sizeof(curEventSamples) + sizeof(curEventChannels) + sizeof(curEventCenter);
 
     /**
      * Reads an event from the current file position
@@ -25,6 +25,7 @@ protected:
         read((char *)&curEventOffset, sizeof(curEventOffset));
         read((char *)&curEventSamples, sizeof(curEventSamples));
         read((char *)&curEventChannels, sizeof(curEventChannels));
+        read((char *)&curEventCenter, sizeof(curEventCenter));
         curChannel = 0;
         curEventLen = EventHdrLen +
                 curEventChannels*(sizeof(curChannelId) + curEventSamples*sizeof(float));
@@ -41,6 +42,7 @@ public:
     qint64 getEventOffset() const { return curEventOffset; }
     qint32 getEventSamples() const { return curEventSamples; }
     qint32 getEventChannels() const { return curEventChannels; }
+    qint32 getEventCenter() const { return curEventCenter; }
     qint32 getChannelId() const { return curChannelId; }
 
     QPair<qint64, qint64> getNumEventsAndNumWins() 
@@ -60,7 +62,7 @@ public:
     void rewind()
     {
         seek(0);
-        curEventPos = curEventLen = curEventChannels = curChannel = 0;
+        curEventPos = curEventLen = curEventChannels = curChannel = curEventCenter = 0;
     }
 
     /**
@@ -69,7 +71,7 @@ public:
      * @param samples number of samples contained in payload channels
      * @param numchannels number of payload channels
      */
-    void writeEvent(const qint64 &offset, const qint32 &samples, const qint32 &numchannels)
+    void writeEvent(const qint64 &offset, const qint32 &samples, const qint32 &numchannels, const qint32 &eventCenter)
     {
         assert(curChannel == curEventChannels);
         lastEventLen = curEventLen;
@@ -78,12 +80,14 @@ public:
         curEventOffset = offset;
         curEventSamples = samples;
         curEventChannels = numchannels;
+        curEventCenter = eventCenter;
         curChannel = 0;
         curEventPos = pos();
         write((const char *)&lastEventLen, sizeof(lastEventLen));
         write((const char *)&offset, sizeof(offset));
         write((const char *)&samples, sizeof(samples));
         write((const char *)&numchannels, sizeof(numchannels));
+        write((const char *)&eventCenter, sizeof(eventCenter));
     }
 
     /**
