@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 NumChannels = 11
 BytesPerSample = NumChannels*4
-EODSamples = 128
+EODSamples = 256
 
 def parsefile(f):
     expr = re.compile(r'(\d+)\s+(\d+)')
