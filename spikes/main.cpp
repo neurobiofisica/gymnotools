@@ -248,7 +248,7 @@ static AINLINE void spikeDetected(SignalFile &sigfile, WindowFile &outfile,
     }
 
     // write spike to outfile
-    outfile.writeEvent(firstOffset, winSamples, numSavedCh);
+    outfile.writeEvent(firstOffset, winSamples, numSavedCh, 0);
     for(qint32 ch = 0; ch < NumChannels; ch++) {
         if(savedCh[ch]) {
             const float *data = buffer.ch(ch);
