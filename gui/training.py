@@ -127,7 +127,7 @@ class TrainingWindow(QtGui.QDialog):
         self.svmtoolOptimProgram = QtCore.QProcess()
         self.svmtoolTrainProgram = QtCore.QProcess()
         self.svmtoolROCProgram = QtCore.QProcess()
-        
+
         self.dicProgram = {'paramchooser lowpass': (self.filterAssist1Program, self.filterAssist2Program), \
                            'paramchooser threshold': (self.thresholdAssist1Program, self.thresholdAssist2Program, self.minlevelAssist1Program, self.minlevelAssist2Program), \
                            'winview': (self.verifySpikes1Program, self.verifySpikes2Program), \
@@ -268,14 +268,14 @@ class TrainingWindow(QtGui.QDialog):
             return True
     
     def printAllStandardOutput(self):
-        print '%s\n'%self.programname
+        print 'stdout:%s\n'%self.programname
         for program in self.dicProgram[self.programname]:
-            print program.readAllStandardOutput()
+            print(program.readAllStandardOutput())
     
     def printAllStandardError(self):
-        print '%s\n'%self.programname
+        print 'stderr:%s\n'%self.programname
         for program in self.dicProgram[self.programname]:
-            program.readAllStandardError()
+            print(program.readAllStandardError())
     
     def filterAssist1(self):
         print 'paramchooser lowpass 1'
@@ -721,6 +721,7 @@ class TrainingWindow(QtGui.QDialog):
                            ['filter', \
                             'prepare', \
                             '--best=%s'%self.number, \
+                            '--hist-bars=40', \
                             self.filterName, \
                             self.unfilteredFeaturesName1, \
                             self.unfilteredFeaturesName2])
@@ -1425,6 +1426,11 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolROCFinish)
     
     def plotROC(self):
+        f = plt.figure(1, figsize=(10,10))
+        ax = f.add_subplot(111)
+        ax.plot(self.FalsePositive, self.TruePositive)
+        plt.show()
+        
         self.plotData.set_xdata(self.FalsePositive)
         self.plotData.set_ydata(self.TruePositive)
         self.ax.axis([0., 1., 0., 1.])

@@ -246,6 +246,11 @@ class DiscriminateWindow(QtGui.QDialog):
                                         '--cutoff=%s'%cutoff, \
                                         '--detection=%s'%threshold, \
                                         '--minlevel=%s'%minLevel, \
+
+                                        #'--fixedwin', \
+                                        #'--winlen=%s'%'winlendisc.winlen', \
+                                        #'--allchans', \
+
                                         '--minratio=0.0', \
                                         '--stopsamples=32', \
                                         TSName, \
@@ -314,25 +319,14 @@ class DiscriminateWindow(QtGui.QDialog):
         self.programname = 'singlefish'
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        print ['./../singlefish/singlefish', \
-                                    '--maxsize=%d'%winlen, \
-                                    '--minwins=%s'%minWin, \
-                                    '--onlyabove=%s'%onlyAbove, \
-                                    '--saturation=%s,%s'%(lowSaturation,highSaturation), \
-                                    '--minprob=0.80', \
-                                    TSName, \
-                                    spikesName, \
-                                    scaleName, \
-                                    filterName, \
-                                    svmName, \
-                                    saveSinglefish, \
-                                    saveProb]
+
+        ################# maxsize = %d,%winlen, \
         self.applySVMProgram.start('./../singlefish/singlefish', \
-                                   ['--maxsize=%d'%winlen, \
-                                    '--minwins=%s'%minWin, \
+                                   #['--maxsize=%d'%300, \
+                                    ['--minwins=%s'%minWin, \
                                     '--onlyabove=%s'%onlyAbove, \
                                     '--saturation=%s,%s'%(lowSaturation,highSaturation), \
-                                    '--minprob=0.80', \
+                                    '--minprob=0.90', \
                                     TSName, \
                                     spikesName, \
                                     scaleName, \
@@ -507,7 +501,7 @@ class DiscriminateWindow(QtGui.QDialog):
     def printAllStandardError(self):
         print '%s\n'%self.programname
         for program in self.dicProgram[self.programname]:
-            program.readAllStandardError()
+            print program.readAllStandardError()
     
     def raiseLongTimeInformation(self):
         dialog = QtGui.QMessageBox()
