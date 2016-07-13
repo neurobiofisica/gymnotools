@@ -31,7 +31,7 @@ parser = MyParser(description=description, formatter_class=argparse.RawTextHelpF
 subparsers = parser.add_subparsers(help='Apply continuity criteria', dest='mode')
 
 iterate_parser = subparsers.add_parser('iterate', help='Iterate over all time series')
-iterate_parser.add_argument('db_file', type=str, help='Database file name' 
+iterate_parser.add_argument('db_file', type=str, help='Database file name') 
 iterate_parser.add_argument('spikes_file', type=argparse.FileType(mode+'r'), help='Spikes window file')
 iterate_parser.add_argument('singlefish_file', type=argparse.FileType(mode+'r'), help='Singlefish file')
 iterate_parser.add_argument('probs_file', type=argparse.FileType('r'), help='Spike probability file')
