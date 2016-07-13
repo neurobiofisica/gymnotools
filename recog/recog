@@ -41,7 +41,7 @@ iterate_parser.add_argument('-d', '--direction', type=int, default=1, help='Scan
 
 args = parser.parse_args()
 
-if args.mode == 'iterate'):
+if args.mode == 'iterate':
     db = recogdb.openDB(args.db_file, 'w')
     wins = winFile(args.spikes_file)
     svmpairs = np.loadtxt(args.singlefish, dtype=np.int64)
