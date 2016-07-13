@@ -497,9 +497,7 @@ class TrainingWindow(QtGui.QDialog):
         cutoff = self.ui.cutoff1LineEdit.text()
         threshold = self.ui.thresholdLevel1LineEdit.text()
         saveSpikes = self.ui.saveSpikes1LineEdit.text()
-        saveWindowLengths = self.ui.saveWindowLengths1LineEdit.text()
         onlyAbove = self.ui.onlyAbove1LineEdit.text()
-        minlevel = self.ui.minlevel1LineEdit.text()
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -510,15 +508,15 @@ class TrainingWindow(QtGui.QDialog):
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectSpikes1Program.start('./../spikes/spikes', \
                            ['--fixedwin', \
+                            '--useHilbert', \
+                            '--detection=%s'%(threshold), \
+############################'--refractory=%s'%(refractory), \
+############################'--max_size=%s'%(maxSize), \
                             '--saturation=%s,%s'%(lowSat,highSat), \
                             '--numtaps=%s'%taps, \
                             '--cutoff=%s'%cutoff, \
                             '--detection=%s'%threshold, \
-                            '--winlen=%s'%saveWindowLengths, \
                             '--onlyabove=%s'%onlyAbove, \
-                            '--minlevel=%s'%minlevel, \
-                            '--minratio=0.0', \
-                            '--stopsamples=32', \
                             TSName, \
                             saveSpikes])
         
@@ -558,15 +556,15 @@ class TrainingWindow(QtGui.QDialog):
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectSpikes2Program.start('./../spikes/spikes', \
                            ['--fixedwin', \
+                            '--useHilbert', \
+                            '--detection=%s'%(threshold), \
+############################'--refractory=%s'%(refractory), \
+############################'--max_size=%s'%(maxSize), \
                             '--saturation=%s,%s'%(lowSat,highSat), \
                             '--numtaps=%s'%taps, \
                             '--cutoff=%s'%cutoff, \
                             '--detection=%s'%threshold, \
-                            '--winlen=%s'%saveWindowLengths, \
                             '--onlyabove=%s'%onlyAbove, \
-                            '--minlevel=%s'%minlevel, \
-                            '--minratio=0.0', \
-                            '--stopsamples=32', \
                             TSName, \
                             saveSpikes])
         

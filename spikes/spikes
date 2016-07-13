@@ -19,10 +19,6 @@ else:
 
 freq = 45454.545454
 winSize = 256
-chirpGain = 0.5
-satH = 9.9
-satL = -9.9
-onlyAbove = 0.005
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -37,11 +33,14 @@ parser.add_argument('timeseries_file', type=argparse.FileType('r'), help='Timese
 parser.add_argument('hilbert_file', help='Output Absolute sum of Hilbert Transform of the signal on I32 format')
 parser.add_argument('outfile', type=argparse.FileType('w'), help='Output spike window file')
 parser.add_argument('--chirps_file', type=argparse.FileType('r'), help='Chirp regions file')
+parser.add_argument('--chirps_gain', type=float, default=0.5, help='Thresold ratio on chirp regions')
 parser.add_argument('-d', '--detection', type=float, default=1.00, help='Theshold for detecting a spike')
 parser.add_argument('-r', '--refractory', type=float, default=0.001, help='Refractory period for spike detection')
 parser.add_argument('-m', '--max_size', type=float, default=0.0035, help='Maximum size for a single spike')
 parser.add_argument('-n', '--numtaps', type=int, default=301, help='Number of taps for high pass filter on Hilbert Transform')
+parser.add_argument('-z', '--saturation', type=str, help='low,high saturation level to filter out')
 parser.add_argument('-c', '--cutoff', type=float, default=1., help='Cutoff frequency of high pass filter')
+parser.add_argument('-o', '--onlyAbove', type=float, default=0.005, help='Only output spikes above this value')
 parser.add_argument('-f', '--fixedwin', help='Fixed window(use for single-fish data files)', action='store_true')
 parser.add_argument('-u', '--useHilbert', help='use already generated Hilbert file', action='store_true')
 
@@ -49,9 +48,19 @@ parser.add_argument('-u', '--useHilbert', help='use already generated Hilbert fi
 args = parser.parse_args()
 
 threshold = args.detection
+cutoff = args.cutoff / freq
+onlyAbove = args.onlyAbove
 refrac = int(args.refractory * freq)
 maxSize = int(args.max_size * freq)
 single = args.fixedwin
+chirpGain = args.chirps_gain
+
+saturation = args.saturation
+satLow = -9.9 # TODO: pegar do .h
+satHigh = 9.9
+if saturation is not None:
+    satLow = float(saturation.split(',')[0].strip())
+    satHigh = float(saturation.split(',')[1].strip())
 
 debug = False
 
@@ -76,7 +85,7 @@ else:
         h += myabshilbert(inarr[i::nchan])
 
     n = args.numtaps
-    a = scipy.signal.firwin(n, cutoff=(args.cutoff/freq), window='hanning')
+    a = scipy.signal.firwin(n, cutoff=cutoff, window='hanning')
     a = -a
     a[n//2] += 1
 
