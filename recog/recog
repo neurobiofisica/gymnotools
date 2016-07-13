@@ -6,6 +6,7 @@ import recogdb
 import struct
 
 import sys
+import argparse
 
 if sys.version_info.major == 3:
     xrange = range
@@ -18,7 +19,49 @@ NChan = 11
 freq = 45454.545454
 overlapRange = int(0.002*freq)
 
-foda = False
+class MyParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_help()
+        sys.stderr.write('\nerror: %s\n'%message)
+        sys.exit(2)
+
+description = 'Apply SVM model on spikes window file with 2 fishes'
+parser = MyParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+
+subparsers = parser.add_subparsers(help='Apply continuity criteria', dest='mode')
+
+iterate_parser = subparsers.add_parser('iterate', help='Iterate over all time series')
+iterate_parser.add_argument('db_file', type=str, help='Database file name' 
+iterate_parser.add_argument('spikes_file', type=argparse.FileType(mode+'r'), help='Spikes window file')
+iterate_parser.add_argument('singlefish_file', type=argparse.FileType(mode+'r'), help='Singlefish file')
+iterate_parser.add_argument('probs_file', type=argparse.FileType('r'), help='Spike probability file')
+iterate_parser.add_argument('ts_output', type=argparse.FileType('w'), help='Timestamps output file')
+iterate_parser.add_argument('-z', '--saturation', type=str, help='low,high saturation levels')
+iterate_parser.add_argument('-d', '--direction', type=int, default=1, help='Scan direction (positive or negative)')
+
+args = parser.parse_args()
+
+if args.mode == 'iterate'):
+    db = recogdb.openDB(args.db_file, 'w')
+    wins = winFile(args.spikes_file)
+    svmpairs = np.loadtxt(args.singlefish, dtype=np.int64)
+    svmpairsTam = svmpairs.shape[0]
+
+    probsfile = args.probs_file
+    probs = {}
+    for l in probsfile.readlines():
+        #cause, offstr, pairstr, probAstr, probBstr = l.strip().split(' ')
+        cause, offstr, probAstr, probBstr = l.strip().split(' ')
+        off = int(offstr)
+        #pair = int(pairstr)
+        probA = float(probAstr)
+        probB = float(probBstr)
+        #probs.update( {off: (cause, pair, probA, probB)} )
+        probs.update( {off: (cause, probA, probB)} )
+
+
+tsoutput = args.ts_output
+#TODO iterate_from
 
 # Verificar se lastLen esta em bytes
 class winFile:
@@ -78,25 +121,6 @@ class winFile:
 
 
 
-db = recogdb.openDB(sys.argv[2], 'w')
-wins = winFile(open(sys.argv[3], mode+'r'))
-svmpairs = np.loadtxt(sys.argv[4], dtype=np.int64)
-svmpairsTam = svmpairs.shape[0]
-
-probsfile = open(sys.argv[5], 'r')
-probs = {}
-for l in probsfile.readlines():
-    #cause, offstr, pairstr, probAstr, probBstr = l.strip().split(' ')
-    cause, offstr, probAstr, probBstr = l.strip().split(' ')
-    off = int(offstr)
-    #pair = int(pairstr)
-    probA = float(probAstr)
-    probB = float(probBstr)
-    #probs.update( {off: (cause, pair, probA, probB)} )
-    probs.update( {off: (cause, probA, probB)} )
-
-
-tsoutput = open(sys.argv[6], 'w')
 
 class recog:
     def __init__(self, db, wins, svmpairs, svmpairsTam, probs):
