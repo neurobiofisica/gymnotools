@@ -45,8 +45,8 @@ onlyAbove = args.onlyabove
 saturationLow = -9.9
 saturationHigh = 9.9
 if saturation is not None:
-    saturationLow = float(saturation.split(',')[0].strip())
-    satutarionHigh = float(saturation.split(',')[1].strip())
+    saturationLow = float(args.saturation.split(',')[0].strip())
+    satutarionHigh = float(args.saturation.split(',')[1].strip())
 minWins = args.minwins
 minprob = args.minprob
 minOverlapChan = 5
