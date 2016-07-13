@@ -70,10 +70,9 @@ if sys.version_info.major == 3:
 else:
     mode = ''
 
-direction = -1
 NChan = 11
 freq = 45454.545454
-overlapRange = int(0.002*freq)
+overlapRange = int(0.002*freq) ##########################
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -102,6 +101,7 @@ if args.mode == 'iterate':
     wins = winFile(args.spikes_file)
     svmpairs = np.loadtxt(args.singlefish_file, dtype=np.int64)
     svmpairsTam = svmpairs.shape[0]
+    direction = args.direction
 
     probsfile = args.probs_file
     probs = {}
