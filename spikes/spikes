@@ -56,11 +56,11 @@ single = args.fixedwin
 chirpGain = args.chirps_gain
 
 saturation = args.saturation
-satLow = -9.9 # TODO: pegar do .h
-satHigh = 9.9
+satL = -9.9 # TODO: pegar do .h
+satH = 9.9
 if saturation is not None:
-    satLow = float(saturation.split(',')[0].strip())
-    satHigh = float(saturation.split(',')[1].strip())
+    satL = float(saturation.split(',')[0].strip())
+    satH = float(saturation.split(',')[1].strip())
 
 debug = False
 
