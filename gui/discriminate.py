@@ -225,6 +225,7 @@ class DiscriminateWindow(QtGui.QDialog):
     def detectSpikes(self):
         print 'spikes'
         TSName = self.ui.loadTimeseriesLineEdit.text()
+        hilbName = TSName.split('.')[1] + '.hilb' ######################
         lowSat = self.ui.lowSaturationLineEdit.text()
         highSat = self.ui.highSaturationLineEdit.text()
         taps = self.ui.tapsLineEdit.text()
@@ -245,15 +246,11 @@ class DiscriminateWindow(QtGui.QDialog):
                                        ['--numtaps=%s'%taps, \
                                         '--cutoff=%s'%cutoff, \
                                         '--detection=%s'%threshold, \
-                                        '--minlevel=%s'%minLevel, \
+########################################'--refractory=%s'%(refractory), \
+########################################'--max_size=%s'%(maxSize), \
 
-                                        #'--fixedwin', \
-                                        #'--winlen=%s'%'winlendisc.winlen', \
-                                        #'--allchans', \
-
-                                        '--minratio=0.0', \
-                                        '--stopsamples=32', \
                                         TSName, \
+                                        hilbName
                                         saveSpikes])
         
         self.cancelled = False
