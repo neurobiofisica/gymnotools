@@ -40,7 +40,7 @@ parser.add_argument('-m', '--max_size', type=float, default=0.0035, help='Maximu
 parser.add_argument('-n', '--numtaps', type=int, default=301, help='Number of taps for high pass filter on Hilbert Transform')
 parser.add_argument('-z', '--saturation', type=str, help='low,high saturation level to filter out')
 parser.add_argument('-c', '--cutoff', type=float, default=1., help='Cutoff frequency of high pass filter')
-parser.add_argument('-o', '--onlyAbove', type=float, default=0.005, help='Only output spikes above this value')
+parser.add_argument('-o', '--onlyabove', type=float, default=0.005, help='Only output spikes above this value')
 parser.add_argument('-f', '--fixedwin', help='Fixed window(use for single-fish data files)', action='store_true')
 parser.add_argument('-u', '--useHilbert', help='use already generated Hilbert file', action='store_true')
 
