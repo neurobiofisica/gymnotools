@@ -81,7 +81,8 @@ else:
     print('Generating new Hilbert file')
     h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//11 - 4))
     for i in xrange(nchan):
-        print(i)
+        sys.stdout.write('%d'%i)
+        sys.stdout.flush()
         h += myabshilbert(inarr[i::nchan])
 
     n = args.numtaps
