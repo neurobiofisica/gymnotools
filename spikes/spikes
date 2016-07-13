@@ -49,7 +49,7 @@ args = parser.parse_args()
 
 threshold = args.detection
 cutoff = args.cutoff / freq
-onlyAbove = args.onlyAbove
+onlyAbove = args.onlyabove
 refrac = int(args.refractory * freq)
 maxSize = int(args.max_size * freq)
 single = args.fixedwin
