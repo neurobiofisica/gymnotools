@@ -319,11 +319,10 @@ class DiscriminateWindow(QtGui.QDialog):
 
         ################# maxsize = %d,%winlen, \
         self.applySVMProgram.start('./../singlefish/singlefish', \
-                                   #['--maxsize=%d'%300, \
                                     ['--minwins=%s'%minWin, \
                                     '--onlyabove=%s'%onlyAbove, \
                                     '--saturation=%s,%s'%(lowSaturation,highSaturation), \
-                                    '--minprob=0.90', \
+                                    '--minprob=0.80', \
                                     TSName, \
                                     spikesName, \
                                     scaleName, \

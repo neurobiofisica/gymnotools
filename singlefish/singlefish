@@ -9,6 +9,9 @@ import windowfile
 import numpy as np
 import argparse
 
+freq = 45454.545454
+numFeatures = 20
+
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
         self.print_help()
@@ -23,20 +26,29 @@ parser.add_argument('spikes_file', type=argparse.FileType('r'), help='Spikes win
 parser.add_argument('scale_file', type=argparse.FileType('r'), help='Traning generated feature scale file')
 parser.add_argument('filter_file', type=argparse.FileType('r'), help='Traning generated feature filter file')
 parser.add_argument('svm_file', type=argparse.FileType('r'), help='Traning generated SVM model file')
-#parser.add_argument('overlap_file', type=argparse.FileType('r'), help='Traning generated overlap classifier file')
 parser.add_argument('singlefish_file', type=argparse.FileType('w'), help='Output timestamps of the SVM classfied pairs')
 parser.add_argument('probs_file', type=argparse.FileType('w'), help='Output SVM probabilities for all spikes')
+parser.add_argument('-a', '--onlyabove', type=float, default=0.005, help='Only analyze with SVM if above this amplitude')
+parser.add_argument('-z', '--saturation', type=str, help='low,high saturation level to filter out')
+parser.add_argument('-w', '--minwins', type=int, default=1, help='Minimum windows needed to analyze with SVM')
+parser.add_argument('-p', '--minprob', type=float, default=0.80, help='Minimum SVM probability to consider as single-fish')
+parser.add_argument('-d', '--maxdist', type=float, help='Maximum distance (in seconds) to the next or previous spike')
+parser.add_argument('-s', '--maxsize', type=int, default=0.00354, help='Maximum size (in seconds) of a single-fish spike window')
 
 args = parser.parse_args()
 
-maxSize = 160
+maxSize = int(args.maxsize * freq)
 maxDist = sys.maxint
-onlyAbove = 0.005
+if args.maxdist is not None:
+    maxDist = int(args.maxdist * freq)
+onlyAbove = args.onlyabove
 saturationLow = -9.9
 saturationHigh = 9.9
-minWins = 1
-numFeatures = 20
-minprob = 0.80
+if saturation is not None:
+    saturationLow = float(saturation.split(',')[0].strip())
+    satutarionHigh = float(saturation.split(',')[1].strip())
+minWins = args.minwins
+minprob = args.minprob
 minOverlapChan = 5
 
 
