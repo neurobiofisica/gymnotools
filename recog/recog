@@ -100,7 +100,7 @@ args = parser.parse_args()
 if args.mode == 'iterate':
     db = recogdb.openDB(args.db_file, 'w')
     wins = winFile(args.spikes_file)
-    svmpairs = np.loadtxt(args.singlefish, dtype=np.int64)
+    svmpairs = np.loadtxt(args.singlefish_file, dtype=np.int64)
     svmpairsTam = svmpairs.shape[0]
 
     probsfile = args.probs_file
