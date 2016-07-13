@@ -509,7 +509,6 @@ class TrainingWindow(QtGui.QDialog):
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectSpikes1Program.start('./../spikes/spikes', \
                            ['--fixedwin', \
-                            '--useHilbert', \
                             '--detection=%s'%(threshold), \
 ############################'--refractory=%s'%(refractory), \
 ############################'--max_size=%s'%(maxSize), \
@@ -559,7 +558,6 @@ class TrainingWindow(QtGui.QDialog):
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectSpikes2Program.start('./../spikes/spikes', \
                            ['--fixedwin', \
-                            '--useHilbert', \
                             '--detection=%s'%(threshold), \
 ############################'--refractory=%s'%(refractory), \
 ############################'--max_size=%s'%(maxSize), \
