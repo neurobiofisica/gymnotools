@@ -491,6 +491,7 @@ class TrainingWindow(QtGui.QDialog):
     def detectSpikes1(self):
         print 'spikes 1'
         TSName = self.ui.loadTS1LineEdit.text()
+        hilbName = TSName.split('.')[0] + '.hilb' #################################
         lowSat = self.ui.lowSaturation1LineEdit.text()
         highSat = self.ui.highSaturation1LineEdit.text()
         taps = self.ui.taps1LineEdit.text()
@@ -518,6 +519,7 @@ class TrainingWindow(QtGui.QDialog):
                             '--detection=%s'%threshold, \
                             '--onlyabove=%s'%onlyAbove, \
                             TSName, \
+                            hilbName, \
                             saveSpikes])
         
         self.cancelled = False
@@ -537,6 +539,7 @@ class TrainingWindow(QtGui.QDialog):
     def detectSpikes2(self):
         print 'spikes 2'
         TSName = self.ui.loadTS2LineEdit.text()
+        hilbName = TSName.split('.')[0] + '.hilb' #################################
         lowSat = self.ui.lowSaturation2LineEdit.text()
         highSat = self.ui.highSaturation2LineEdit.text()
         taps = self.ui.taps2LineEdit.text()
@@ -566,6 +569,7 @@ class TrainingWindow(QtGui.QDialog):
                             '--detection=%s'%threshold, \
                             '--onlyabove=%s'%onlyAbove, \
                             TSName, \
+                            hilbName, \
                             saveSpikes])
         
         self.cancelled = False
