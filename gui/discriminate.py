@@ -250,7 +250,7 @@ class DiscriminateWindow(QtGui.QDialog):
 ########################################'--max_size=%s'%(maxSize), \
 
                                         TSName, \
-                                        hilbName
+                                        hilbName, \
                                         saveSpikes])
         
         self.cancelled = False
