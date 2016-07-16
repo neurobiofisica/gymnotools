@@ -38,9 +38,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-322</y>
-        <width>1255</width>
-        <height>1092</height>
+        <y>0</y>
+        <width>1375</width>
+        <height>1182</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
@@ -63,35 +63,28 @@
          </item>
          <item>
           <layout class="QGridLayout" name="step1ParametersLayout">
-           <item row="13" column="2">
-            <widget class="QLineEdit" name="minlevel2LineEdit"/>
-           </item>
-           <item row="13" column="1">
-            <widget class="QLineEdit" name="minlevel1LineEdit"/>
-           </item>
-           <item row="11" column="0">
-            <widget class="QLabel" name="thresholdLevelLabel">
+           <item row="2" column="0">
+            <widget class="QLabel" name="SaveLoadHilbLabel">
              <property name="text">
-              <string>Threshold level (V):</string>
+              <string>Save/Load Hilbert Transform</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
              </property>
             </widget>
            </item>
-           <item row="6" column="2">
-            <widget class="QPushButton" name="filterAssist2But">
+           <item row="8" column="2">
+            <widget class="QLineEdit" name="taps2LineEdit">
              <property name="text">
-              <string>Filter Assistant</string>
+              <string>301</string>
              </property>
             </widget>
            </item>
-           <item row="7" column="2">
-            <widget class="QLineEdit" name="taps2LineEdit">
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
+           <item row="6" column="2">
+            <widget class="QLineEdit" name="highSaturation2LineEdit"/>
+           </item>
+           <item row="5" column="2">
+            <widget class="QLineEdit" name="lowSaturation2LineEdit"/>
            </item>
            <item row="0" column="2">
             <widget class="QLabel" name="spikeParametersFish2Label">
@@ -103,33 +96,27 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="2">
-            <widget class="QLineEdit" name="lowSaturation2LineEdit"/>
-           </item>
-           <item row="4" column="2">
-            <widget class="QLineEdit" name="highSaturation2LineEdit"/>
-           </item>
-           <item row="10" column="1">
-            <widget class="QPushButton" name="thresholdAssist1But">
-             <property name="text">
-              <string>Threshold Assistant</string>
-             </property>
-            </widget>
-           </item>
-           <item row="11" column="2">
-            <widget class="QLineEdit" name="thresholdLevel2LineEdit"/>
-           </item>
-           <item row="8" column="0">
+           <item row="9" column="0">
             <widget class="QLabel" name="cutoffLabel">
              <property name="text">
-              <string>Cutoff frequency (cycles/sample):</string>
+              <string>Cutoff frequency (Hz):</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
+           <item row="8" column="0">
+            <widget class="QLabel" name="tapsLabel">
+             <property name="text">
+              <string>Number of taps:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
             <widget class="QLabel" name="highSaturationLabel">
              <property name="text">
               <string>HIGH saturation level (V):</string>
@@ -139,7 +126,7 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="5" column="0">
             <widget class="QLabel" name="lowSaturationLabel">
              <property name="text">
               <string>LOW saturation level (V):</string>
@@ -149,13 +136,10 @@
              </property>
             </widget>
            </item>
-           <item row="7" column="0">
-            <widget class="QLabel" name="tapsLabel">
+           <item row="9" column="2">
+            <widget class="QLineEdit" name="cutoff2LineEdit">
              <property name="text">
-              <string>Number of taps:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
+              <string>1.0</string>
              </property>
             </widget>
            </item>
@@ -169,17 +153,10 @@
              </property>
             </widget>
            </item>
-           <item row="8" column="2">
-            <widget class="QLineEdit" name="cutoff2LineEdit">
+           <item row="9" column="1">
+            <widget class="QLineEdit" name="cutoff1LineEdit">
              <property name="text">
-              <string/>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="2">
-            <widget class="QPushButton" name="thresholdAssist2But">
-             <property name="text">
-              <string>Threshold Assistant</string>
+              <string>1.0</string>
              </property>
             </widget>
            </item>
@@ -193,7 +170,10 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
+           <item row="5" column="1">
+            <widget class="QLineEdit" name="lowSaturation1LineEdit"/>
+           </item>
+           <item row="4" column="0">
             <widget class="QLabel" name="saturationLabel">
              <property name="font">
               <font>
@@ -208,46 +188,19 @@
             </widget>
            </item>
            <item row="8" column="1">
-            <widget class="QLineEdit" name="cutoff1LineEdit">
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLineEdit" name="lowSaturation1LineEdit"/>
-           </item>
-           <item row="7" column="1">
             <widget class="QLineEdit" name="taps1LineEdit">
              <property name="text">
-              <string/>
+              <string>301</string>
              </property>
             </widget>
            </item>
            <item row="1" column="1">
             <widget class="ClickQLineEdit" name="loadTS1LineEdit"/>
            </item>
-           <item row="11" column="1">
-            <widget class="QLineEdit" name="thresholdLevel1LineEdit"/>
-           </item>
-           <item row="4" column="1">
+           <item row="6" column="1">
             <widget class="QLineEdit" name="highSaturation1LineEdit"/>
            </item>
-           <item row="9" column="0">
-            <widget class="QLabel" name="thresholdLabel">
-             <property name="font">
-              <font>
-               <family>Sans Serif</family>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Threshold:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
+           <item row="7" column="0">
             <widget class="QLabel" name="filterLabel">
              <property name="font">
               <font>
@@ -257,41 +210,40 @@
               </font>
              </property>
              <property name="text">
-              <string>Low-pass filter parameters:</string>
+              <string>High-pass filter parameters:</string>
              </property>
             </widget>
            </item>
            <item row="1" column="2">
             <widget class="ClickQLineEdit" name="loadTS2LineEdit"/>
            </item>
-           <item row="6" column="1">
-            <widget class="QPushButton" name="filterAssist1But">
+           <item row="2" column="1">
+            <widget class="ClickQLineEdit" name="saveLoadHilb1LineEdit"/>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="UseExistingHilb">
              <property name="text">
-              <string>Filter Assistant</string>
+              <string>Use Existing Hilbert Transform file?</string>
              </property>
             </widget>
            </item>
-           <item row="13" column="0">
-            <widget class="QLabel" name="minlevelLabel">
-             <property name="text">
-              <string>MinLevel (just above noise) (V):</string>
+           <item row="2" column="2">
+            <widget class="ClickQLineEdit" name="saveLoadHilb2LineEdit"/>
+           </item>
+           <item row="3" column="1" alignment="Qt::AlignHCenter">
+            <widget class="QCheckBox" name="useHilb1CheckBox">
+             <property name="layoutDirection">
+              <enum>Qt::LeftToRight</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
+             <property name="text">
+              <string notr="true"/>
              </property>
             </widget>
            </item>
-           <item row="12" column="1">
-            <widget class="QPushButton" name="minlevel1But">
+           <item row="3" column="2" alignment="Qt::AlignHCenter">
+            <widget class="QCheckBox" name="useHilb2CheckBox">
              <property name="text">
-              <string>MinLevel Assistant</string>
-             </property>
-            </widget>
-           </item>
-           <item row="12" column="2">
-            <widget class="QPushButton" name="minlevel2But">
-             <property name="text">
-              <string>MinLevel Assistant</string>
+              <string/>
              </property>
             </widget>
            </item>
@@ -358,84 +310,17 @@
           </widget>
          </item>
          <item>
-          <layout class="QGridLayout" name="step2ParametersLayout" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="4,0,4">
+          <layout class="QGridLayout" name="step2ParametersLayout" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="4,0,0">
            <property name="horizontalSpacing">
             <number>6</number>
            </property>
            <property name="verticalSpacing">
             <number>0</number>
            </property>
-           <item row="1" column="0" colspan="3">
-            <widget class="QLabel" name="saveSpikesLabel">
-             <property name="text">
-              <string>Save detected spikes as: </string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0" colspan="2">
-            <widget class="ClickQLineEdit" name="saveWindowLengths1LineEdit"/>
-           </item>
-           <item row="3" column="0" colspan="3">
-            <widget class="QLabel" name="saveWindowLengthsLabel">
-             <property name="text">
-              <string>Save window lengths as:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="11" column="2">
-            <widget class="QPushButton" name="verifySpikes2But">
-             <property name="text">
-              <string>Verify detection</string>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="0" colspan="3">
-            <widget class="QLabel" name="loadSpikesLabel">
-             <property name="text">
-              <string>Load spikes file:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="2">
-            <widget class="ClickQLineEdit" name="loadSpikes2LineEdit"/>
-           </item>
            <item row="5" column="0" colspan="3">
-            <widget class="QLabel" name="onlyAboveLabel">
+            <widget class="QLabel" name="maxSizeLabel">
              <property name="text">
-              <string>Only output spikes above (V) (Needed to avoid noise)</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLabel" name="detectFish2Label">
-             <property name="text">
-              <string>Fish 2</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="2">
-            <widget class="ClickQLineEdit" name="saveWindowLengths2LineEdit"/>
-           </item>
-           <item row="11" column="0" colspan="2">
-            <widget class="QPushButton" name="verifySpikes1But">
-             <property name="text">
-              <string>Verify detection</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="ClickQLineEdit" name="saveSpikes2LineEdit"/>
-           </item>
-           <item row="2" column="0" colspan="2">
-            <widget class="ClickQLineEdit" name="saveSpikes1LineEdit"/>
-           </item>
-           <item row="7" column="0" colspan="2">
-            <widget class="QPushButton" name="detectSpikes1But">
-             <property name="text">
-              <string>Detect Spikes</string>
+              <string>Maximum size (s):</string>
              </property>
             </widget>
            </item>
@@ -449,7 +334,71 @@
              </property>
             </widget>
            </item>
-           <item row="8" column="0" colspan="3">
+           <item row="9" column="0" colspan="3">
+            <widget class="QLabel" name="saveSpikesLabel">
+             <property name="text">
+              <string>Save detected spikes as: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="17" column="2">
+            <widget class="QPushButton" name="verifySpikes2But">
+             <property name="text">
+              <string>Verify detection</string>
+             </property>
+            </widget>
+           </item>
+           <item row="15" column="0" colspan="3">
+            <widget class="QLabel" name="loadSpikesLabel">
+             <property name="text">
+              <string>Load spikes file:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="16" column="2">
+            <widget class="ClickQLineEdit" name="loadSpikes2LineEdit"/>
+           </item>
+           <item row="17" column="0" colspan="2">
+            <widget class="QPushButton" name="verifySpikes1But">
+             <property name="text">
+              <string>Verify detection</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="detectFish2Label">
+             <property name="text">
+              <string>Fish 2</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="2">
+            <widget class="ClickQLineEdit" name="saveSpikes2LineEdit"/>
+           </item>
+           <item row="10" column="0" colspan="2">
+            <widget class="ClickQLineEdit" name="saveSpikes1LineEdit"/>
+           </item>
+           <item row="13" column="0" colspan="2">
+            <widget class="QPushButton" name="detectSpikes1But">
+             <property name="text">
+              <string>Calculate Hilbert and detect Spikes</string>
+             </property>
+            </widget>
+           </item>
+           <item row="16" column="0" colspan="2">
+            <widget class="ClickQLineEdit" name="loadSpikes1LineEdit"/>
+           </item>
+           <item row="13" column="2">
+            <widget class="QPushButton" name="detectSpikes2But">
+             <property name="text">
+              <string>Calculate Hilbert and detect Spikes</string>
+             </property>
+            </widget>
+           </item>
+           <item row="14" column="0" colspan="3">
             <spacer name="step2ParametersSpacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -465,21 +414,61 @@
              </property>
             </spacer>
            </item>
-           <item row="7" column="2">
-            <widget class="QPushButton" name="detectSpikes2But">
+           <item row="2" column="0" colspan="2">
+            <widget class="QLineEdit" name="thresholdLevel1LineEdit">
              <property name="text">
-              <string>Detect Spikes</string>
+              <string>1.0</string>
              </property>
             </widget>
            </item>
-           <item row="10" column="0" colspan="2">
-            <widget class="ClickQLineEdit" name="loadSpikes1LineEdit"/>
+           <item row="4" column="2">
+            <widget class="QLineEdit" name="refractory2LineEdit"/>
+           </item>
+           <item row="4" column="0" colspan="2">
+            <widget class="QLineEdit" name="refractory1LineEdit"/>
+           </item>
+           <item row="1" column="0" colspan="3" alignment="Qt::AlignLeft">
+            <widget class="QLabel" name="thresholdLevelLabel">
+             <property name="text">
+              <string>Threshold level (V):</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QLineEdit" name="thresholdLevel2LineEdit">
+             <property name="text">
+              <string>1.0</string>
+             </property>
+            </widget>
            </item>
            <item row="6" column="2">
-            <widget class="QLineEdit" name="onlyAbove2LineEdit"/>
+            <widget class="QLineEdit" name="maxSize2LineEdit"/>
+           </item>
+           <item row="3" column="0" colspan="3">
+            <widget class="QLabel" name="refractoryLabel">
+             <property name="text">
+              <string>Refractory period (s):</string>
+             </property>
+            </widget>
            </item>
            <item row="6" column="0" colspan="2">
+            <widget class="QLineEdit" name="maxSize1LineEdit"/>
+           </item>
+           <item row="8" column="2">
+            <widget class="QLineEdit" name="onlyAbove2LineEdit"/>
+           </item>
+           <item row="8" column="0" colspan="2">
             <widget class="QLineEdit" name="onlyAbove1LineEdit"/>
+           </item>
+           <item row="7" column="0" colspan="3">
+            <widget class="QLabel" name="onlyAboveLabel">
+             <property name="text">
+              <string>Only output spikes above (V) (Needed to avoid noise)</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -1203,24 +1192,16 @@
   <tabstop>loadTS1LineEdit</tabstop>
   <tabstop>lowSaturation1LineEdit</tabstop>
   <tabstop>highSaturation1LineEdit</tabstop>
-  <tabstop>filterAssist1But</tabstop>
   <tabstop>taps1LineEdit</tabstop>
   <tabstop>cutoff1LineEdit</tabstop>
-  <tabstop>thresholdAssist1But</tabstop>
-  <tabstop>thresholdLevel1LineEdit</tabstop>
   <tabstop>loadTS2LineEdit</tabstop>
   <tabstop>lowSaturation2LineEdit</tabstop>
   <tabstop>highSaturation2LineEdit</tabstop>
-  <tabstop>filterAssist2But</tabstop>
   <tabstop>taps2LineEdit</tabstop>
   <tabstop>cutoff2LineEdit</tabstop>
-  <tabstop>thresholdAssist2But</tabstop>
-  <tabstop>thresholdLevel2LineEdit</tabstop>
   <tabstop>saveSpikes1LineEdit</tabstop>
-  <tabstop>saveWindowLengths1LineEdit</tabstop>
   <tabstop>detectSpikes1But</tabstop>
   <tabstop>saveSpikes2LineEdit</tabstop>
-  <tabstop>saveWindowLengths2LineEdit</tabstop>
   <tabstop>detectSpikes2But</tabstop>
   <tabstop>loadSpikes1LineEdit</tabstop>
   <tabstop>verifySpikes1But</tabstop>

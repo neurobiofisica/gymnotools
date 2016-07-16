@@ -39,6 +39,8 @@ class TrainingWindow(QtGui.QDialog):
         # LineFields List -> for saving parameters
         self.lineFieldsList = (self.ui.loadTS1LineEdit, \
                                self.ui.loadTS2LineEdit, \
+                               self.ui.saveLoadHilb1LineEdit, \
+                               self.ui.saveLoadHilb2LineEdit, \
                                self.ui.lowSaturation1LineEdit, \
                                self.ui.lowSaturation2LineEdit, \
                                self.ui.highSaturation1LineEdit, \
@@ -49,12 +51,12 @@ class TrainingWindow(QtGui.QDialog):
                                self.ui.cutoff2LineEdit, \
                                self.ui.thresholdLevel1LineEdit, \
                                self.ui.thresholdLevel2LineEdit, \
-                               self.ui.minlevel1LineEdit, \
-                               self.ui.minlevel2LineEdit, \
+                               self.ui.refractory1LineEdit, \
+                               self.ui.refractory2LineEdit, \
+                               self.ui.maxSize1LineEdit, \
+                               self.ui.maxSize2LineEdit, \
                                self.ui.saveSpikes1LineEdit, \
                                self.ui.saveSpikes2LineEdit, \
-                               self.ui.saveWindowLengths1LineEdit, \
-                               self.ui.saveWindowLengths2LineEdit, \
                                self.ui.onlyAbove1LineEdit, \
                                self.ui.onlyAbove2LineEdit, \
                                self.ui.loadSpikes1LineEdit, \
@@ -103,12 +105,6 @@ class TrainingWindow(QtGui.QDialog):
         
         # Program objects -> they must be parameters for the GarbageCollector
         # do not clean them
-        self.filterAssist1Program = QtCore.QProcess()
-        self.filterAssist2Program = QtCore.QProcess()
-        self.thresholdAssist1Program = QtCore.QProcess()
-        self.thresholdAssist2Program = QtCore.QProcess()
-        self.minlevelAssist1Program = QtCore.QProcess()
-        self.minlevelAssist2Program = QtCore.QProcess()
         self.verifySpikes1Program = QtCore.QProcess()
         self.verifySpikes2Program = QtCore.QProcess()
         self.detectSpikes1Program = QtCore.QProcess()
@@ -128,9 +124,7 @@ class TrainingWindow(QtGui.QDialog):
         self.svmtoolTrainProgram = QtCore.QProcess()
         self.svmtoolROCProgram = QtCore.QProcess()
 
-        self.dicProgram = {'paramchooser lowpass': (self.filterAssist1Program, self.filterAssist2Program), \
-                           'paramchooser threshold': (self.thresholdAssist1Program, self.thresholdAssist2Program, self.minlevelAssist1Program, self.minlevelAssist2Program), \
-                           'winview': (self.verifySpikes1Program, self.verifySpikes2Program), \
+        self.dicProgram = {'winview': (self.verifySpikes1Program, self.verifySpikes2Program), \
                            'spikes Fish 1': (self.detectSpikes1Program, ), \
                            'spikes Fish 2': (self.detectSpikes2Program, ), \
                            'features compute': (self.featuresCompute1Program, self.featuresCompute2Program), \
@@ -228,15 +222,6 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
         QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
         
-        QtCore.QObject.connect(self.ui.filterAssist1But, QtCore.SIGNAL('clicked()'), self.filterAssist1)
-        QtCore.QObject.connect(self.ui.filterAssist2But, QtCore.SIGNAL('clicked()'), self.filterAssist2)
-        
-        QtCore.QObject.connect(self.ui.thresholdAssist1But, QtCore.SIGNAL('clicked()'), self.thresholdAssist1)
-        QtCore.QObject.connect(self.ui.thresholdAssist2But, QtCore.SIGNAL('clicked()'), self.thresholdAssist2)
-        
-        QtCore.QObject.connect(self.ui.minlevel1But, QtCore.SIGNAL('clicked()'), self.minlevelAssist1)
-        QtCore.QObject.connect(self.ui.minlevel2But, QtCore.SIGNAL('clicked()'), self.minlevelAssist2)
-        
         QtCore.QObject.connect(self.ui.verifySpikes1But, QtCore.SIGNAL('clicked()'), self.verifySpikes1)
         QtCore.QObject.connect(self.ui.verifySpikes2But, QtCore.SIGNAL('clicked()'), self.verifySpikes2)
         
@@ -276,171 +261,6 @@ class TrainingWindow(QtGui.QDialog):
         print 'stderr:%s\n'%self.programname
         for program in self.dicProgram[self.programname]:
             print(program.readAllStandardError())
-    
-    def filterAssist1(self):
-        print 'paramchooser lowpass 1'
-        TSName = self.ui.loadTS1LineEdit.text()
-        
-        # Same name of self.dicProgram
-        self.programname = 'paramchooser lowpass'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.filterAssist1Program.start('./../paramchooser/paramchooser', ['lowpass', TSName])
-        
-        self.cancelled = False
-        def filterAssist1Finish(ret, exitStatus):
-            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.filterAssist1Program.readAllStandardOutput()
-                out = out + '\n' + self.filterAssist1Program.readAllStandardError()
-                
-                out = str(out)
-                
-                numtaps = out.split('numtaps = ')[1].split('\n')[0]
-                cutoff = out.split('cutoff = ')[1].split('\n')[0]
-                
-                self.ui.taps1LineEdit.setText(numtaps)
-                self.ui.cutoff1LineEdit.setText(cutoff)
-            else:
-                return None
-        
-        QtCore.QObject.connect(self.filterAssist1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), filterAssist1Finish)
-        
-    def filterAssist2(self):
-        print 'paramchooser lowpass 2'
-        TSName = self.ui.loadTS2LineEdit.text()
-       
-        # Same name of self.dicProgram
-        self.programname = 'paramchooser lowpass'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.filterAssist2Program.start('./../paramchooser/paramchooser', ['lowpass', TSName])
-        
-        self.cancelled = False
-        def filterAssist2Finish(ret, exitStatus):
-            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.filterAssist2Program.readAllStandardOutput()
-                out = out + '\n' + self.filterAssist2Program.readAllStandardError()
-                
-                out = str(out)
-                
-                numtaps = out.split('numtaps = ')[1].split('\n')[0]
-                cutoff = out.split('cutoff = ')[1].split('\n')[0]
-                
-                self.ui.taps2LineEdit.setText(numtaps)
-                self.ui.cutoff2LineEdit.setText(cutoff)
-            else:
-                return None
-        
-        QtCore.QObject.connect(self.filterAssist2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), filterAssist2Finish)
-    
-    def thresholdAssist1(self):
-        print 'paramchooser threshold 1'
-        TSName = self.ui.loadTS1LineEdit.text()
-        taps = self.ui.taps1LineEdit.text()
-        cutoff = self.ui.cutoff1LineEdit.text()
-        
-        # Same name of self.dicProgram
-        self.programname = 'paramchooser threshold'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )        
-        self.thresholdAssist1Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
-        
-        self.cancelled = False
-        def thresholdAssist1Finish(ret, exitStatus):
-            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.thresholdAssist1Program.readAllStandardOutput()
-                out = out + '\n' + self.thresholdAssist1Program.readAllStandardError()
-                
-                out = str(out)
-                
-                threshold = out.split('threshold = ')[1].split('\n')[0]
-                self.ui.thresholdLevel1LineEdit.setText(threshold)
-            else:
-                return None
-        
-        QtCore.QObject.connect(self.thresholdAssist1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), thresholdAssist1Finish)
-        
-    
-    def thresholdAssist2(self):
-        print 'paramchooser threshold 2'
-        TSName = self.ui.loadTS2LineEdit.text()
-        taps = self.ui.taps2LineEdit.text()
-        cutoff = self.ui.cutoff2LineEdit.text()
-        
-        # Same name of self.dicProgram
-        self.programname = 'paramchooser threshold'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )        
-        self.thresholdAssist2Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
-        
-        self.cancelled = False
-        def thresholdAssist2Finish(ret, exitStatus):
-            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.thresholdAssist2Program.readAllStandardOutput()
-                out = out + '\n' + self.thresholdAssist2Program.readAllStandardError()
-                
-                out = str(out)
-                
-                threshold = out.split('threshold = ')[1].split('\n')[0]
-                self.ui.thresholdLevel2LineEdit.setText(threshold)
-            else:
-                return None
-        
-        QtCore.QObject.connect(self.thresholdAssist2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), thresholdAssist2Finish)
-    
-    def minlevelAssist1(self):
-        print 'paramchooser threshold 1'
-        TSName = self.ui.loadTS1LineEdit.text()
-        taps = self.ui.taps1LineEdit.text()
-        cutoff = self.ui.cutoff1LineEdit.text()
-        
-        # Same name of self.dicProgram
-        self.programname = 'paramchooser threshold'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.minlevelAssist1Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
-        
-        self.cancelled = False
-        def minlevelAssist1Finish(ret, exitStatus):
-            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.minlevelAssist1Program.readAllStandardOutput()
-                out = out + '\n' + self.minlevelAssist1Program.readAllStandardError()
-                
-                out = str(out)
-                
-                threshold = out.split('threshold = ')[1].split('\n')[0]
-                self.ui.minlevel1LineEdit.setText(threshold)
-            else:
-                return None
-        
-        QtCore.QObject.connect(self.minlevelAssist1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), minlevelAssist1Finish)
-    
-    def minlevelAssist2(self):
-        print 'paramchooser threshold 2'
-        TSName = self.ui.loadTS2LineEdit.text()
-        taps = self.ui.taps2LineEdit.text()
-        cutoff = self.ui.cutoff2LineEdit.text()
-        
-        # Same name of self.dicProgram
-        self.programname = 'paramchooser threshold'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.minlevelAssist2Program.start('./../paramchooser/paramchooser', ['threshold', TSName, taps, cutoff])
-        
-        self.cancelled = False
-        def minlevelAssist2Finish(ret, exitStatus):
-            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.minlevelAssist2Program.readAllStandardOutput()
-                out = out + '\n' + self.minlevelAssist2Program.readAllStandardError()
-                
-                out = str(out)
-                
-                threshold = out.split('threshold = ')[1].split('\n')[0]
-                self.ui.minlevel2LineEdit.setText(threshold)
-            else:
-                return None
-        
-        QtCore.QObject.connect(self.minlevelAssist2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), minlevelAssist2Finish)
     
     def verifySpikes1(self):
         print 'winview 1'
@@ -497,6 +317,8 @@ class TrainingWindow(QtGui.QDialog):
         taps = self.ui.taps1LineEdit.text()
         cutoff = self.ui.cutoff1LineEdit.text()
         threshold = self.ui.thresholdLevel1LineEdit.text()
+        refractory = self.ui.refractory1LineEdit.text()
+        maxSize = self.ui.maxSize1LineEdit.text()
         saveSpikes = self.ui.saveSpikes1LineEdit.text()
         onlyAbove = self.ui.onlyAbove1LineEdit.text()
         
@@ -507,11 +329,12 @@ class TrainingWindow(QtGui.QDialog):
         self.programname = 'spikes Fish 1'
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.detectSpikes1Program.start('./../spikes/spikes', \
+        #self.detectSpikes1Program.start('./../spikes/spikes', \
+        print('./../spikes/spikes', \
                            ['--fixedwin', \
                             '--detection=%s'%(threshold), \
-############################'--refractory=%s'%(refractory), \
-############################'--max_size=%s'%(maxSize), \
+                            '--refractory=%s'%(refractory), \
+                            '--max_size=%s'%(maxSize), \
                             '--saturation=%s,%s'%(lowSat,highSat), \
                             '--numtaps=%s'%taps, \
                             '--cutoff=%s'%cutoff, \
@@ -544,10 +367,10 @@ class TrainingWindow(QtGui.QDialog):
         taps = self.ui.taps2LineEdit.text()
         cutoff = self.ui.cutoff2LineEdit.text()
         threshold = self.ui.thresholdLevel2LineEdit.text()
+        refractory = self.ui.refractory2LineEdit.text()
+        maxSize = self.ui.maxSize2LineEdit.text()
         saveSpikes = self.ui.saveSpikes2LineEdit.text()
-        saveWindowLengths = self.ui.saveWindowLengths2LineEdit.text()
         onlyAbove = self.ui.onlyAbove2LineEdit.text()
-        minlevel = self.ui.minlevel2LineEdit.text()
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -556,11 +379,12 @@ class TrainingWindow(QtGui.QDialog):
         self.programname = 'spikes Fish 2'
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.detectSpikes2Program.start('./../spikes/spikes', \
+        #self.detectSpikes2Program.start('./../spikes/spikes', \
+        print('./../spikes/spikes', \
                            ['--fixedwin', \
                             '--detection=%s'%(threshold), \
-############################'--refractory=%s'%(refractory), \
-############################'--max_size=%s'%(maxSize), \
+                            '--refractory=%s'%(refractory), \
+                            '--max_size=%s'%(maxSize), \
                             '--saturation=%s,%s'%(lowSat,highSat), \
                             '--numtaps=%s'%taps, \
                             '--cutoff=%s'%cutoff, \
@@ -980,29 +804,31 @@ class TrainingWindow(QtGui.QDialog):
     
     def defineFieldsType(self):
         self.fieldsType = {self.ui.loadTS1LineEdit: 'load', \
+                       self.ui.saveLoadHilb1LineEdit: 'save', \
                        
                        self.ui.loadTS2LineEdit: 'load', \
+                       self.ui.saveLoadHilb2LineEdit: 'save', \
                        
                        self.ui.lowSaturation1LineEdit: 'float', \
                        self.ui.highSaturation1LineEdit: 'float', \
                        self.ui.taps1LineEdit: 'int', \
                        self.ui.cutoff1LineEdit: 'float', \
                        self.ui.thresholdLevel1LineEdit: 'float', \
-                       self.ui.minlevel1LineEdit: 'float', \
+                       self.ui.refractory1LineEdit: 'float', \
+                       self.ui.maxSize1LineEdit: 'float', \
                        
                        self.ui.lowSaturation2LineEdit: 'float', \
                        self.ui.highSaturation2LineEdit: 'float', \
                        self.ui.taps2LineEdit: 'int', \
                        self.ui.cutoff2LineEdit: 'float', \
                        self.ui.thresholdLevel2LineEdit: 'float', \
-                       self.ui.minlevel2LineEdit: 'float', \
+                       self.ui.refractory2LineEdit: 'float', \
+                       self.ui.maxSize2LineEdit: 'float', \
                        
                        self.ui.saveSpikes1LineEdit: 'save', \
-                       self.ui.saveWindowLengths1LineEdit: 'save', \
                        self.ui.onlyAbove1LineEdit: 'float', \
                        
                        self.ui.saveSpikes2LineEdit: 'save', \
-                       self.ui.saveWindowLengths2LineEdit: 'save', \
                        self.ui.onlyAbove2LineEdit: 'float', \
                        
                        self.ui.loadSpikes1LineEdit: 'load', \
@@ -1069,12 +895,12 @@ class TrainingWindow(QtGui.QDialog):
         self.fileFieldsExtension = {
             self.ui.loadTS1LineEdit: 'Timeseries on format I32 file (*.*) (*.*)', \
             self.ui.loadTS2LineEdit: 'Timeseries on format I32 file (*.*) (*.*)', \
+            self.ui.saveLoadHilb1LineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
+            self.ui.saveLoadHilb2LineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
             self.ui.saveSpikes1LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.saveSpikes2LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.loadSpikes1LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.loadSpikes2LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
-            self.ui.saveWindowLengths1LineEdit: 'Window Length File (*.winlen) (*.winlen)', \
-            self.ui.saveWindowLengths2LineEdit: 'Window Length File (*.winlen) (*.winlen)', \
             self.ui.saveFeatures1LineEdit: 'Features File (*.features) (*.features)', \
             self.ui.saveFeatures2LineEdit: 'Features File (*.features) (*.features)', \
             self.ui.loadFeatures1LineEdit: 'Features File (*.features) (*.features)', \
@@ -1448,11 +1274,11 @@ class TrainingWindow(QtGui.QDialog):
             ( \
                 (self.ui.loadTS1LineEdit, \
                  ), \
-                (self.ui.lowSaturation1LineEdit, \
+                (self.ui.saveLoadHilb1LineEdit, \
+                 self.ui.lowSaturation1LineEdit, \
                  self.ui.highSaturation1LineEdit, \
                  self.ui.taps1LineEdit, \
                  self.ui.cutoff1LineEdit, \
-                 self.ui.filterAssist1But,
                  ) \
             ), \
         )
@@ -1461,72 +1287,72 @@ class TrainingWindow(QtGui.QDialog):
             ( \
                 (self.ui.loadTS2LineEdit, \
                  ), \
-                (self.ui.lowSaturation2LineEdit, \
+                (self.ui.saveLoadHilb2LineEdit, \
+                 self.ui.lowSaturation2LineEdit, \
                  self.ui.highSaturation2LineEdit, \
                  self.ui.taps2LineEdit, \
                  self.ui.cutoff2LineEdit, \
-                 self.ui.filterAssist2But, \
                  ) \
             ), \
         )
         
         self.spikeParametersFish1Unlocker = ( \
             ( \
-                (self.ui.lowSaturation1LineEdit, \
+                (self.ui.saveLoadHilb1LineEdit, \
+                 self.ui.lowSaturation1LineEdit, \
                  self.ui.highSaturation1LineEdit, \
                  self.ui.taps1LineEdit, \
                  self.ui.cutoff1LineEdit, \
                  self.ui.thresholdLevel1LineEdit, \
-                 self.ui.minlevel1LineEdit, \
+                 self.ui.refractory1LineEdit, \
+                 self.ui.maxSize1LineEdit, \
+                 self.ui.onlyAbove1LineEdit, \
                  ), \
                 (self.ui.saveSpikes1LineEdit, \
-                 self.ui.saveWindowLengths1LineEdit, \
-                 self.ui.onlyAbove1LineEdit, \
                 ) \
             ), \
-            ( \
-                (self.ui.taps1LineEdit, \
-                 self.ui.cutoff1LineEdit, \
-                 ), \
-                (self.ui.thresholdAssist1But, \
-                 self.ui.thresholdLevel1LineEdit, \
-                 self.ui.minlevel1But, \
-                 self.ui.minlevel1LineEdit, \
-                 ) \
-            ), \
+            #( \
+            #    (self.ui.taps1LineEdit, \
+            #     self.ui.cutoff1LineEdit, \
+            #     ), \
+            #    (self.ui.thresholdAssist1But, \
+            #     self.ui.thresholdLevel1LineEdit, \
+            #     self.ui.minlevel1But, \
+            #     self.ui.minlevel1LineEdit, \
+            #     ) \
+            #), \
         )
         
         self.spikeParametersFish2Unlocker = ( \
             ( \
-                (self.ui.lowSaturation2LineEdit, \
+                (self.ui.saveLoadHilb2LineEdit, \
+                 self.ui.lowSaturation2LineEdit, \
                  self.ui.highSaturation2LineEdit, \
                  self.ui.taps2LineEdit, \
                  self.ui.cutoff2LineEdit, \
                  self.ui.thresholdLevel2LineEdit, \
-                 self.ui.minlevel2LineEdit, \
+                 self.ui.refractory2LineEdit, \
+                 self.ui.maxSize2LineEdit, \
+                 self.ui.onlyAbove2LineEdit, \
                  ), \
                 (self.ui.saveSpikes2LineEdit, \
-                 self.ui.saveWindowLengths2LineEdit, \
-                 self.ui.onlyAbove2LineEdit, \
                 ) \
             ), \
-            ( \
-                (self.ui.taps2LineEdit, \
-                 self.ui.cutoff2LineEdit, \
-                 ), \
-                (self.ui.thresholdAssist2But, \
-                 self.ui.thresholdLevel2LineEdit, \
-                 self.ui.minlevel2But, \
-                 self.ui.minlevel2LineEdit, \
-                 ) \
-            ), \
+            #( \
+            #    (self.ui.taps2LineEdit, \
+            #     self.ui.cutoff2LineEdit, \
+            #     ), \
+            #    (self.ui.thresholdAssist2But, \
+            #     self.ui.thresholdLevel2LineEdit, \
+            #     self.ui.minlevel2But, \
+            #     self.ui.minlevel2LineEdit, \
+            #     ) \
+            #), \
         )
         
         self.spikeSavefilesFish1Unlocker = ( \
             ( \
                 (self.ui.saveSpikes1LineEdit, \
-                 self.ui.saveWindowLengths1LineEdit, \
-                 self.ui.onlyAbove1LineEdit, \
                  ), \
                 (self.ui.detectSpikes1But, \
                 ) \
@@ -1536,8 +1362,6 @@ class TrainingWindow(QtGui.QDialog):
         self.spikeSavefilesFish2Unlocker = ( \
             ( \
                 (self.ui.saveSpikes2LineEdit, \
-                 self.ui.saveWindowLengths2LineEdit, \
-                 self.ui.onlyAbove2LineEdit, \
                  ), \
                 (self.ui.detectSpikes2But, \
                  ) \
@@ -1739,28 +1563,30 @@ class TrainingWindow(QtGui.QDialog):
         self.Fields = {self.ui.loadTS1LineEdit: self.loadTSFish1Unlocker, \
                        
                        self.ui.loadTS2LineEdit: self.loadTSFish2Unlocker, \
-                       
+                      
+                       self.ui.saveLoadHilb1LineEdit: self.spikeParametersFish1Unlocker, \
                        self.ui.lowSaturation1LineEdit: self.spikeParametersFish1Unlocker, \
                        self.ui.highSaturation1LineEdit: self.spikeParametersFish1Unlocker, \
                        self.ui.taps1LineEdit: self.spikeParametersFish1Unlocker, \
                        self.ui.cutoff1LineEdit: self.spikeParametersFish1Unlocker, \
                        self.ui.thresholdLevel1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.minlevel1LineEdit: self.spikeParametersFish1Unlocker, \
+                       self.ui.refractory1LineEdit: self.spikeParametersFish1Unlocker, \
+                       self.ui.maxSize1LineEdit: self.spikeParametersFish1Unlocker, \
+                       self.ui.onlyAbove1LineEdit: self.spikeParametersFish1Unlocker, \
                        
+                       self.ui.saveLoadHilb2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.lowSaturation2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.highSaturation2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.taps2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.cutoff2LineEdit: self.spikeParametersFish2Unlocker, \
                        self.ui.thresholdLevel2LineEdit: self.spikeParametersFish2Unlocker, \
-                       self.ui.minlevel2LineEdit: self.spikeParametersFish2Unlocker, \
+                       self.ui.refractory2LineEdit: self.spikeParametersFish1Unlocker, \
+                       self.ui.maxSize2LineEdit: self.spikeParametersFish1Unlocker, \
+                       self.ui.onlyAbove2LineEdit: self.spikeParametersFish2Unlocker, \
                        
                        self.ui.saveSpikes1LineEdit: self.spikeSavefilesFish1Unlocker, \
-                       self.ui.saveWindowLengths1LineEdit: self.spikeSavefilesFish1Unlocker, \
-                       self.ui.onlyAbove1LineEdit: self.spikeSavefilesFish1Unlocker, \
                        
                        self.ui.saveSpikes2LineEdit: self.spikeSavefilesFish2Unlocker, \
-                       self.ui.saveWindowLengths2LineEdit: self.spikeSavefilesFish2Unlocker, \
-                       self.ui.onlyAbove2LineEdit: self.spikeSavefilesFish2Unlocker, \
                        
                        self.ui.loadSpikes1LineEdit: self.loadSpikesFish1Unlocker, \
                        
@@ -1825,10 +1651,10 @@ class TrainingWindow(QtGui.QDialog):
         
         FileFields = [self.ui.loadTS1LineEdit, \
                            self.ui.loadTS2LineEdit, \
+                           self.ui.saveLoadHilb1LineEdit, \
+                           self.ui.saveLoadHilb2LineEdit, \
                            self.ui.saveSpikes1LineEdit, \
                            self.ui.saveSpikes2LineEdit, \
-                           self.ui.saveWindowLengths1LineEdit, \
-                           self.ui.saveWindowLengths2LineEdit, \
                            self.ui.loadSpikes1LineEdit, \
                            self.ui.loadSpikes2LineEdit, \
                            self.ui.saveFeatures1LineEdit, \
