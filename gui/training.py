@@ -321,17 +321,10 @@ class TrainingWindow(QtGui.QDialog):
         maxSize = self.ui.maxSize1LineEdit.text()
         saveSpikes = self.ui.saveSpikes1LineEdit.text()
         onlyAbove = self.ui.onlyAbove1LineEdit.text()
-        
-        dialog = self.raiseLongTimeInformation()
-        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
-        
-        # Same name of self.dicProgram
-        self.programname = 'spikes Fish 1'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        #self.detectSpikes1Program.start('./../spikes/spikes', \
-        print('./../spikes/spikes', \
-                           ['--fixedwin', \
+        useHilb = self.ui.useHilb1CheckBox.isChecked()
+
+
+        listArgs = ['--fixedwin', \
                             '--detection=%s'%(threshold), \
                             '--refractory=%s'%(refractory), \
                             '--max_size=%s'%(maxSize), \
@@ -342,7 +335,23 @@ class TrainingWindow(QtGui.QDialog):
                             '--onlyabove=%s'%onlyAbove, \
                             TSName, \
                             hilbName, \
-                            saveSpikes])
+                            saveSpikes]
+        if useHilb == True:
+            listArgs.insert(0, '--useHilbert')
+
+        print(repr(useHilb))
+        print(listArgs)
+ 
+
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        # Same name of self.dicProgram
+        self.programname = 'spikes Fish 1'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        self.detectSpikes1Program.start('./../spikes/spikes', \
+                            listArgs)
         
         self.cancelled = False
         def detectSpikes1Finish(ret, exitStatus):
@@ -371,17 +380,10 @@ class TrainingWindow(QtGui.QDialog):
         maxSize = self.ui.maxSize2LineEdit.text()
         saveSpikes = self.ui.saveSpikes2LineEdit.text()
         onlyAbove = self.ui.onlyAbove2LineEdit.text()
-        
-        dialog = self.raiseLongTimeInformation()
-        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
-        
-        # Same name of self.dicProgram
-        self.programname = 'spikes Fish 2'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        #self.detectSpikes2Program.start('./../spikes/spikes', \
-        print('./../spikes/spikes', \
-                           ['--fixedwin', \
+        useHilb = self.ui.useHilb2CheckBox.isChecked()
+
+
+        listArgs = ['--fixedwin', \
                             '--detection=%s'%(threshold), \
                             '--refractory=%s'%(refractory), \
                             '--max_size=%s'%(maxSize), \
@@ -392,7 +394,19 @@ class TrainingWindow(QtGui.QDialog):
                             '--onlyabove=%s'%onlyAbove, \
                             TSName, \
                             hilbName, \
-                            saveSpikes])
+                            saveSpikes]
+        if useHilb == True:
+            listArgs.insert(0, '--useHilbert')
+        
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        
+        # Same name of self.dicProgram
+        self.programname = 'spikes Fish 2'
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        self.detectSpikes2Program.start('./../spikes/spikes', \
+                            listArgs)
         
         self.cancelled = False
         def detectSpikes2Finish(ret, exitStatus):
