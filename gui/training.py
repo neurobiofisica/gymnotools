@@ -35,12 +35,33 @@ class TrainingWindow(QtGui.QDialog):
         self.fig = self.ui.ROCWidget.canvas.fig
         self.ax = self.ui.ROCWidget.canvas.ax
         self.plotData, = self.ui.ROCWidget.canvas.ax.plot([],[],'k.')
-        
+       
+        self.defaultValues = {self.ui.lowSaturation1LineEdit: -9.9, \
+                              self.ui.lowSaturation2LineEdit: -9.9, \
+
+                              self.ui.highSaturation1LineEdit: 9.9, \
+                              self.ui.highSaturation2LineEdit: 9.9, \
+
+                              self.ui.taps1LineEdit: 301, \
+                              self.ui.taps2LineEdit: 301, \
+
+                              self.ui.cutoff1LineEdit: 1.0, \
+                              self.ui.cutoff2LineEdit: 1.0, \
+                        
+                              self.ui.thresholdLevel1LineEdit: 1.0, \
+                              self.ui.thresholdLevel2LineEdit: 1.0, \
+                             }
+
+        for field in self.defaultValues.keys():
+            field.setText(str(self.defaultValues[field]))
+ 
         # LineFields List -> for saving parameters
         self.lineFieldsList = (self.ui.loadTS1LineEdit, \
                                self.ui.loadTS2LineEdit, \
                                self.ui.saveLoadHilb1LineEdit, \
                                self.ui.saveLoadHilb2LineEdit, \
+                               self.ui.useHilb1CheckBox, \
+                               self.ui.useHilb2CheckBox, \
                                self.ui.lowSaturation1LineEdit, \
                                self.ui.lowSaturation2LineEdit, \
                                self.ui.highSaturation1LineEdit, \
@@ -204,6 +225,8 @@ class TrainingWindow(QtGui.QDialog):
         for element in self.lineFieldsList:
             if isinstance(element, QtGui.QLineEdit):
                 saveFile.write( '%s\t%s\n'%(element.objectName(), element.text()) )
+            elif isinstance(element, QtGui.QCheckBox):
+                saveFile.write( '%s\t%s\n'%(element.objectName(), element.isChecked()) )
         saveFile.close()
 
     def loadParameters(self):
@@ -215,7 +238,16 @@ class TrainingWindow(QtGui.QDialog):
             if Value != '':
                 for element in self.lineFieldsList:
                     if element.objectName() == objectName:
-                        element.setText(Value)
+                        if isinstance(element, QtGui.QLineEdit):
+                            element.setText(Value)
+                        elif isinstance(element, QtGui.QCheckBox):
+                            print(Value)
+                            if Value == 'True':
+                                print('%s: setting true'%element.objectName())
+                                element.setChecked(True)
+                            else:
+                                print('%s: setting false'%element.objectName())
+                                element.setChecked(False)
                         break
     
     def connectButtons(self):
@@ -311,7 +343,7 @@ class TrainingWindow(QtGui.QDialog):
     def detectSpikes1(self):
         print 'spikes 1'
         TSName = self.ui.loadTS1LineEdit.text()
-        hilbName = TSName.split('.')[0] + '.hilb' #################################
+        hilbName = self.ui.saveLoadHilb1LineEdit.text()
         lowSat = self.ui.lowSaturation1LineEdit.text()
         highSat = self.ui.highSaturation1LineEdit.text()
         taps = self.ui.taps1LineEdit.text()
@@ -329,8 +361,6 @@ class TrainingWindow(QtGui.QDialog):
                             '--refractory=%s'%(refractory), \
                             '--max_size=%s'%(maxSize), \
                             '--saturation=%s,%s'%(lowSat,highSat), \
-                            '--numtaps=%s'%taps, \
-                            '--cutoff=%s'%cutoff, \
                             '--detection=%s'%threshold, \
                             '--onlyabove=%s'%onlyAbove, \
                             TSName, \
@@ -338,6 +368,9 @@ class TrainingWindow(QtGui.QDialog):
                             saveSpikes]
         if useHilb == True:
             listArgs.insert(0, '--useHilbert')
+        else:
+            listArgs.insert(3, '--numtaps=%s'%taps)
+            listArgs.insert(4, '--cutoff=%s'%cutoff)
 
         print(repr(useHilb))
         print(listArgs)
@@ -370,7 +403,7 @@ class TrainingWindow(QtGui.QDialog):
     def detectSpikes2(self):
         print 'spikes 2'
         TSName = self.ui.loadTS2LineEdit.text()
-        hilbName = TSName.split('.')[0] + '.hilb' #################################
+        hilbName = self.ui.saveLoadHilb1LineEdit.text()
         lowSat = self.ui.lowSaturation2LineEdit.text()
         highSat = self.ui.highSaturation2LineEdit.text()
         taps = self.ui.taps2LineEdit.text()
@@ -388,8 +421,6 @@ class TrainingWindow(QtGui.QDialog):
                             '--refractory=%s'%(refractory), \
                             '--max_size=%s'%(maxSize), \
                             '--saturation=%s,%s'%(lowSat,highSat), \
-                            '--numtaps=%s'%taps, \
-                            '--cutoff=%s'%cutoff, \
                             '--detection=%s'%threshold, \
                             '--onlyabove=%s'%onlyAbove, \
                             TSName, \
@@ -397,6 +428,9 @@ class TrainingWindow(QtGui.QDialog):
                             saveSpikes]
         if useHilb == True:
             listArgs.insert(0, '--useHilbert')
+        else:
+            listArgs.insert(3, '--numtaps=%s'%taps)
+            listArgs.insert(4, '--cutoff=%s'%cutoff)
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -819,6 +853,8 @@ class TrainingWindow(QtGui.QDialog):
     def defineFieldsType(self):
         self.fieldsType = {self.ui.loadTS1LineEdit: 'load', \
                        self.ui.saveLoadHilb1LineEdit: 'save', \
+                       self.ui.useHilb1CheckBox: 'not-check', \
+                       self.ui.useHilb2CheckBox: 'not-check', \
                        
                        self.ui.loadTS2LineEdit: 'load', \
                        self.ui.saveLoadHilb2LineEdit: 'save', \
@@ -1296,6 +1332,26 @@ class TrainingWindow(QtGui.QDialog):
                  ) \
             ), \
         )
+
+        self.clickUseHilb1 = ( \
+            ( \
+                (self.ui.useHilb1CheckBox, \
+                ), \
+                (self.ui.taps1LineEdit, \
+                 self.ui.cutoff1LineEdit, \
+                ) \
+            ), \
+        )
+
+        self.clickUseHilb2 = ( \
+            ( \
+                (self.ui.useHilb2CheckBox, \
+                ), \
+                (self.ui.taps2LineEdit, \
+                 self.ui.cutoff2LineEdit, \
+                ) \
+            ), \
+        ) 
         
         self.loadTSFish2Unlocker = ( \
             ( \
@@ -1577,6 +1633,9 @@ class TrainingWindow(QtGui.QDialog):
         self.Fields = {self.ui.loadTS1LineEdit: self.loadTSFish1Unlocker, \
                        
                        self.ui.loadTS2LineEdit: self.loadTSFish2Unlocker, \
+
+                       self.ui.useHilb1CheckBox: self.clickUseHilb1, \
+                       self.ui.useHilb2CheckBox: self.clickUseHilb2, \
                       
                        self.ui.saveLoadHilb1LineEdit: self.spikeParametersFish1Unlocker, \
                        self.ui.lowSaturation1LineEdit: self.spikeParametersFish1Unlocker, \
@@ -1659,7 +1718,10 @@ class TrainingWindow(QtGui.QDialog):
                        }
         
         for field in self.Fields.keys():
-            QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
+            if isinstance(field, QtGui.QLineEdit):
+                QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
+            elif isinstance(field, QtGui.QCheckBox):
+                QtCore.QObject.connect(field, QtCore.SIGNAL('stateChanged(int)'), self.tryUnlock)
     
     def connectFileFields(self):
         
@@ -1715,7 +1777,9 @@ class TrainingWindow(QtGui.QDialog):
                 return True
             except:
                 return False
-            
+        elif self.fieldsType[field] == 'not-check':
+            return not(field.isChecked())
+    
         else:
             if data != '':
                 return True
@@ -1725,6 +1789,9 @@ class TrainingWindow(QtGui.QDialog):
     def switchLockState(self, lockerList, state):
         for el in lockerList:
             el.setEnabled(state)
+            if el in self.defaultValues.keys():
+                if state == False:
+                    el.setText( str(self.defaultValues[el]) )
     
     def tryUnlock(self, text):
         field = self.sender()
