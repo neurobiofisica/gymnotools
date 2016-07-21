@@ -20,15 +20,32 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.ui = Ui_discriminateWindow()
         self.ui.setupUi(self)
+
+        self.defaultValues = {self.ui.lowSaturationLineEdit: -9.9, \
+                              self.ui.highSaturationLineEdit: 9.9, \
+
+                              self.ui.tapsLineEdit: 301, \
+
+                              self.ui.cutoffLineEdit: 1.0, \
+
+                              self.ui.thresholdLevelLineEdit: 1.0, \
+
+                              self.ui.loadChirpsModelLineEdit: os.path.dirname(os.path.realpath(__file__)) + '/../chirpDetector/chirpModel_abs.chirpmodel'
+                             }
+
+        for field in self.defaultValues.keys():
+            field.setText(str(self.defaultValues[field]))
         
         # LineFields List -> for saving parameters
         self.lineFieldsList = (self.ui.loadTimeseriesLineEdit, \
+                               self.ui.loadChirpsModelLineEdit, \
+                               self.ui.saveChirpsLineEdit, \
+                               self.ui.loadChirpsLineEdit, \
                                self.ui.lowSaturationLineEdit, \
                                self.ui.highSaturationLineEdit, \
                                self.ui.tapsLineEdit, \
                                self.ui.cutoffLineEdit, \
                                self.ui.thresholdLevelLineEdit, \
-                               self.ui.minlevelLineEdit, \
                                self.ui.saveSpikesLineEdit, \
                                self.ui.loadSpikesLineEdit, \
                                self.ui.loadWinlen1LineEdit, \
@@ -50,6 +67,7 @@ class DiscriminateWindow(QtGui.QDialog):
         
         # Program objects -> they must be parameters for the GarbageCollector
         # do not clean them
+        self.detectChirpsProgram = QtCore.QProcess()
         self.filterAssistProgram = QtCore.QProcess()
         self.thresholdAssistProgram = QtCore.QProcess()
         self.minlevelAssistProgram = QtCore.QProcess()
@@ -59,8 +77,7 @@ class DiscriminateWindow(QtGui.QDialog):
         self.applyContinuityProgram = QtCore.QProcess()
         self.detectTimestampsProgram = QtCore.QProcess()
         
-        self.dicProgram = {'paramchooser lowpass': (self.filterAssistProgram, ), \
-                           'paramchooser threshold': (self.thresholdAssistProgram,  self.minlevelAssistProgram), \
+        self.dicProgram = {'detectaChirp': (self.detectChirpsProgram, ), \
                            'winview': (self.verifySpikesProgram, ), \
                            'spikes': (self.detectSpikesProgram, ), \
                            'singlefish': (self.applySVMProgram, ), \
@@ -74,18 +91,21 @@ class DiscriminateWindow(QtGui.QDialog):
                             self.ui.step2ParametersLayout, \
                             self.ui.step3ParametersLayout, \
                             self.ui.step4ParametersLayout, \
+                            self.ui.step5ParametersLayout, \
                             )
         
         self.titleLabels = (self.ui.step1TitleLabel, \
                             self.ui.step2TitleLabel, \
                             self.ui.step3TitleLabel, \
                             self.ui.step4TitleLabel, \
+                            self.ui.step5TitleLabel
                             )
         
         self.isLayoutShown = [True, \
                              True, \
                              True, \
-                             True, 
+                             True, \
+                             True, \
                              ]
         '''for layout in self.ParametersLayout:
             if isinstance(layout, QtGui.QLayout):
@@ -111,12 +131,10 @@ class DiscriminateWindow(QtGui.QDialog):
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
     
     def connectButtons(self):
+        QtCore.QObject.connect(self.ui.detectChirpsBut, QtCore.SIGNAL('clicked()'), self.detectChirps)
+
         QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
         QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
-        
-        QtCore.QObject.connect(self.ui.filterAssistBut, QtCore.SIGNAL('clicked()'), self.filterAssist)
-        QtCore.QObject.connect(self.ui.thresholdAssistBut, QtCore.SIGNAL('clicked()'), self.thresholdAssist)
-        QtCore.QObject.connect(self.ui.minlevelAssistBut, QtCore.SIGNAL('clicked()'), self.minlevelAssist)
         
         QtCore.QObject.connect(self.ui.detectSpikesBut, QtCore.SIGNAL('clicked()'), self.detectSpikes)
         QtCore.QObject.connect(self.ui.verifySpikesBut, QtCore.SIGNAL('clicked()'), self.verifySpikes)
@@ -128,111 +146,74 @@ class DiscriminateWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.detectTimestampsBut, QtCore.SIGNAL('clicked()'), self.detectTimestamps)
         
         QtCore.QObject.connect(self.ui.verifyCorrectTimestampsBut, QtCore.SIGNAL('clicked()'), self.verifyAndCorrect)
-    
-    def filterAssist(self):
-        print 'paramchooser lowpass'
+
+    def detectChirps(self):
+        print 'detectaChirp'
+
         TSName = self.ui.loadTimeseriesLineEdit.text()
+        chirpsModel = self.ui.loadChirpsModelLineEdit.text()
+        saveChirps = self.ui.saveChirpsLineEdit.text()
+        lowSat = self.ui.lowSaturationLineEdit.text()
+        highSat = self.ui.highSaturationLineEdit.text()
+
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
         # Same name of self.dicProgram
-        self.programname = 'paramchooser lowpass'
+        self.programname = 'detectaChirp'
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.filterAssistProgram.start('./../paramchooser/paramchooser', \
-                                       ['lowpass', \
-                                        TSName])
-        
+        self.detectChirpsProgram.start('./../chirpDetector/detectaChirp', \
+                                        ['--saturation=%s,%s'%(lowSat,highSat), \
+                                        TSName, \
+                                        chirpsModel, \
+                                        saveChirps, \
+                                        ])
+
         self.cancelled = False
-        def filterAssistFinish(ret, exitStatus):
+        def detectChirpsFinish(ret, exitStatus):
+            self.app.restoreOverrideCursor()
+            dialog.hide()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.filterAssistProgram.readAllStandardOutput()
-                out = out + '\n' + self.filterAssistProgram.readAllStandardError()
-                
-                out = str(out)
-                
-                numtaps = out.split('numtaps = ')[1].split('\n')[0]
-                cutoff = out.split('cutoff = ')[1].split('\n')[0]
-                
-                self.ui.tapsLineEdit.setText(numtaps)
-                self.ui.cutoffLineEdit.setText(cutoff)
+                self.ui.loadChirpsLineEdit.setText(saveChirps)
             else:
                 return None
-        
-        QtCore.QObject.connect(self.filterAssistProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), filterAssistFinish)
-    
-    def thresholdAssist(self):
-        print 'paramchooser threshold'
-        TSName = self.ui.loadTimeseriesLineEdit.text()
-        taps = self.ui.tapsLineEdit.text()
-        cutoff = self.ui.cutoffLineEdit.text()
-        
-        # Same name of self.dicprogram
-        self.programname = 'paramchooser threshold'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.thresholdAssistProgram.start('./../paramchooser/paramchooser', \
-                                          ['threshold', \
-                                           TSName, \
-                                           taps, \
-                                           cutoff])
-        
-        self.cancelled = False
-        def thresholdAssistFinish(ret, exitStatus):
-            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.thresholdAssistProgram.readAllStandardOutput()
-                out = out + '\n' + self.thresholdAssistProgram.readAllStandardError()
-                
-                out = str(out)
-                
-                threshold = out.split('threshold = ')[1].split('\n')[0]
-                self.ui.thresholdLevelLineEdit.setText(threshold)
-            else:
-                return None
-        
-        QtCore.QObject.connect(self.thresholdAssistProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), thresholdAssistFinish)
-    
-    def minlevelAssist(self):
-        print 'paramchooser threshold'
-        TSName = self.ui.loadTimeseriesLineEdit.text()
-        taps = self.ui.tapsLineEdit.text()
-        cutoff = self.ui.cutoffLineEdit.text()
-        
-        # Same name of self.dicprogram
-        self.programname = 'paramchooser threshold'
-        #Be sure that is on current directory
-        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.minlevelAssistProgram.start('./../paramchooser/paramchooser', \
-                                          ['threshold', \
-                                           TSName, \
-                                           taps, \
-                                           cutoff])
-        
-        self.cancelled = False
-        def minlevelAssistFinish(ret, exitStatus):
-            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                out = self.minlevelAssistProgram.readAllStandardOutput()
-                out = out + '\n' + self.minlevelAssistProgram.readAllStandardError()
-                
-                out = str(out)
-                
-                threshold = out.split('threshold = ')[1].split('\n')[0]
-                self.ui.minlevelLineEdit.setText(threshold)
-            else:
-                return None
-        
-        QtCore.QObject.connect(self.minlevelAssistProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), minlevelAssistFinish)
-    
+
+        QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectChirpsFinish)
+        QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+
+
     
     def detectSpikes(self):
         print 'spikes'
         TSName = self.ui.loadTimeseriesLineEdit.text()
-        hilbName = TSName.split('.')[1] + '.hilb' ######################
-        lowSat = self.ui.lowSaturationLineEdit.text()
-        highSat = self.ui.highSaturationLineEdit.text()
+        chirpsFile = None #########################################
+        hilbName = self.ui.saveLoadHilbLineEdit.text()
         taps = self.ui.tapsLineEdit.text()
         cutoff = self.ui.cutoffLineEdit.text()
         threshold = self.ui.thresholdLevelLineEdit.text()
-        minLevel = self.ui.minlevelLineEdit.text()
+        refractory = self.ui.refractoryLineEdit.text()
+        maxSize = self.ui.maxSizeLineEdit.text()
         saveSpikes = self.ui.saveSpikesLineEdit.text()
+        useHilb = self.ui.useHilb1CheckBox.isChecked()
+
+        listArgs = ['--chirps_file=%s'%chirpsFile, \
+                            '--detection=%s'%(threshold), \
+                            '--refractory=%s'%(refractory), \
+                            '--max_size=%s'%(maxSize), \
+                            '--detection=%s'%threshold, \
+                            TSName, \
+                            hilbName, \
+                            saveSpikes]
+        if useHilb == True:
+            listArgs.insert(0, '--useHilbert')
+        else:
+            listArgs.insert(3, '--numtaps=%s'%taps)
+            listArgs.insert(4, '--cutoff=%s'%cutoff)
+
+        print(repr(useHilb))
+        print(listArgs)
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -242,16 +223,7 @@ class DiscriminateWindow(QtGui.QDialog):
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
         self.detectSpikesProgram.start('./../spikes/spikes', \
-                                       # Saturation will exclude windows -> can only be used on training
-                                       ['--numtaps=%s'%taps, \
-                                        '--cutoff=%s'%cutoff, \
-                                        '--detection=%s'%threshold, \
-########################################'--refractory=%s'%(refractory), \
-########################################'--max_size=%s'%(maxSize), \
-
-                                        TSName, \
-                                        hilbName, \
-                                        saveSpikes])
+                                        listArgs)
         
         self.cancelled = False
         def detectSpikesFinish(ret, exitStatus):
@@ -584,13 +556,18 @@ class DiscriminateWindow(QtGui.QDialog):
     
     def defineFieldsType(self):
         self.fieldsType = {self.ui.loadTimeseriesLineEdit: 'load', \
+                           self.ui.loadChirpsModelLineEdit: 'load', \
+                           self.ui.saveChirpsLineEdit: 'save', \
+                           self.ui.loadChirpsLineEdit: 'load', \
+
+                           self.ui.saveLoadHilbLineEdit: 'save', \
+                           self.ui.useHilbCheckBox: 'not-check', \
                            
                            self.ui.lowSaturationLineEdit: 'float', \
                            self.ui.highSaturationLineEdit: 'float', \
                            self.ui.tapsLineEdit: 'int', \
                            self.ui.cutoffLineEdit: 'float', \
                            self.ui.thresholdLevelLineEdit: 'float', \
-                           self.ui.minlevelLineEdit: 'float', \
                            
                            self.ui.saveSpikesLineEdit: 'save', \
                            
@@ -626,6 +603,10 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.fileFieldsExtension = {
             self.ui.loadTimeseriesLineEdit: 'Timeseries on format I32 file (*.*) (*.*)', \
+            self.ui.loadChirpsModelLineEdit: 'Chirp model file (*.chirpmodel) (*.chirpmodel)', \
+            self.ui.saveChirpsLineEdit: 'Chirps location file (*.chirps) (*.chirps)', \
+            self.ui.loadChirpsLineEdit: 'Chirps location file (*.chirps), (*.chirps)', \
+            self.ui.saveLoadHilbLineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
             self.ui.saveSpikesLineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.loadSpikesLineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.loadWinlen1LineEdit: 'Window Length File (*.winlen) (*.winlen)', \
@@ -652,6 +633,7 @@ class DiscriminateWindow(QtGui.QDialog):
             filename = QtGui.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
         elif self.fieldsType[field] == 'save':
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Save file', path, fileFilter )
+        
         if filename != '':
             field.setText(filename)
         else:
@@ -659,6 +641,10 @@ class DiscriminateWindow(QtGui.QDialog):
     
     def connectFileFields(self):
         FileFields = (self.ui.loadTimeseriesLineEdit, \
+                      self.ui.loadChirpsModelLineEdit, \
+                      self.ui.saveChirpsLineEdit, \
+                      self.ui.loadChirpsLineEdit, \
+                      self.ui.saveLoadHilbLineEdit, \
                       self.ui.saveSpikesLineEdit, \
                       self.ui.loadSpikesLineEdit, \
                       self.ui.loadWinlen1LineEdit, \
@@ -687,11 +673,41 @@ class DiscriminateWindow(QtGui.QDialog):
             ( \
                 (self.ui.loadTimeseriesLineEdit, \
                 ), \
-                (self.ui.lowSaturationLineEdit, \
+                (self.ui.saveChirpsLineEdit, \
+                 self.ui.lowSaturationLineEdit, \
                  self.ui.highSaturationLineEdit, \
+                ) \
+            ), \
+        )
+
+        self.loadChirpsModelUnlocker = ( \
+            ( \
+                (self.ui.loadChirpsModelLineEdit, \
+                 self.ui.saveChirpsLineEdit, \
+                ), \
+                (self.ui.detectChirpsBut, \
+                )
+            ), \
+        )
+
+        self.loadChirpsUnlocker = ( \
+            ( \
+                (self.ui.loadChirpsLineEdit, \
+                ), \
+                (self.ui.saveLoadHilbLineEdit, \
                  self.ui.tapsLineEdit, \
                  self.ui.cutoffLineEdit, \
-                 self.ui.filterAssistBut, \
+                ) \
+            ), \
+        )
+
+
+        self.clickUseHilb = ( \
+            ( \
+                (self.ui.useHilbCheckBox, \
+                ), \
+                (self.ui.tapsLineEdit, \
+                 self.ui.cutoffLineEdit, \
                 ) \
             ), \
         )
@@ -704,21 +720,17 @@ class DiscriminateWindow(QtGui.QDialog):
                  self.ui.tapsLineEdit, \
                  self.ui.cutoffLineEdit, \
                  self.ui.thresholdLevelLineEdit, \
-                 self.ui.minlevelLineEdit, \
                 ), \
                 (self.ui.saveSpikesLineEdit, \
                 ) \
             ), \
-            ( \
-                (self.ui.tapsLineEdit, \
-                 self.ui.cutoffLineEdit, \
-                ), \
-                (self.ui.thresholdLevelLineEdit, \
-                 self.ui.thresholdAssistBut, \
-                 self.ui.minlevelAssistBut, \
-                 self.ui.minlevelLineEdit, \
-                )
-            ), \
+            #( \
+            #    (self.ui.tapsLineEdit, \
+            #     self.ui.cutoffLineEdit, \
+            #    ), \
+            #    (self.ui.thresholdLevelLineEdit, \
+            #    )
+            #), \
         )
         
         self.spikeSavefileUnlocker = ( \
@@ -825,12 +837,16 @@ class DiscriminateWindow(QtGui.QDialog):
         
         # Connects each field to its unlocker (dependencies and unlockers)
         self.Fields = {self.ui.loadTimeseriesLineEdit: self.loadTimeseriesUnlocker, \
+                       self.ui.loadChirpsModelLineEdit: self.loadChirpsModelUnlocker, \
+                       self.ui.saveChirpsLineEdit: self.loadChirpsModelUnlocker, \
+                       self.ui.loadChirpsLineEdit: self.loadChirpsUnlocker, \
+                       self.ui.useHilbCheckBox: self.clickUseHilb, \
+                       self.ui.saveLoadHilbLineEdit: self.spikeParametersUnlocker, \
                        self.ui.lowSaturationLineEdit: self.spikeParametersUnlocker, \
                        self.ui.highSaturationLineEdit: self.spikeParametersUnlocker, \
                        self.ui.tapsLineEdit: self.spikeParametersUnlocker, \
                        self.ui.cutoffLineEdit: self.spikeParametersUnlocker, \
                        self.ui.thresholdLevelLineEdit: self.spikeParametersUnlocker, \
-                       self.ui.minlevelLineEdit: self.spikeParametersUnlocker, \
                        self.ui.saveSpikesLineEdit: self.spikeSavefileUnlocker, \
                        self.ui.loadSpikesLineEdit: self.SVMLoadParametersUnlocker, \
                        self.ui.loadWinlen1LineEdit: self.SVMLoadParametersUnlocker, \
@@ -851,7 +867,10 @@ class DiscriminateWindow(QtGui.QDialog):
                        }
         
         for field in self.Fields.keys():
-            QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
+            if isinstance(field, QtGui.QLineEdit):
+                QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
+            elif isinstance(field, QtGui.QCheckBox):
+                QtCore.QObject.connect(field, QtCore.SIGNAL('stateChanged(int)'), self.tryUnlock)
     
     def initialClickState(self):
         for tup in self.Fields.values():
@@ -887,7 +906,9 @@ class DiscriminateWindow(QtGui.QDialog):
                 return True
             except:
                 return False
-            
+        elif self.fieldsType[field] == 'not-check':
+            return not(field.isChecked())
+
         else:
             if data != '':
                 return True
@@ -897,6 +918,9 @@ class DiscriminateWindow(QtGui.QDialog):
     def switchLockState(self, lockerList, state):
         for el in lockerList:
             el.setEnabled(state)
+            if el in self.defaultValues.keys():
+                if state == False:
+                    el.setText( str(self.defaultValues[el]) )
 
 if __name__ == '__main__':
     

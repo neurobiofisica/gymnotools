@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import numpy as np
+import pylab as pl
+import matplotlib.pyplot as plt
+from sklearn import svm, datasets, ensemble
+import sys
+
+import argparse
+import pickle
+
+if sys.version_info.major == 3:
+    xrange = range
+
+def distort(x, baseline=0.2):
+    return baseline + (1-baseline)/(1+x**2)
+
+class MyParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_help()
+        sys.stderr.write('\nerror: %s\n'%message)
+        sys.exit(2)
+
+description = 'Detect chirps on memampf32 (DasyLab I32) based on previously generated Random Forest Model'
+parser = MyParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+
+parser.add_argument('timeseries_file', type=argparse.FileType('r'), help='Timeseries (I32) file')
+parser.add_argument('chirp_model', type=argparse.FileType('rb'), help='Chirp Random Forest Model')
+parser.add_argument('output_file', type=argparse.FileType('w'), help='Output text with begin and end locations of chirps')
+parser.add_argument('-z', '--saturation', type=str, help='low,high saturation level to filter out')
+
+args = parser.parse_args()
+
+nChan = 11
+windowSize = 2000
+win = 100
+minsat = -9.9 # TODO: pegar do .h
+maxsat = 9.9
+if args.saturation is not None:
+    minsat = float(args.saturation.split(',')[0].strip())
+    maxsat = float(args.saturation.split(',')[1].strip())
+
+clf = pickle.load( args.chirp_model )
+
+out = args.output_file
+
+A = np.memmap(args.timeseries_file, dtype='float32', mode='r')
+channels = [ A[i::11] for i in range(nChan) ]
+tam = int(np.ceil(A.size/11))
+
+onChirp = False
+chirps = np.zeros( channels[0].size )
+step = int(windowSize/10)
+consecutive_chirps = 0
+consecutive_no = 0
+for n,i in enumerate(xrange(0, tam - windowSize, step)):
+    if n % (11*10) == 0:
+        sys.stdout.write('\r%10d\t\t%3.4f%%'%( i, (100.*i)/tam ))
+        sys.stdout.flush()
+
+    sig = np.zeros(windowSize)
+    chanused = 0
+    for c in xrange(nChan):
+        s = channels[c][i:i+windowSize]
+        if s.min() < minsat or s.max() > maxsat:
+            continue
+        sig += np.abs(s)
+        chanused += 1
+
+    if chanused == 0:
+        print('All saturated')
+        for c in xrange(nChan):
+            s = channels[c][i:i+windowSize]
+            sig += np.abs(s)
+    else:
+        sig = ((1.*nChan)/chanused) * sig
+
+    sig = sig*distort(sig)
+            
+    if 1 in clf.predict([sig]):
+        consecutive_chirps += 1
+        consecutive_no = 0
+    else:
+        consecutive_chirps = 0
+        consecutive_no += 1
+        if onChirp == True and consecutive_no > 10:
+            onChirp = False
+            out.write('\t%d\n'%(i-10))
+            out.flush()
+
+    if consecutive_chirps == 4:
+        chirps[i-4:i] = 1
+        if onChirp == False:
+            onChirp = True
+            out.write('%d'%(i-4))
+    elif consecutive_chirps > 4:
+        chirps[i] = 1
+
+print('')
+

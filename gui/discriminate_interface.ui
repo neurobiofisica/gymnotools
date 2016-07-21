@@ -39,15 +39,15 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>1099</width>
-        <height>878</height>
+        <width>1085</width>
+        <height>946</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="3" column="2">
-        <layout class="QVBoxLayout" name="step2Layout" stretch="0,0">
+       <item row="4" column="2">
+        <layout class="QVBoxLayout" name="step3Layout" stretch="0,0">
          <item>
-          <widget class="ClickQLabel" name="step2TitleLabel">
+          <widget class="ClickQLabel" name="step3TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -57,12 +57,12 @@
             </font>
            </property>
            <property name="text">
-            <string>2. Apply SVM &gt;</string>
+            <string>3. Apply SVM &gt;</string>
            </property>
           </widget>
          </item>
          <item>
-          <layout class="QGridLayout" name="step2ParametersLayout">
+          <layout class="QGridLayout" name="step3ParametersLayout">
            <item row="8" column="1" colspan="2">
             <widget class="ClickQLineEdit" name="saveSinglefishLineEdit"/>
            </item>
@@ -208,10 +208,10 @@
          </item>
         </layout>
        </item>
-       <item row="3" column="0" rowspan="3">
-        <layout class="QVBoxLayout" name="step1Layout" stretch="0,0">
+       <item row="4" column="0" rowspan="3">
+        <layout class="QVBoxLayout" name="step2Layout" stretch="0,0">
          <item>
-          <widget class="ClickQLabel" name="step1TitleLabel">
+          <widget class="ClickQLabel" name="step2TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -221,20 +221,13 @@
             </font>
            </property>
            <property name="text">
-            <string>1. Select parameters and detect spikes &gt;</string>
+            <string>2. Select parameters and detect spikes &gt;</string>
            </property>
           </widget>
          </item>
          <item>
-          <layout class="QGridLayout" name="step1ParametersLayout">
-           <item row="8" column="0">
-            <widget class="QLabel" name="minlevelLabel">
-             <property name="text">
-              <string>MinLevel (same used for training) (V):</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
+          <layout class="QGridLayout" name="step2ParametersLayout">
+           <item row="6" column="0">
             <widget class="QLabel" name="tapsLabel">
              <property name="text">
               <string>Number of taps:</string>
@@ -244,10 +237,10 @@
              </property>
             </widget>
            </item>
-           <item row="9" column="1">
+           <item row="13" column="1">
             <widget class="ClickQLineEdit" name="saveSpikesLineEdit"/>
            </item>
-           <item row="11" column="0" colspan="2">
+           <item row="15" column="0" colspan="2">
             <spacer name="verticalSpacer_5">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -260,21 +253,14 @@
              </property>
             </spacer>
            </item>
-           <item row="2" column="1">
+           <item row="6" column="1">
             <widget class="QLineEdit" name="tapsLineEdit">
              <property name="text">
-              <string/>
+              <string>301</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="QPushButton" name="filterAssistBut">
-             <property name="text">
-              <string>Filter Assistant</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
+           <item row="9" column="0">
             <widget class="QLabel" name="thresholdLevelLabel">
              <property name="text">
               <string>Threshold level (V):</string>
@@ -284,7 +270,7 @@
              </property>
             </widget>
            </item>
-           <item row="0" column="0">
+           <item row="5" column="0">
             <widget class="QLabel" name="filterLabel">
              <property name="font">
               <font>
@@ -298,14 +284,14 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
-            <widget class="QPushButton" name="thresholdAssistBut">
+           <item row="14" column="0" colspan="2">
+            <widget class="QPushButton" name="detectSpikesBut">
              <property name="text">
-              <string>Threshold Assistant</string>
+              <string>Detect Spikes</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
+           <item row="8" column="0">
             <widget class="QLabel" name="thresholdLabel">
              <property name="font">
               <font>
@@ -319,14 +305,14 @@
              </property>
             </widget>
            </item>
-           <item row="10" column="0" colspan="2">
-            <widget class="QPushButton" name="detectSpikesBut">
+           <item row="9" column="1">
+            <widget class="QLineEdit" name="thresholdLevelLineEdit">
              <property name="text">
-              <string>Detect Spikes</string>
+              <string>1.0</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item row="7" column="0">
             <widget class="QLabel" name="cutoffLabel">
              <property name="text">
               <string>Cutoff frequency (cycles/sample):</string>
@@ -336,7 +322,14 @@
              </property>
             </widget>
            </item>
-           <item row="9" column="0">
+           <item row="10" column="0" alignment="Qt::AlignHCenter">
+            <widget class="QLabel" name="refracLabel">
+             <property name="text">
+              <string>Refractory period (s):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="13" column="0">
             <widget class="QLabel" name="saveSpikesLabel">
              <property name="text">
               <string>Save detected spikes as: </string>
@@ -346,34 +339,113 @@
              </property>
             </widget>
            </item>
-           <item row="6" column="1">
-            <widget class="QLineEdit" name="thresholdLevelLineEdit"/>
-           </item>
-           <item row="8" column="1">
-            <widget class="QLineEdit" name="minlevelLineEdit"/>
+           <item row="7" column="1">
+            <widget class="QLineEdit" name="cutoffLineEdit">
+             <property name="text">
+              <string>1.0</string>
+             </property>
+            </widget>
            </item>
            <item row="3" column="1">
-            <widget class="QLineEdit" name="cutoffLineEdit">
+            <widget class="ClickQLineEdit" name="saveLoadHilbLineEdit"/>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="hilbLabel">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Hilbert Transform:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="useHilbLabel">
+             <property name="text">
+              <string>Use existing Hilbert Transform File?</string>
+             </property>
+            </widget>
+           </item>
+           <item row="12" column="0">
+            <widget class="QLabel" name="saveLabel">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Save:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1" alignment="Qt::AlignHCenter">
+            <widget class="QCheckBox" name="useHilbCheckBox">
+             <property name="layoutDirection">
+              <enum>Qt::LeftToRight</enum>
+             </property>
              <property name="text">
               <string/>
              </property>
             </widget>
            </item>
-           <item row="7" column="1">
-            <widget class="QPushButton" name="minlevelAssistBut">
+           <item row="3" column="0">
+            <widget class="QLabel" name="saveLoadHilbLabel">
              <property name="text">
-              <string>MinLevel Assistant</string>
+              <string>Save/Load hilbert Transform:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
              </property>
             </widget>
+           </item>
+           <item row="11" column="0" alignment="Qt::AlignHCenter">
+            <widget class="QLabel" name="maxSizeLabel">
+             <property name="text">
+              <string>Maximum size (s):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="1">
+            <widget class="QLineEdit" name="refracLineEdit"/>
+           </item>
+           <item row="11" column="1">
+            <widget class="QLineEdit" name="maxSizeLineEdit"/>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="chirpsLabel">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Chirps:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="loadChirpsLabel">
+             <property name="text">
+              <string>Load chirps file:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="ClickQLineEdit" name="loadChirpsLineEdit"/>
            </item>
           </layout>
          </item>
         </layout>
        </item>
-       <item row="8" column="0">
-        <layout class="QVBoxLayout" name="step3Layout" stretch="0,0">
+       <item row="9" column="0">
+        <layout class="QVBoxLayout" name="step4Layout" stretch="0,0">
          <item>
-          <widget class="ClickQLabel" name="step3TitleLabel">
+          <widget class="ClickQLabel" name="step4TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -383,12 +455,12 @@
             </font>
            </property>
            <property name="text">
-            <string>3. Apply continuity criteria &gt;</string>
+            <string>4. Apply continuity criteria &gt;</string>
            </property>
           </widget>
          </item>
          <item>
-          <layout class="QGridLayout" name="step3ParametersLayout">
+          <layout class="QGridLayout" name="step4ParametersLayout">
            <item row="1" column="1">
             <widget class="ClickQLineEdit" name="loadProbLineEdit"/>
            </item>
@@ -443,45 +515,45 @@
          </item>
         </layout>
        </item>
-       <item row="2" column="0">
+       <item row="3" column="0">
         <widget class="Line" name="line_3">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
         </widget>
        </item>
-       <item row="4" column="2">
+       <item row="5" column="2">
         <widget class="Line" name="line_6">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
-       <item row="7" column="0">
+       <item row="8" column="0">
         <widget class="Line" name="line">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
-       <item row="7" column="2">
+       <item row="8" column="2">
         <widget class="Line" name="line_5">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
-       <item row="8" column="1">
+       <item row="9" column="1">
         <widget class="Line" name="line_4">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
         </widget>
        </item>
-       <item row="8" column="2">
-        <layout class="QVBoxLayout" name="step4Layout">
+       <item row="9" column="2">
+        <layout class="QVBoxLayout" name="step5Layout">
          <item>
-          <widget class="ClickQLabel" name="step4TitleLabel">
+          <widget class="ClickQLabel" name="step5TitleLabel">
            <property name="font">
             <font>
              <family>Sans Serif</family>
@@ -500,7 +572,7 @@
           </widget>
          </item>
          <item>
-          <layout class="QGridLayout" name="step4ParametersLayout">
+          <layout class="QGridLayout" name="step5ParametersLayout">
            <item row="1" column="0">
             <widget class="QLabel" name="saveTimestampsLabel">
              <property name="text">
@@ -586,6 +658,9 @@
            <property name="text">
             <string>Saturation level:</string>
            </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
           </widget>
          </item>
          <item row="2" column="1">
@@ -604,6 +679,9 @@
          <item row="2" column="2">
           <widget class="QLineEdit" name="highSaturationLineEdit"/>
          </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="ClickQLineEdit" name="loadTimeseriesLineEdit"/>
+         </item>
          <item row="0" column="0">
           <widget class="QLabel" name="loadTimeseriesLabel">
            <property name="text">
@@ -613,9 +691,6 @@
             <set>Qt::AlignCenter</set>
            </property>
           </widget>
-         </item>
-         <item row="0" column="1" colspan="2">
-          <widget class="ClickQLineEdit" name="loadTimeseriesLineEdit"/>
          </item>
         </layout>
        </item>
@@ -637,7 +712,7 @@
          </item>
         </layout>
        </item>
-       <item row="6" column="2">
+       <item row="7" column="2">
         <widget class="QLabel" name="label">
          <property name="text">
           <string/>
@@ -647,7 +722,56 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="1" rowspan="4">
+       <item row="2" column="0">
+        <layout class="QVBoxLayout" name="step1Layout">
+         <item>
+          <widget class="ClickQLabel" name="step1TitleLabel">
+           <property name="font">
+            <font>
+             <pointsize>11</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>1. Detect chirps &gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="step1ParametersLayout">
+           <item row="1" column="0" alignment="Qt::AlignHCenter">
+            <widget class="QLabel" name="saveChirpsLabel">
+             <property name="text">
+              <string>Save chirps file:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0" alignment="Qt::AlignHCenter">
+            <widget class="QLabel" name="loadChirpsModelLabel">
+             <property name="text">
+              <string>Load chirps model:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="ClickQLineEdit" name="loadChirpsModelLineEdit"/>
+           </item>
+           <item row="1" column="1">
+            <widget class="ClickQLineEdit" name="saveChirpsLineEdit"/>
+           </item>
+           <item row="2" column="0" colspan="2">
+            <widget class="QPushButton" name="detectChirpsBut">
+             <property name="text">
+              <string>detectChirps</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="1" rowspan="6">
         <widget class="Line" name="line_2">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -679,10 +803,8 @@
   <tabstop>loadTimeseriesLineEdit</tabstop>
   <tabstop>lowSaturationLineEdit</tabstop>
   <tabstop>highSaturationLineEdit</tabstop>
-  <tabstop>filterAssistBut</tabstop>
   <tabstop>tapsLineEdit</tabstop>
   <tabstop>cutoffLineEdit</tabstop>
-  <tabstop>thresholdAssistBut</tabstop>
   <tabstop>thresholdLevelLineEdit</tabstop>
   <tabstop>saveSpikesLineEdit</tabstop>
   <tabstop>detectSpikesBut</tabstop>

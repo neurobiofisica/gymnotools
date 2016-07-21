@@ -2,7 +2,8 @@
 
 # Form implementation generated from reading ui file 'training_interface.ui'
 #
-# Created by: PyQt4 UI code generator 4.11.4
+# Created: Thu Jul 21 17:22:24 2016
+#      by: PyQt4 UI code generator 4.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -793,6 +794,6 @@ class Ui_trainingWindow(object):
         self.loadSVMLabel.setText(_translate("trainingWindow", "Load SVM model: ", None))
         self.generateROCBut.setText(_translate("trainingWindow", "Generate ROC Curve", None))
 
+from clickAux import ClickQLineEdit, ClickQLabel
 from ROCAux import ROCWidget
-from clickAux import ClickQLabel, ClickQLineEdit
 import resource_rc
