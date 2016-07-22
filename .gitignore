@@ -1,1 +1,4 @@
+Makefile
 *.pyc
+*.o
+*.a
