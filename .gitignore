@@ -1,4 +1,13 @@
+crosspat/crosspat
+features/features
+paramchooser/paramchooser
+slice/slice
+storms/storms
+svmtool/svmtool
+winview/winview
 Makefile
 *.pyc
 *.o
 *.a
+*.autosave
+*.swp
