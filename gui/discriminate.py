@@ -416,8 +416,8 @@ class DiscriminateWindow(QtGui.QDialog):
         self.programname = 'detectIPI'
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.detectTimestampsProgram.start('python', \
-                                           ['./../detectIPI/detectIPI.py', \
+        self.detectTimestampsProgram.start('./../recog/recog', \
+                                           ['export', \
                                             DBName, \
                                             saveTimestamps])
         

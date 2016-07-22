@@ -94,6 +94,10 @@ iterate_parser.add_argument('ts_output', type=argparse.FileType('w'), help='Time
 iterate_parser.add_argument('-z', '--saturation', type=str, help='low,high saturation levels')
 iterate_parser.add_argument('-d', '--direction', type=int, default=1, help='Scan direction (positive or negative)')
 
+export_parser = subparsers.add_parser('export', help='Export data from DB')
+export_parser.add_argument('db_file', type=str, help='Database file name')
+export_parser.add_argument('ts_output', type=argparse.FileType('w'), help='Timestamps output file')
+
 args = parser.parse_args()
 
 if args.mode == 'iterate':
@@ -116,7 +120,13 @@ if args.mode == 'iterate':
         probs.update( {off: (cause, probA, probB)} )
 
 
-tsoutput = args.ts_output
+    tsoutput = args.ts_output
+
+if args.mode == 'export':
+    db = recogdb.openDB(args.db_file, 'w')
+    tsoutput = args.ts_output
+
+
 #TODO iterate_from
 
 
@@ -124,13 +134,7 @@ tsoutput = args.ts_output
 
 
 class recog:
-    def __init__(self, db, wins, svmpairs, svmpairsTam, probs):
-        self.db = db
-        self.wins = wins
-        self.svmpairs = svmpairs
-        self.svmpairsTam = svmpairsTam
-        self.probs = probs
-
+    def __init__(self):
         self.direction = None
 
         self. off = None
@@ -150,12 +154,24 @@ class recog:
         self.lastIPIA = None
         self.lastIPIB = None
 
+    def init_iterate(self, db, wins, svmpairs, svmpairsTam, probs, tsoutput):
+        self.db = db
+        self.wins = wins
+        self.svmpairs = svmpairs
+        self.svmpairsTam = svmpairsTam
+        self.probs = probs
+        self.tsoutput = tsoutput
+
+    def init_export(self, db, tsoutput):
+        self.db = db
+        self.tsoutput = tsoutput
+
     def emitSingleA(self, sigs):
         self.templateA = sigs.copy() ###### Necessario? Nao irei alterar a variavel, apenas substitui-la
         self.templateAsize = self.samples
         self.lastCenterA = self.center
         recogdb.writeEntry(self.db, self.off, 1, 0, 0, 1<<30, 1<<30, 0, self.off+self.center, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
-        tsoutput.write('1 %d\n'%(self.off+self.center))
+        self.tsoutput.write('1 %d\n'%(self.off+self.center))
 
         if self.lastTSA is None:
             self.lastTSA = self.off+self.center
@@ -168,7 +184,7 @@ class recog:
         self.templateBsize = self.samples
         self.lastCenterB = self.center
         recogdb.writeEntry(self.db, self.off, 2, 0, 1<<30, 0, 1<<30, 0, -1, self.off+self.center, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
-        tsoutput.write('-1 %d\n'%(self.off+self.center))
+        self.tsoutput.write('-1 %d\n'%(self.off+self.center))
 
         if self.lastTSB is None:
             self.lastTSB = self.off+self.center
@@ -190,7 +206,7 @@ class recog:
 
         ret = not None
         while (ret is not None):
-            tsoutput.flush()
+            self.tsoutput.flush()
 
             ret = winfunc()
             if ret is not None:
@@ -389,7 +405,7 @@ class recog:
 
         if distA < distB and distA < distAB:
             recogdb.writeEntry(self.db, self.off, 1, self.direction, distA, distB, distAB, 0, self.off+posA, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
-            tsoutput.write('1 %d\n'%(self.off+posA))
+            self.tsoutput.write('1 %d\n'%(self.off+posA))
             sys.stdout.write('\tsingle A')
             sys.stdout.flush()
 
@@ -406,7 +422,7 @@ class recog:
 
         elif distB < distA and distB < distAB:
             recogdb.writeEntry(self.db, self.off, 2, self.direction, distA, distB, distAB, 0, -1, self.off+posB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
-            tsoutput.write('-1 %d\n'%(self.off+posB))
+            self.tsoutput.write('-1 %d\n'%(self.off+posB))
             sys.stdout.write('\tsingle B')
             sys.stdout.flush()
 
@@ -424,13 +440,13 @@ class recog:
         elif distAB <= distA and distAB <= distB:
             recogdb.writeEntry(self.db, self.off, 3, self.direction, distA, distB, distAB, 0, self.off+posA_AB, self.off+posB_AB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
             if posA < posB:
-                tsoutput.write('1 %d\n'%(self.off+posA_AB))
-                tsoutput.write('-1 %d\n'%(self.off+posB_AB))
+                self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
+                self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
                 sys.stdout.write('\toverlap AB')
                 sys.stdout.flush()
             else:
-                tsoutput.write('-1 %d\n'%(self.off+posB_AB))
-                tsoutput.write('1 %d\n'%(self.off+posA_AB))
+                self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
+                self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
                 sys.stdout.write('\toverlap BA')
                 sys.stdout.flush()
 
@@ -450,7 +466,7 @@ class recog:
         sys.stdout.flush()
 
     def export(self):
-        print('exporting data to' + tsoutput.name)
+        print('exporting data to' + self.tsoutput.name)
         for rec in self.db.iteritems():
             key, bindata = rec
             off, = struct.unpack('q', key)
@@ -458,74 +474,31 @@ class recog:
             sys.stdout.flush()
             presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = recogdb.parseDBHeader(bindata)
             if presentFish == 1:
-                tsoutput.write('1 %d\n'%correctedPosA)
+                self.tsoutput.write('1 %d\n'%correctedPosA)
             elif presentFish == 2:
-                tsoutput.write('-1 %d\n'%correctedPosB)
+                self.tsoutput.write('-1 %d\n'%correctedPosB)
             elif presentFish == 3:
                 if correctedPosA < correctedPosB:
-                    tsoutput.write('1 %d\n'%correctedPosA)
-                    tsoutput.write('-1 %d\n'%correctedPosB)
+                    self.tsoutput.write('1 %d\n'%correctedPosA)
+                    self.tsoutput.write('-1 %d\n'%correctedPosB)
                 else:
-                    tsoutput.write('-1 %d\n'%correctedPosB)
-                    tsoutput.write('1 %d\n'%correctedPosA)
+                    self.tsoutput.write('-1 %d\n'%correctedPosB)
+                    self.tsoutput.write('1 %d\n'%correctedPosA)
             else:
                 print('error on presentFish DB field')
-            tsoutput.flush()
+            self.tsoutput.flush()
 
 
 if __name__ == '__main__':
-    r = recog(db, wins, svmpairs, svmpairsTam, probs)
-    if sys.argv[1] == 'iterate':
+    r = recog()
+    if args.mode == 'iterate':
+        r.init_iterate(db, wins, svmpairs, svmpairsTam, probs, tsoutput)
         r.iterate(direction)
 
-    elif sys.argv[1] == 'continue':
+    elif sys.argv[1] == 'continue': ############### TODO: fazer init
         r.iterate(direction, cont=True)
 
-    elif sys.argv[1] == 'export':
+    elif args.mode == 'export':
+        r.init_export(db, tsoutput)
         r.export()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # Backwards
-    '''wins.end()
-    i=0
-    while True:
-        i += 1
-        ret = wins.prevWin()
-        if ret is not None:
-            lastLen, off, samples, channels, center, sigs = ret
-        else:
-            break
-        print('\nstep: %d'%i)
-        for c, s in sigs:
-            plt.plot(s)
-        plt.show()'''
-
-
-    # Foreward
-    '''i=0
-    while True:
-        i += 1
-        print('\nstep: %d'%i)
-        ret = wins.nextWin()
-        if ret is not None:
-            lastLen, off, samples, channels, sigs, center = ret
-        else:
-            break
-        for c, s in sigs:
-            plt.plot(s)
-
-        plt.show()'''
+        print('')
