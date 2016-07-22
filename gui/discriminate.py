@@ -278,7 +278,7 @@ class DiscriminateWindow(QtGui.QDialog):
         saveSinglefish = self.ui.saveSinglefishLineEdit.text()
         saveProb = self.ui.saveProbLineEdit.text()
         
-        winlen = max( (self.mean_stdWinLen(winLen1), self.mean_stdWinLen(winLen2)) )
+        #winlen = max( (self.mean_stdWinLen(winLen1), self.mean_stdWinLen(winLen2)) )
         
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
