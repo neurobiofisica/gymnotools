@@ -41,15 +41,16 @@ class DiscriminateWindow(QtGui.QDialog):
                                self.ui.loadChirpsModelLineEdit, \
                                self.ui.saveChirpsLineEdit, \
                                self.ui.loadChirpsLineEdit, \
+                               self.ui.saveLoadHilbLineEdit, \
                                self.ui.lowSaturationLineEdit, \
                                self.ui.highSaturationLineEdit, \
                                self.ui.tapsLineEdit, \
                                self.ui.cutoffLineEdit, \
                                self.ui.thresholdLevelLineEdit, \
+                               self.ui.refractoryLineEdit, \
+                               self.ui.maxSizeLineEdit, \
                                self.ui.saveSpikesLineEdit, \
                                self.ui.loadSpikesLineEdit, \
-                               self.ui.loadWinlen1LineEdit, \
-                               self.ui.loadWinlen2LineEdit, \
                                self.ui.loadFilterLineEdit, \
                                self.ui.loadRescaleLineEdit, \
                                self.ui.loadSVMModelLineEdit, \
@@ -188,7 +189,7 @@ class DiscriminateWindow(QtGui.QDialog):
     def detectSpikes(self):
         print 'spikes'
         TSName = self.ui.loadTimeseriesLineEdit.text()
-        chirpsFile = None #########################################
+        chirpsFile = self.ui.loadChirpsLineEdit.text()
         hilbName = self.ui.saveLoadHilbLineEdit.text()
         taps = self.ui.tapsLineEdit.text()
         cutoff = self.ui.cutoffLineEdit.text()
@@ -196,7 +197,7 @@ class DiscriminateWindow(QtGui.QDialog):
         refractory = self.ui.refractoryLineEdit.text()
         maxSize = self.ui.maxSizeLineEdit.text()
         saveSpikes = self.ui.saveSpikesLineEdit.text()
-        useHilb = self.ui.useHilb1CheckBox.isChecked()
+        useHilb = self.ui.useHilbCheckBox.isChecked()
 
         listArgs = ['--chirps_file=%s'%chirpsFile, \
                             '--detection=%s'%(threshold), \
@@ -267,8 +268,6 @@ class DiscriminateWindow(QtGui.QDialog):
         print 'singlefish'
         minWin = self.ui.minWinLineEdit.text()
         onlyAbove = self.ui.onlyAboveLineEdit.text()
-        winLen1 = self.ui.loadWinlen1LineEdit.text()
-        winLen2 = self.ui.loadWinlen2LineEdit.text()
         lowSaturation = self.ui.lowSaturationLineEdit.text()
         highSaturation = self.ui.highSaturationLineEdit.text()
         TSName = self.ui.loadTimeseriesLineEdit.text()
@@ -568,12 +567,12 @@ class DiscriminateWindow(QtGui.QDialog):
                            self.ui.tapsLineEdit: 'int', \
                            self.ui.cutoffLineEdit: 'float', \
                            self.ui.thresholdLevelLineEdit: 'float', \
+                           self.ui.refractoryLineEdit: 'float', \
+                           self.ui.maxSizeLineEdit: 'float', \
                            
                            self.ui.saveSpikesLineEdit: 'save', \
                            
                            self.ui.loadSpikesLineEdit: 'load', \
-                           self.ui.loadWinlen1LineEdit: 'load', \
-                           self.ui.loadWinlen2LineEdit: 'load', \
                            self.ui.loadFilterLineEdit: 'load', \
                            self.ui.loadRescaleLineEdit: 'load', \
                            self.ui.loadSVMModelLineEdit: 'load', \
@@ -609,8 +608,6 @@ class DiscriminateWindow(QtGui.QDialog):
             self.ui.saveLoadHilbLineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
             self.ui.saveSpikesLineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.loadSpikesLineEdit: 'Spikes File (*.spikes) (*.spikes)', \
-            self.ui.loadWinlen1LineEdit: 'Window Length File (*.winlen) (*.winlen)', \
-            self.ui.loadWinlen2LineEdit: 'Window Length File (*.winlen) (*.winlen)', \
             self.ui.loadFilterLineEdit: 'Filter File (*.filter) (*.filter)', \
             self.ui.loadRescaleLineEdit: 'Rescale File (*.scale) (*.scale)', \
             self.ui.loadSVMModelLineEdit: 'SVM Model File (*.svmmodel) (*.svmmodel)', \
@@ -647,8 +644,6 @@ class DiscriminateWindow(QtGui.QDialog):
                       self.ui.saveLoadHilbLineEdit, \
                       self.ui.saveSpikesLineEdit, \
                       self.ui.loadSpikesLineEdit, \
-                      self.ui.loadWinlen1LineEdit, \
-                      self.ui.loadWinlen2LineEdit, \
                       self.ui.loadFilterLineEdit, \
                       self.ui.loadRescaleLineEdit, \
                       self.ui.loadSVMModelLineEdit, \
@@ -755,8 +750,6 @@ class DiscriminateWindow(QtGui.QDialog):
             ( \
                 (self.ui.loadTimeseriesLineEdit, \
                  self.ui.loadSpikesLineEdit, \
-                 self.ui.loadWinlen1LineEdit, \
-                 self.ui.loadWinlen2LineEdit, \
                  self.ui.loadFilterLineEdit, \
                  self.ui.loadRescaleLineEdit, \
                  self.ui.loadSVMModelLineEdit, \
@@ -849,8 +842,6 @@ class DiscriminateWindow(QtGui.QDialog):
                        self.ui.thresholdLevelLineEdit: self.spikeParametersUnlocker, \
                        self.ui.saveSpikesLineEdit: self.spikeSavefileUnlocker, \
                        self.ui.loadSpikesLineEdit: self.SVMLoadParametersUnlocker, \
-                       self.ui.loadWinlen1LineEdit: self.SVMLoadParametersUnlocker, \
-                       self.ui.loadWinlen2LineEdit: self.SVMLoadParametersUnlocker, \
                        self.ui.loadFilterLineEdit: self.SVMLoadParametersUnlocker, \
                        self.ui.loadRescaleLineEdit: self.SVMLoadParametersUnlocker, \
                        self.ui.loadSVMModelLineEdit: self.SVMLoadParametersUnlocker, \
