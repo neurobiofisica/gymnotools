@@ -328,7 +328,7 @@ class DiscriminateWindow(QtGui.QDialog):
         self.singlefishName = self.ui.loadSinglefishLineEdit.text()
         self.probName = self.ui.loadProbLineEdit.text()
         self.saveDBName = self.ui.saveDBLineEdit.text()
-        self.TSoutput = self.saveDBName.split('.')[0] + '.timestamps'
+        self.TSoutput = '/tmp/' + self.saveDBName.split('/')[-1].split('.')[0] + '.timestamps'
        
         if os.path.isfile(self.saveDBName):
             dialog = QtGui.QMessageBox()
