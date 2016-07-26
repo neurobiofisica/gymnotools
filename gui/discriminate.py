@@ -10,7 +10,7 @@ except:
 from .discriminate_interface import Ui_discriminateWindow
 
 sys.path.append( os.path.realpath('../') )
-from python.plotIPIandSVM import plotIPIandSVM
+#from python.plotIPIandSVM import plotIPIandSVM
 
 class DiscriminateWindow(QtGui.QDialog):
     def __init__(self, app, parent=None):
@@ -81,6 +81,7 @@ class DiscriminateWindow(QtGui.QDialog):
         self.applySVMProgram = QtCore.QProcess()
         self.applyContinuityProgram = QtCore.QProcess()
         self.detectTimestampsProgram = QtCore.QProcess()
+        self.plotIPIandSVMProgram = QtCore.QProcess()
         
         self.dicProgram = {'detectaChirp': (self.detectChirpsProgram, ), \
                            'winview': (self.verifySpikesProgram, ), \
@@ -88,6 +89,7 @@ class DiscriminateWindow(QtGui.QDialog):
                            'singlefish': (self.applySVMProgram, ), \
                            'recog': (self.applyContinuityProgram, ), \
                            'detectIPI': (self.detectTimestampsProgram, ), \
+                           'plotIPIandSVM': (self.plotIPIandSVMProgram, ), \
                            }
         
         self.cancelled = False
@@ -446,25 +448,42 @@ class DiscriminateWindow(QtGui.QDialog):
         lowSaturation = float(self.ui.lowSaturationLineEdit.text())
         highSaturation = float(self.ui.highSaturationLineEdit.text())
         DBName = str(self.ui.loadDBLineEdit.text())
-        timeseriesFile = open(self.ui.loadTimeseriesLineEdit.text(),'r')
-        spikesFile = open(self.ui.loadSpikesLineEdit.text(), 'r')
+        timeseriesFile = self.ui.loadTimeseriesLineEdit.text()
+        spikesFile = self.ui.loadSpikesLineEdit.text()
         timestampsFile = str(self.ui.loadTimestampsLineEdit.text())
         
         self.programname = 'plotIPIandSVM'
         
-        timeseriesName = str(timeseriesFile.name.split('/')[-1].split('.')[0])
+        timeseriesName = str(timeseriesFile.split('/')[-1].split('.')[0])
         if os.path.isdir(timeseriesName) == False:
             os.makedirs(str(timeseriesName))
         dbname = str(DBName.split('/')[-1].split('.')[0] + '_undo.keys')
         undoFilename = str(timeseriesName + '/' + dbname)
         open(undoFilename,'a').close()
         
-        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
-        plotVerify = plotIPIandSVM.PlotData(self.app, DBName, spikesFile, timeseriesFile, undoFilename, timeseriesName, (lowSaturation, highSaturation), 120., 90.)
-        pickVerify = plotIPIandSVM.PickPoints(plotVerify, timestampsFile)
-        self.app.restoreOverrideCursor()
-        
-        plotVerify.show()
+        #Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        self.plotIPIandSVMProgram.start('./../plotIPIandSVM/plotIPIandSVM', \
+                                        [DBName, \
+                                        timeseriesFile, \
+                                        spikesFile, \
+                                        timestampsFile, \
+                                        ])
+
+        self.cancelled = False
+        def plotIPIandSVMFinish(ret, exitStatus):
+            self.app.restoreOverrideCursor()
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
+                pass
+            else:
+                print('error')
+                return None
+
+        QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), plotIPIandSVMFinish)
+        QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+
+
         
     def printAllStandardOutput(self):
         print('%s\n'%self.programname)

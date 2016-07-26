@@ -57,4 +57,4 @@ class Ui_Dialog(object):
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "IPI and SVM tool", None))
 
-from .graphAux import graphIPI, graphwave
+from graphAux import graphIPI, graphwave

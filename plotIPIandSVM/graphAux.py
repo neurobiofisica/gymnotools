@@ -3,6 +3,10 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 from matplotlib.figure import Figure
 
+import sys
+if sys.version_info.major == 3:
+    xrange = range
+
 NChan=11
 NColumns=2
 NRows = NChan/NColumns + NChan%NColumns

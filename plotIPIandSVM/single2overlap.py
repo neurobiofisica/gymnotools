@@ -1,5 +1,5 @@
 from PyQt4 import QtCore, QtGui
-from .single2overlapInterface import *
+from single2overlapInterface import *
 
 import sys, os, inspect
 

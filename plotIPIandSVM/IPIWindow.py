@@ -1,6 +1,6 @@
 from PyQt4 import QtCore, QtGui
-from .IPIClick_interface import *
-from .single2overlap import single2overlap
+from IPIClick_interface import *
+from single2overlap import single2overlap
 
 import random
 
