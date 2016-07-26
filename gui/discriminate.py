@@ -3,7 +3,7 @@ import os, sys, inspect
 import numpy as np
 
 from PyQt4 import QtCore, QtGui
-from discriminate_interface import Ui_discriminateWindow
+from .discriminate_interface import Ui_discriminateWindow
 
 sys.path.append( os.path.realpath('../') )
 from python.plotIPIandSVM import plotIPIandSVM
@@ -149,7 +149,7 @@ class DiscriminateWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.ui.verifyCorrectTimestampsBut, QtCore.SIGNAL('clicked()'), self.verifyAndCorrect)
 
     def detectChirps(self):
-        print 'detectaChirp'
+        print('detectaChirp')
 
         TSName = self.ui.loadTimeseriesLineEdit.text()
         chirpsModel = self.ui.loadChirpsModelLineEdit.text()
@@ -187,7 +187,7 @@ class DiscriminateWindow(QtGui.QDialog):
 
     
     def detectSpikes(self):
-        print 'spikes'
+        print('spikes')
         TSName = self.ui.loadTimeseriesLineEdit.text()
         chirpsFile = self.ui.loadChirpsLineEdit.text()
         hilbName = self.ui.saveLoadHilbLineEdit.text()
@@ -240,7 +240,7 @@ class DiscriminateWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def verifySpikes(self):
-        print 'winview'
+        print('winview')
         spikesName = self.ui.loadSpikesLineEdit.text()
         TSName = self.ui.loadTimeseriesLineEdit.text()
         
@@ -258,14 +258,14 @@ class DiscriminateWindow(QtGui.QDialog):
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 pass
             else:
-                print 'stdout:\n' + self.verifySpikesProgram.readAllStandardOutput()
-                print 'stderr:\n' + self.verifySpikesProgram.readAllStandardError()
+                print('stdout:\n' + self.verifySpikesProgram.readAllStandardOutput())
+                print('stderr:\n' + self.verifySpikesProgram.readAllStandardError())
                 return None
         
         QtCore.QObject.connect(self.verifySpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikesFinish)
     
     def applySVM(self):
-        print 'singlefish'
+        print('singlefish')
         minWin = self.ui.minWinLineEdit.text()
         onlyAbove = self.ui.onlyAboveLineEdit.text()
         lowSaturation = self.ui.lowSaturationLineEdit.text()
@@ -304,15 +304,15 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.cancelled = False
         def applySVMFinish(ret, exitStatus):
-            print 'singlefish finished (%d,%s)'%(ret, repr(exitStatus))
+            print('singlefish finished (%d,%s)'%(ret, repr(exitStatus)))
             self.app.restoreOverrideCursor()
             dialog.hide()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadSinglefishLineEdit.setText(saveSinglefish)
                 self.ui.loadProbLineEdit.setText(saveProb)
             else:
-                print 'stdout:\n' + self.applySVMProgram.readAllStandardOutput()
-                print 'stderr:\n' + self.applySVMProgram.readAllStandardError()
+                print('stdout:\n' + self.applySVMProgram.readAllStandardOutput())
+                print('stderr:\n' + self.applySVMProgram.readAllStandardError())
                 return None
         
         QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), applySVMFinish)
@@ -320,7 +320,7 @@ class DiscriminateWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def applyContinuity(self):
-        print 'recog'
+        print('recog')
         self.lowSaturation = self.ui.lowSaturationLineEdit.text()
         self.highSaturation = self.ui.highSaturationLineEdit.text()
         self.TSName = self.ui.loadTimeseriesLineEdit.text()
@@ -346,7 +346,7 @@ class DiscriminateWindow(QtGui.QDialog):
             if ret == QtGui.QMessageBox.Cancel:
                 return None
             elif ret == 0: #Override
-                print 'Removing DB file...'
+                print('Removing DB file...')
                 os.remove(self.saveDBName)
             else: #ret == 1 -> Apply over
                 pass
@@ -356,7 +356,7 @@ class DiscriminateWindow(QtGui.QDialog):
     
     def recog(self, d):
         # TODO: saturation level??
-        print 'direction = %d'%d
+        print('direction = %d'%d)
         
         self.dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -376,7 +376,7 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.cancelled = False
         def recogFinish(ret, exitStatus):
-            print 'recog finished (%d,%s)'%(ret, repr(exitStatus))
+            print('recog finished (%d,%s)'%(ret, repr(exitStatus)))
             self.dialog.hide()
             self.app.restoreOverrideCursor()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
@@ -389,8 +389,8 @@ class DiscriminateWindow(QtGui.QDialog):
                 else:
                     self.ui.loadDBLineEdit.setText(self.saveDBName)
             else:
-                print 'stdout:\n' + self.applyContinuityProgram.readAllStandardOutput()
-                print 'stderr:\n' + self.applyContinuityProgram.readAllStandardError()
+                print('stdout:\n' + self.applyContinuityProgram.readAllStandardOutput())
+                print('stderr:\n' + self.applyContinuityProgram.readAllStandardError())
                 return None
         
         
@@ -406,7 +406,7 @@ class DiscriminateWindow(QtGui.QDialog):
         return int(np.ceil(m+s))
     
     def detectTimestamps(self):
-        print 'detectIPI'
+        print('detectIPI')
         DBName = self.ui.loadDBLineEdit.text()
         saveTimestamps = self.ui.saveTimestampsLineEdit.text()
         
@@ -423,14 +423,14 @@ class DiscriminateWindow(QtGui.QDialog):
         
         self.cancelled = False
         def detectTimestampsFinish(ret, exitStatus):
-            print 'detectIPI finished (%d,%s)'%(ret, repr(exitStatus))
+            print('detectIPI finished (%d,%s)'%(ret, repr(exitStatus)))
             dialog.hide()
             self.app.restoreOverrideCursor()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadTimestampsLineEdit.setText(saveTimestamps)
             else:
-                print 'stdout:\n' + self.detectSpikesProgram.readAllStandardOutput()
-                print 'stderr:\n' + self.detectSpikesProgram.readAllStandardError()
+                print('stdout:\n' + self.detectSpikesProgram.readAllStandardOutput())
+                print('stderr:\n' + self.detectSpikesProgram.readAllStandardError())
                 return None
         
         QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectTimestampsFinish)
@@ -438,7 +438,7 @@ class DiscriminateWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def verifyAndCorrect(self):
-        print 'plotIPIandSVM'
+        print('plotIPIandSVM')
         lowSaturation = float(self.ui.lowSaturationLineEdit.text())
         highSaturation = float(self.ui.highSaturationLineEdit.text())
         DBName = str(self.ui.loadDBLineEdit.text())
@@ -463,14 +463,14 @@ class DiscriminateWindow(QtGui.QDialog):
         plotVerify.show()
         
     def printAllStandardOutput(self):
-        print '%s\n'%self.programname
+        print('%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
-            print program.readAllStandardOutput()
+            print(program.readAllStandardOutput())
     
     def printAllStandardError(self):
-        print '%s\n'%self.programname
+        print('%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
-            print program.readAllStandardError()
+            print(program.readAllStandardError())
     
     def raiseLongTimeInformation(self):
         dialog = QtGui.QMessageBox()
@@ -483,7 +483,7 @@ class DiscriminateWindow(QtGui.QDialog):
         return dialog
     
     def cancelApp(self):
-        print 'Cancelled.'
+        print('Cancelled.')
         self.cancelled = True
         self.app.restoreOverrideCursor()
         for l in self.dicProgram.values():
@@ -492,10 +492,10 @@ class DiscriminateWindow(QtGui.QDialog):
     
     def isReturnCodeOk(self, ret):
         if ret != 0:
-            print '\n---\tERROR (%s): %d\t---\n'%(self.programname, ret)
+            print('\n---\tERROR (%s): %d\t---\n'%(self.programname, ret))
             for program in self.dicProgram[self.programname]:
-                print program.readAllStandardOutput()
-                print program.readAllStandardError()
+                print(program.readAllStandardOutput())
+                print(program.readAllStandardError())
             self.raiseParameterError('%s ERROR!\n'%self.programname)
             return False
         else:

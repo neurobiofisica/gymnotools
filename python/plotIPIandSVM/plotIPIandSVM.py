@@ -10,8 +10,8 @@ from matplotlib.widgets import Button
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 
 from PyQt4 import QtCore, QtGui
-from graphicalInterface import Ui_Dialog
-from IPIWindow import IPIWindow
+from .graphicalInterface import Ui_Dialog
+from .IPIWindow import IPIWindow
 
 #Be sure that is on current directory (to import and append path correctly)
 os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
@@ -250,7 +250,7 @@ class PickPoints:
                         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
                         
                         direction, force, key = self.plotObject.dialogIPI.pop_iterate_from()
-                        print 'direction %d %d %r'%(direction, key, force)
+                        print('direction %d %d %r'%(direction, key, force))
                         print([recogpath, 'iterate_from', \
                                                '--saturation=%f,%f'%(self.plotObject.lowSaturation, self.plotObject.highSaturation), \
                                                '--from=%d'%key, \
@@ -270,23 +270,23 @@ class PickPoints:
                                                self.plotObject.singlefishfilename, \
                                                self.plotObject.probsfilename])
                         if ret != 0:
-                            print 'ret = %d'%ret
+                            print('ret = %d'%ret)
                             assert ret == 0
                         
                         self.plotObject.db.sync()
                        
-                    print 'detectIPI'
+                    print('detectIPI')
                     #Be sure that is on current directory
                     os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
                     
                     ret = subprocess.call(['python', detectIPIpath, self.plotObject.dbname, self.ipifilename])
                     if ret != 0:
-                        print 'ret = %d'%ret
+                        print('ret = %d'%ret)
                         assert ret == 0
                     
                     self.plotObject.db.sync()
                     
-                    print os.path.abspath(oldDir)   
+                    print(os.path.abspath(oldDir))
                     os.chdir( os.path.abspath(oldDir) )
  
                     self.plotObject.loadDataFromDB()
@@ -428,7 +428,7 @@ class PickPoints:
         elif isinstance(event, KeyEvent):
             button = event.key
         else: #This should never happen!
-            print 'ERROR'
+            print('ERROR')
             assert(False)
 
         if button == 'up':
@@ -440,8 +440,8 @@ class PickPoints:
         else:
             # deal with something that should never happen
             scale_factor = 1
-            print 'ERROR'
-            print button
+            print('ERROR')
+            print(button)
             assert False
         # set new limits
         if self.zoomStatus == 'X':
@@ -1022,7 +1022,7 @@ if __name__ == '__main__':
     winSize = args.winSize
     
     if os.path.isfile(dbf) == False:
-        print 'DB file not found'
+        print('DB file not found')
         
     # Create folder to save DB modifications
     # /home/datafile.memmapf32 -> datafilename == datafile

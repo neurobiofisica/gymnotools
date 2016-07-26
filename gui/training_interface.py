@@ -794,6 +794,7 @@ class Ui_trainingWindow(object):
         self.loadSVMLabel.setText(_translate("trainingWindow", "Load SVM model: ", None))
         self.generateROCBut.setText(_translate("trainingWindow", "Generate ROC Curve", None))
 
-from clickAux import ClickQLineEdit, ClickQLabel
-from ROCAux import ROCWidget
-import resource_rc
+from .clickAux import ClickQLineEdit, ClickQLabel
+from .ROCAux import ROCWidget
+#import resource_rc
+from .resource_rc import *

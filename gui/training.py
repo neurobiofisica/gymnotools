@@ -1,11 +1,14 @@
 import os, sys, inspect
 import re
 
+import matplotlib
+matplotlib.use("Qt4Agg")
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore, QtGui
-from training_interface import Ui_trainingWindow
+from .training_interface import Ui_trainingWindow
 
 # Default SVM values TODO: pegar de aquivo externo
 defcStart = -5.0
@@ -275,27 +278,27 @@ class TrainingWindow(QtGui.QDialog):
     
     def isReturnCodeOk(self, ret):
         if ret != 0:
-            print '\n---\tERROR (%s): %d\t---\n'%(self.programname, ret)
+            print('\n---\tERROR (%s): %d\t---\n'%(self.programname, ret))
             for program in self.dicProgram[self.programname]:
-                print program.readAllStandardOutput()
-                print program.readAllStandardError()
+                print(program.readAllStandardOutput())
+                print(program.readAllStandardError())
             self.raiseParameterError('%s ERROR!\n'%self.programname)
             return False
         else:
             return True
     
     def printAllStandardOutput(self):
-        print 'stdout:%s\n'%self.programname
+        print('stdout:%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
             print(program.readAllStandardOutput())
     
     def printAllStandardError(self):
-        print 'stderr:%s\n'%self.programname
+        print('stderr:%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
             print(program.readAllStandardError())
     
     def verifySpikes1(self):
-        print 'winview 1'
+        print('winview 1')
         spikesName = self.ui.loadSpikes1LineEdit.text()
         TSName = self.ui.loadTS1LineEdit.text()
         
@@ -318,7 +321,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.verifySpikes1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes1Finish)
         
     def verifySpikes2(self):
-        print 'winview 2'
+        print('winview 2')
         spikesName = self.ui.loadSpikes2LineEdit.text()
         TSName = self.ui.loadTS2LineEdit.text()
         
@@ -341,7 +344,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes2Finish)
     
     def detectSpikes1(self):
-        print 'spikes 1'
+        print('spikes 1')
         TSName = self.ui.loadTS1LineEdit.text()
         hilbName = self.ui.saveLoadHilb1LineEdit.text()
         lowSat = self.ui.lowSaturation1LineEdit.text()
@@ -401,7 +404,7 @@ class TrainingWindow(QtGui.QDialog):
         
         
     def detectSpikes2(self):
-        print 'spikes 2'
+        print('spikes 2')
         TSName = self.ui.loadTS2LineEdit.text()
         hilbName = self.ui.saveLoadHilb1LineEdit.text()
         lowSat = self.ui.lowSaturation2LineEdit.text()
@@ -474,7 +477,7 @@ class TrainingWindow(QtGui.QDialog):
         self.featuresCompute() 
         
     def featuresCompute(self):
-        print 'features compute'
+        print('features compute')
         
         # Same name of self.dicProgram
         self.programname = 'features compute'
@@ -523,7 +526,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresRescalePrepare(self):        
-        print 'features rescale prepare'
+        print('features rescale prepare')
         
         # Same name of self.dicProgram
         self.programname = 'features rescale prepare'
@@ -553,7 +556,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresRescaleApply(self):
-        print 'features rescale apply'
+        print('features rescale apply')
         
         # Same name of self.dicProgram
         self.programname = 'features rescale apply'
@@ -583,7 +586,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresFilterPrepare(self):
-        print 'features filter prepare'
+        print('features filter prepare')
         
         # Same name of self.dicProgram
         self.programname = 'features filter prepare'
@@ -616,7 +619,7 @@ class TrainingWindow(QtGui.QDialog):
         
         
     def featuresFilterApply(self):
-        print 'features filter apply'
+        print('features filter apply')
         
         # Same name of self.dicProgram
         self.programname = 'features filter apply'
@@ -670,7 +673,7 @@ class TrainingWindow(QtGui.QDialog):
         QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresFinish(self):
-        print 'end features'
+        print('end features')
         self.ui.loadFeatures1LineEdit.setText(self.featuresName1)
         self.ui.loadFeatures2LineEdit.setText(self.featuresName2)
         if os.path.isfile(self.unfilteredFeaturesName1):
@@ -681,7 +684,7 @@ class TrainingWindow(QtGui.QDialog):
         self.dialog.hide()
     
     def sliceInfo(self, filename):
-        print 'slice info'
+        print('slice info')
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
         field = self.sender()
@@ -742,7 +745,7 @@ class TrainingWindow(QtGui.QDialog):
            (0 < probCross < 1.0) and \
            (0 < probTest < 1.0) and \
            (0 <= probTrain + probCross + probTest <= 1.0):
-            print 'slice random'
+            print('slice random')
             self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
             
             self.programname = 'slice random'
@@ -781,7 +784,7 @@ class TrainingWindow(QtGui.QDialog):
            (0 <= probCross <= 1) and \
            (0 <= probTest <= 1) and \
            (0 <= probTrain + probCross + probTest <= 1):
-            print 'slice random'
+            print('slice random')
             self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
             
             self.programname = 'slice random'
@@ -843,7 +846,7 @@ class TrainingWindow(QtGui.QDialog):
         QtGui.QMessageBox.critical(self, "ERROR", text + "Please check your parameters.", QtGui.QMessageBox.Ok )
     
     def cancelApp(self):
-        print 'Cancelled.'
+        print('Cancelled.')
         self.cancelled = True
         self.app.restoreOverrideCursor()
         for l in self.dicProgram.values():
@@ -1173,12 +1176,12 @@ class TrainingWindow(QtGui.QDialog):
             stdout = self.svmtoolOptimProgram.readAllStandardOutput()
             self.svmOutput = self.svmOutput + stdout
             if stdout != '':
-                print 'stdout:\t%s'%str(stdout).strip()
+                print('stdout:\t%s'%str(stdout).strip())
                 self.f.write(str(stdout).strip()+'\n')
             stderr = self.svmtoolOptimProgram.readAllStandardError()
             self.svmOutput = self.svmOutput + stderr
             if stderr != '':
-                print 'stderr:\t%s'%str(stderr).strip()
+                print('stderr:\t%s'%str(stderr).strip())
                 self.f.write(str(stderr).strip()+'\n')
             self.f.flush()
         
@@ -1249,7 +1252,7 @@ class TrainingWindow(QtGui.QDialog):
         self.SVMToolROC()
     
     def SVMToolROC(self):
-        print 'svmtool roc'
+        print('svmtool roc')
         
         self.svmOutput = ''
         self.FalsePositive = []
@@ -1269,11 +1272,11 @@ class TrainingWindow(QtGui.QDialog):
             stdout = self.svmtoolROCProgram.readAllStandardOutput()
             self.svmOutput = self.svmOutput + stdout
             if stdout != '':
-                print 'stdout:\t%s'%str(stdout).strip()
+                print('stdout:\t%s'%str(stdout).strip())
             stderr = self.svmtoolROCProgram.readAllStandardError()
             self.svmOutput = self.svmOutput + stderr
             if stderr != '':
-                print 'stderr:\t%s'%str(stderr).strip()
+                print('stderr:\t%s'%str(stderr).strip())
         
         self.cancelled = False
         def svmtoolROCFinish(ret, exitStatus):

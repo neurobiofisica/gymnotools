@@ -151,4 +151,4 @@ class Ui_single2overlap(object):
         self.okButton.setText(QtGui.QApplication.translate("single2overlap", "Ok", None, QtGui.QApplication.UnicodeUTF8))
         self.cancelButton.setText(QtGui.QApplication.translate("single2overlap", "Cancel", None, QtGui.QApplication.UnicodeUTF8))
 
-from single2overlapAux import singleSignal
+from .single2overlapAux import singleSignal

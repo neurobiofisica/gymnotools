@@ -1,6 +1,6 @@
 from PyQt4 import QtCore, QtGui
-from IPIClick_interface import *
-from single2overlap import single2overlap
+from .IPIClick_interface import *
+from .single2overlap import single2overlap
 
 import random
 
@@ -172,7 +172,7 @@ class ModifySelector:
         # Store old 'presentFish' data
         oldFish = read_data[ recogdb.dicFields['presentFish'] ]
         if oldFish not in (1,2):
-            print 'only single spikes can be inverted'
+            print('only single spikes can be inverted')
             assert False
         newFish = 2 if oldFish == 1 else 1
         
@@ -601,13 +601,13 @@ class ModifySelector:
         # Read old data
         oldFish1 = read_data1[ recogdb.dicFields['presentFish'] ]
         if oldFish1 not in (1,2):
-            print 'only single spikes can be inverted'
+            print('only single spikes can be inverted')
             assert False
         newFish1 = 2 if oldFish1 == 1 else 1
         
         oldFish2 = read_data2[ recogdb.dicFields['presentFish'] ]
         if oldFish2 not in (1,2):
-            print 'only single spikes can be inverted'
+            print('only single spikes can be inverted')
             assert False
         newFish2 = 2 if oldFish2 == 1 else 1
         
