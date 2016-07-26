@@ -3,6 +3,10 @@ import os, sys, inspect
 import numpy as np
 
 from PyQt4 import QtCore, QtGui
+try:
+    from PyQt4.QtCore import QString
+except:
+    QString = str
 from .discriminate_interface import Ui_discriminateWindow
 
 sys.path.append( os.path.realpath('../') )
@@ -515,7 +519,7 @@ class DiscriminateWindow(QtGui.QDialog):
     def loadParameters(self):
         loadFilename = QtGui.QFileDialog.getOpenFileName(self, 'Load Parameters File', '', 'Parameters File (*.discparameters) (*.discparameters);;All files (*.*) (*.*)')
         loadFile = open(loadFilename, 'r')
-        for line in loadFile.xreadlines():
+        for line in loadFile.readlines():
             objectName, Value = line.split('\t')
             Value = Value.strip()
             if Value != '':
@@ -625,7 +629,7 @@ class DiscriminateWindow(QtGui.QDialog):
         field = self.sender()
         # TODO: define saving path
         path = ''
-        fileFilter = QtCore.QString(self.fileFieldsExtension[field]) + QtCore.QString(';;All files (*.*) (*.*)')
+        fileFilter = QString(self.fileFieldsExtension[field]) + QString(';;All files (*.*) (*.*)')
         if self.fieldsType[field] == 'load':
             filename = QtGui.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
         elif self.fieldsType[field] == 'save':
