@@ -8,6 +8,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore, QtGui
+try:
+    from PyQt4.QtCore import QString
+except:
+    QString = str
 from .training_interface import Ui_trainingWindow
 
 # Default SVM values TODO: pegar de aquivo externo
@@ -822,7 +826,7 @@ class TrainingWindow(QtGui.QDialog):
         field = self.sender()
         # TODO: define saving path
         path = ''
-        fileFilter = QtCore.QString(self.fileFieldsExtension[field]) + QtCore.QString(';;All files (*.*) (*.*)')
+        fileFilter = QString(self.fileFieldsExtension[field]) + QString(';;All files (*.*) (*.*)')
         if self.fieldsType[field] == 'load':
             filename = QtGui.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
         elif self.fieldsType[field] == 'save':
