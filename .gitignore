@@ -6,8 +6,16 @@ storms/storms
 svmtool/svmtool
 winview/winview
 Makefile
+*/Makefile
 *.pyc
 *.o
 *.a
 *.autosave
 *.swp
+*/moc_*.cpp
+*/ui_*.h
+*/qrc_resource.cpp
+pygymnext/_pygymnext.so
+pygymnext/pygymnext.py
+pygymnext/pygymnext_wrap.cxx
+
