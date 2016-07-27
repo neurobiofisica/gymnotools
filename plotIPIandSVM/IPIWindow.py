@@ -239,9 +239,6 @@ class ModifySelector:
         keyundofile.close()
     
     def convert2overlap(self,key):
-        sys.stdout.write(str(key))
-        sys.stdout.flush()
-        sys.exit(-1)
         prevB, data_pB = recogdb.getNearest(self.db, -1, key, 1, overlap=True)
         prevR, data_pR = recogdb.getNearest(self.db, -1, key, 2, overlap=True)
 
