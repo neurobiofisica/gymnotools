@@ -80,56 +80,6 @@ class MyParser(argparse.ArgumentParser):
         sys.stderr.write('\nerror: %s\n'%message)
         sys.exit(2)
 
-description = 'Apply SVM model on spikes window file with 2 fishes'
-parser = MyParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-
-subparsers = parser.add_subparsers(help='Apply continuity criteria', dest='mode')
-
-iterate_parser = subparsers.add_parser('iterate', help='Iterate over all time series')
-iterate_parser.add_argument('db_file', type=str, help='Database file name') 
-iterate_parser.add_argument('spikes_file', type=argparse.FileType(mode+'r'), help='Spikes window file')
-iterate_parser.add_argument('singlefish_file', type=argparse.FileType(mode+'r'), help='Singlefish file')
-iterate_parser.add_argument('probs_file', type=argparse.FileType('r'), help='Spike probability file')
-iterate_parser.add_argument('ts_output', type=argparse.FileType('w'), help='Timestamps output file')
-iterate_parser.add_argument('-z', '--saturation', type=str, help='low,high saturation levels')
-iterate_parser.add_argument('-d', '--direction', type=int, default=1, help='Scan direction (positive or negative)')
-
-export_parser = subparsers.add_parser('export', help='Export data from DB')
-export_parser.add_argument('db_file', type=str, help='Database file name')
-export_parser.add_argument('ts_output', type=argparse.FileType('w'), help='Timestamps output file')
-
-args = parser.parse_args()
-
-if args.mode == 'iterate':
-    db = recogdb.openDB(args.db_file, 'w')
-    wins = winFile(args.spikes_file)
-    svmpairs = np.loadtxt(args.singlefish_file, dtype=np.int64)
-    svmpairsTam = svmpairs.shape[0]
-    direction = args.direction
-
-    probsfile = args.probs_file
-    probs = {}
-    for l in probsfile.readlines():
-        #cause, offstr, pairstr, probAstr, probBstr = l.strip().split(' ')
-        cause, offstr, probAstr, probBstr = l.strip().split(' ')
-        off = int(offstr)
-        #pair = int(pairstr)
-        probA = float(probAstr)
-        probB = float(probBstr)
-        #probs.update( {off: (cause, pair, probA, probB)} )
-        probs.update( {off: (cause, probA, probB)} )
-
-
-    tsoutput = args.ts_output
-
-if args.mode == 'export':
-    db = recogdb.openDB(args.db_file, 'w')
-    tsoutput = args.ts_output
-
-
-#TODO iterate_from
-
-
 
 
 
@@ -490,12 +440,62 @@ class recog:
 
 
 if __name__ == '__main__':
+    description = 'Apply SVM model on spikes window file with 2 fishes'
+    parser = MyParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+
+    subparsers = parser.add_subparsers(help='Apply continuity criteria', dest='mode')
+
+    iterate_parser = subparsers.add_parser('iterate', help='Iterate over all time series')
+    iterate_parser.add_argument('db_file', type=str, help='Database file name') 
+    iterate_parser.add_argument('spikes_file', type=argparse.FileType(mode+'r'), help='Spikes window file')
+    iterate_parser.add_argument('singlefish_file', type=argparse.FileType(mode+'r'), help='Singlefish file')
+    iterate_parser.add_argument('probs_file', type=argparse.FileType('r'), help='Spike probability file')
+    iterate_parser.add_argument('ts_output', type=argparse.FileType('w'), help='Timestamps output file')
+    iterate_parser.add_argument('-z', '--saturation', type=str, help='low,high saturation levels')
+    iterate_parser.add_argument('-d', '--direction', type=int, default=1, help='Scan direction (positive or negative)')
+
+    export_parser = subparsers.add_parser('export', help='Export data from DB')
+    export_parser.add_argument('db_file', type=str, help='Database file name')
+    export_parser.add_argument('ts_output', type=argparse.FileType('w'), help='Timestamps output file')
+
+    args = parser.parse_args()
+
+    if args.mode == 'iterate':
+        db = recogdb.openDB(args.db_file, 'w')
+        wins = winFile(args.spikes_file)
+        svmpairs = np.loadtxt(args.singlefish_file, dtype=np.int64)
+        svmpairsTam = svmpairs.shape[0]
+        direction = args.direction
+
+        probsfile = args.probs_file
+        probs = {}
+        for l in probsfile.readlines():
+            #cause, offstr, pairstr, probAstr, probBstr = l.strip().split(' ')
+            cause, offstr, probAstr, probBstr = l.strip().split(' ')
+            off = int(offstr)
+            #pair = int(pairstr)
+            probA = float(probAstr)
+            probB = float(probBstr)
+            #probs.update( {off: (cause, pair, probA, probB)} )
+            probs.update( {off: (cause, probA, probB)} )
+
+
+        tsoutput = args.ts_output
+
+    if args.mode == 'export':
+        db = recogdb.openDB(args.db_file, 'w')
+        tsoutput = args.ts_output
+
+
+    #TODO iterate_from
+
+
     r = recog()
     if args.mode == 'iterate':
         r.init_iterate(db, wins, svmpairs, svmpairsTam, probs, tsoutput)
         r.iterate(direction)
 
-    elif sys.argv[1] == 'continue': ############### TODO: fazer init
+    elif args.mode == 'continue': ############### TODO: fazer init
         r.iterate(direction, cont=True)
 
     elif args.mode == 'export':
