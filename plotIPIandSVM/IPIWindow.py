@@ -7,6 +7,9 @@ import random
 import numpy as np
 
 import sys, os
+if sys.version_info.major == 3:
+    xrange = range
+
 if os.getcwd().split('/')[-1] == 'gui':
     sys.path.append( os.path.realpath('../python') )
 elif os.getcwd().split('/')[-1] == 'plotIPIandSVM':
@@ -172,7 +175,8 @@ class ModifySelector:
         # Store old 'presentFish' data
         oldFish = read_data[ recogdb.dicFields['presentFish'] ]
         if oldFish not in (1,2):
-            print('only single spikes can be inverted')
+            sys.stdout.write('only single spikes can be inverted')
+            sys.stdout.flush()
             assert False
         newFish = 2 if oldFish == 1 else 1
         
@@ -235,6 +239,9 @@ class ModifySelector:
         keyundofile.close()
     
     def convert2overlap(self,key):
+        sys.stdout.write(str(key))
+        sys.stdout.flush()
+        sys.exit(-1)
         prevB, data_pB = recogdb.getNearest(self.db, -1, key, 1, overlap=True)
         prevR, data_pR = recogdb.getNearest(self.db, -1, key, 2, overlap=True)
 
@@ -601,13 +608,15 @@ class ModifySelector:
         # Read old data
         oldFish1 = read_data1[ recogdb.dicFields['presentFish'] ]
         if oldFish1 not in (1,2):
-            print('only single spikes can be inverted')
+            sys.stdout.write('only single spikes can be inverted')
+            sys.stdout.flush()
             assert False
         newFish1 = 2 if oldFish1 == 1 else 1
         
         oldFish2 = read_data2[ recogdb.dicFields['presentFish'] ]
         if oldFish2 not in (1,2):
-            print('only single spikes can be inverted')
+            sys.stdout.write('only single spikes can be inverted')
+            sys.stdout.flush()
             assert False
         newFish2 = 2 if oldFish2 == 1 else 1
         
@@ -1251,35 +1260,35 @@ class IPIWindow(QtGui.QDialog):
         self.options = []
 
         # single continuity spike
-        if self.svm not in ['s', 'v']:
-            if self.fish != 3:
-                self.windowType = 'continuity'
-                self.setMainText('Continuity spike selected')
+        '''if self.svm not in ['s', 'v']:'''
+        if self.fish != 3:
+            self.windowType = 'continuity'
+            self.setMainText('Continuity spike selected')
 
-                for i in xrange(3):
-                    self.options.append( QtGui.QRadioButton(self.uiObject.mainOptionsBox) )
-                    self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
-                    self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
+            for i in xrange(3):
+                self.options.append( QtGui.QRadioButton(self.uiObject.mainOptionsBox) )
+                self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
+                self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
-                self.setOpt(0, 'Invert fish classification')
-                self.setOpt(1, 'Convert to overlapping spike')
-                self.setOpt(2, 'Create SVM Pair')
+            self.setOpt(0, 'Invert fish classification')
+            self.setOpt(1, 'Convert to overlapping spike')
+            self.setOpt(2, 'Create SVM Pair')
 
-            # Overlapping spike
-            else:
-                self.windowType = 'overlap'
-                self.setMainText('Overlapping spikes selected')
+        # Overlapping spike
+        else:
+            self.windowType = 'overlap'
+            self.setMainText('Overlapping spikes selected')
 
-                for i in xrange(3):
-                    self.options.append( QtGui.QRadioButton(self.uiObject.mainOptionsBox) )
-                    self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
-                    self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
+            for i in xrange(3):
+                self.options.append( QtGui.QRadioButton(self.uiObject.mainOptionsBox) )
+                self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
+                self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
-                self.setOpt(0, 'Convert to single A spike')
-                self.setOpt(1, 'Convert to single B spike')
-                self.setOpt(2, 'Change spike positioning')
+            self.setOpt(0, 'Convert to single A spike')
+            self.setOpt(1, 'Convert to single B spike')
+            self.setOpt(2, 'Change spike positioning')
 
-        # SVM spike
+        '''# SVM spike
         else:
             self.windowType = 'svm'
             self.setMainText('SVM spike selected')
@@ -1291,7 +1300,7 @@ class IPIWindow(QtGui.QDialog):
 
             self.setOpt(0, 'Invert SVM classification')
             self.setOpt(1, 'Remove SVM classification')
-            self.setOpt(2, 'Recalculate continuity from this SVM')
+            self.setOpt(2, 'Recalculate continuity from this SVM')'''
 
     def parseSVMFlag(self,svmFlag):
         if svmFlag == 'a':

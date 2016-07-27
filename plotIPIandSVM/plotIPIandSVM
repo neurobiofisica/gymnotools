@@ -253,8 +253,8 @@ class PickPoints:
                         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
                         
                         direction, force, key = self.plotObject.dialogIPI.pop_iterate_from()
-                        print('direction %d %d %r'%(direction, key, force))
-                        print([recogpath, 'iterate_from', \
+                        sys.stdout.write('direction %d %d %r\n'%(direction, key, force))
+                        '''sys.stdout.write([recogpath, 'iterate_from', \
                                                '--saturation=%f,%f'%(self.plotObject.lowSaturation, self.plotObject.highSaturation), \
                                                '--from=%d'%key, \
                                                '--direction=%d'%direction, \
@@ -262,7 +262,8 @@ class PickPoints:
                                                self.plotObject.dbname, \
                                                self.plotObject.spikesname, \
                                                self.plotObject.singlefishfilename, \
-                                               self.plotObject.probsfilename])
+                                               self.plotObject.probsfilename])'''
+                        sys.stdout.flush()
                         ret = subprocess.call([recogpath, 'iterate_from', \
                                                '--saturation=%f,%f'%(self.plotObject.lowSaturation, self.plotObject.highSaturation), \
                                                '--from=%d'%key, \
@@ -273,23 +274,27 @@ class PickPoints:
                                                self.plotObject.singlefishfilename, \
                                                self.plotObject.probsfilename])
                         if ret != 0:
-                            print('ret = %d'%ret)
+                            sys.stdout.write('ret = %d\n'%ret)
+                            sys.stdout.flush()
                             assert ret == 0
                         
                         self.plotObject.db.sync()
                        
-                    print('detectIPI')
+                    sys.stdout.write('detectIPI\n') #################
+                    sys.stdout.flush()
                     #Be sure that is on current directory
                     os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
                     
                     ret = subprocess.call(['python', detectIPIpath, self.plotObject.dbname, self.ipifilename])
                     if ret != 0:
-                        print('ret = %d'%ret)
+                        sys.stdout.write('ret = %d\n'%ret)
+                        sys.stdout.flush()
                         assert ret == 0
                     
                     self.plotObject.db.sync()
                     
-                    print(os.path.abspath(oldDir))
+                    sys.stdout.write(os.path.abspath(oldDir)+'\n')
+                    sys.stdout.flush()
                     os.chdir( os.path.abspath(oldDir) )
  
                     self.plotObject.loadDataFromDB()
@@ -431,7 +436,8 @@ class PickPoints:
         elif isinstance(event, KeyEvent):
             button = event.key
         else: #This should never happen!
-            print('ERROR')
+            sys.stdout.write('ERROR\n')
+            sys.stdout.flush()
             assert(False)
 
         if button == 'up':
@@ -443,8 +449,9 @@ class PickPoints:
         else:
             # deal with something that should never happen
             scale_factor = 1
-            print('ERROR')
-            print(button)
+            sys.stdout.write('ERROR\n')
+            sys.stdout.write(button+'\n')
+            sys.stdout.flush()
             assert False
         # set new limits
         if self.zoomStatus == 'X':
@@ -1027,7 +1034,8 @@ if __name__ == '__main__':
     winSize = args.winSize
     
     if os.path.isfile(dbf) == False:
-        print('DB file not found')
+        sys.stdout.write('DB file not found\n')
+        sys.stdout.flush()
         
     # Create folder to save DB modifications
     # /home/datafile.memmapf32 -> datafilename == datafile
