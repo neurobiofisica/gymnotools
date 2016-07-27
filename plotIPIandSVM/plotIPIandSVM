@@ -738,7 +738,7 @@ class PlotData(QtGui.QDialog):
 
         samples = int(round(centralts * freq)) - spksurroudings/2 # The timestamp is on the zero crossing
         f = self.datafile
-        f.seek(round(samples*NChan*4))
+        f.seek(int(round(samples*NChan*4)))
         data = np.frombuffer(f.read(4*spksurroudings*NChan), dtype=np.float32)
         nsamples = data.size // NChan
 
