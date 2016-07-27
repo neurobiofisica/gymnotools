@@ -119,8 +119,8 @@ def fishrec(tup):
     off, bindata = tup
     off, = struct.unpack('q', off)
     read_data = parseDBHeader(bindata)
-    spkdata = read_data[-1]
-    presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = parseDBHeader(bindata)
+    #spkdata = read_data[-1]
+    presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = read_data #parseDBHeader(bindata)
     #print( '%d\t%d\t%f\t%f\t%f\t%d\t%c\t%d\t%f\t%f\n'%(off,presentFish,distA,distB,distAB,flags,svm,pairsvm,probA,probB))
     fishwins = {}
     if presentFish & 1:
@@ -277,7 +277,7 @@ def writeEntry(db, k, presentFish, direction, distA, distB, distAB, flags, corre
 
     key = struct.pack('=q',k)
     headerdata = binarizeDBHeader( (presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB) )
-    spkdata = struct.pack('=qi', 0, signals[0].size)
+    spkdata = struct.pack('ii', 0, signals[0].size) #0 is the offset for that fish
     for sig in signals:
         spkdata += sig.astype('float32').tostring()
     data = headerdata + spkdata
