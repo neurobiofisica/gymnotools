@@ -5,6 +5,63 @@ import sys
 if sys.version_info.major == 3:
     xrange=range
 
+# Verificar se lastLen esta em bytes
+class winFile:
+    def __init__(self, f):
+        self.f = f
+        self.lastLen, self.off, self.samples, self.channels, self.sigs, self.center = self.readWin()
+        self.nowLen = (4+8+4+4+4) + self.channels*4*(1 + self.samples)
+        self.f.seek(0)
+        self.beg = True
+
+    def readWin(self):
+        raw = self.f.read(4+8+4+4+4)
+        if raw == '':
+            return None
+        try: ##############################################################
+            lastLen, off, samples, channels, center = struct.unpack('=iqiii', raw)
+        except struct.error:
+            return None
+        sigs = {}
+        for ch in range(channels):
+            chid, = struct.unpack('i', self.f.read(4))
+            win = np.frombuffer(self.f.read(samples*4), dtype=np.float32)
+            sigs.update( {chid: win} )
+        return lastLen, off, samples, channels, center, sigs
+
+    def nextWin(self):
+        self.beg = False
+        ret = self.readWin()
+        if ret == None:
+            return None
+        self.lastLen, self.off, self.samples, self.channels, self.center, self.sigs = ret
+        self.nowLen = (4+8+4+4+4) + self.channels*4*(1 + self.samples)
+        return self.lastLen, self.off, self.samples, self.channels, self.center, self.sigs
+
+    def prevWin(self):
+        if self.beg == True:
+            return None
+        self.f.seek(self.f.tell() - self.lastLen)
+        self.lastLen, self.off, self.samples, self.channels, self.center, self.sigs = self.readWin()
+        self.nowLen = (4+8+4+4+4) + self.channels*4*(1 + self.samples)
+        self.f.seek(self.f.tell() - self.nowLen)
+        if self.f.tell() == 0:
+            self.beg = True
+        return self.lastLen, self.off, self.samples, self.channels, self.center, self.sigs
+
+    def beg(self):
+        self.f.seek(0)
+        self.lastLen, self.off, self.samples, self.channels, self.center, self.sigs = self.readWin()
+        self.nowLen = (4+8+4+4+4) + self.channels*4*(1 + self.samples)
+        self.f.seek(0)
+        self.beg = True
+
+    def end(self):
+        while self.nextWin() != None:
+            pass
+        self.beg = False
+
+
 def readwins(f, N=np.inf):
     n = 0
     wins = []

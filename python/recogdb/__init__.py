@@ -1,3 +1,5 @@
+import sys
+
 import bsddb3.db as bsd
 import bsddb3
 from bsddb3 import _DBWithCursor
@@ -40,14 +42,21 @@ def compare_fcn(a, b):
     return 0
 
 def verifyKey(db,k):
-    if not (isinstance(k,int) or isinstance(k,str)):
-        print("key must be an integer or an 8 byte (64-bit) binary string\n")
+    if sys.version_info.major == 3:
+        tp = bytes
+    else:
+        tp = str
+
+    if not (isinstance(k,int) or isinstance(k,tp)):
+        sys.stderr.write("key must be an integer or an 8 byte (64-bit) binary string\n")
+        sys.stderr.flush()
         return None
 
     # string len verification
-    elif isinstance(k,str):
+    elif isinstance(k,tp):
         if len(k) != 8:
-            print("The string must be an 8 byte (64-bit) size\n")
+            sys.stderr.write("The string must be an 8 byte (64-bit) size\n")
+            sys.stderr.flush()
             return None
         key = k
 
@@ -56,7 +65,8 @@ def verifyKey(db,k):
         key = struct.pack('q',k)
 
     if db.has_key(key) == False:
-        print( "key not found\n")
+        sys.stderr.write( "key not found\n")
+        sys.stderr.flush()
         return None
 
     return key
@@ -64,7 +74,8 @@ def verifyKey(db,k):
 
 def openDB(filename, mode):
     if mode not in ('r','w','rw','c','n'):
-        print( "mude must be one of 'r','w','rw','c','n'\n")
+        sys.stderr.write( "mude must be one of 'r','w','rw','c','n'\n")
+        sys.stderr.flush()
         return None
 
     flags = 0
@@ -147,7 +158,8 @@ def readHeaderEntry(db,k):
     try:
         tup = db.set_location(key)
     except bsd.DBNotFoundError:
-        print( 'set_location failed\n')
+        sys.stderr.write( 'set_location failed\n')
+        sys.stderr.flush()
         return None
 
     
@@ -211,10 +223,12 @@ def getNearest(db, direction, k, fish, overlap=True):
 def getNearestSVM(db, direction, k):
     key = struct.pack('=q',k)
     if not db.has_key(key):
-        print('key not found')
+        sys.stderr.write('key not found')
+        sys.stderr.flush()
         return None
     if direction not in [-1, 1]:
-        print('direction must be 1 or -1')
+        sys.stderr.write('direction must be 1 or -1')
+        sys.stderr.flush()
         return None
     
     db.set_location(key)
@@ -252,7 +266,8 @@ def updateHeaderEntry(db, k, field, data, change_svm=True, sync=True):
     dic = dicFields.copy()
     dic.pop('flags')
     if field not in dic.keys():
-        print('You can only modify one of the fields: ' + str(dic.keys()) + '\n')
+        sys.stderr.write('You can only modify one of the fields: ' + str(dic.keys()) + '\n')
+        sys.stderr.flush()
         return None
     
     raw = readHeaderEntry(db,key)

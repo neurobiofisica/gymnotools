@@ -30,8 +30,7 @@ else:
 os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
 
 sys.path.append( os.path.realpath('../') )
-recogpath = './../../recog/recog'
-detectIPIpath = '../../detectIPI/detectIPI.py'
+recogpath = '../recog/recog'
 import recogdb
 
 SPKSIZE = 256
@@ -59,7 +58,7 @@ NChan = 11
 # Auxiliary function for reading
 def parseSVMFlags(f, col=4):
     flags = []
-    for line in f.xreadlines():
+    for line in f.readlines():
         flags.append( line.split()[col] )
     return flags
 
@@ -280,12 +279,12 @@ class PickPoints:
                         
                         self.plotObject.db.sync()
                        
-                    sys.stdout.write('detectIPI\n') #################
+                    sys.stdout.write('recog export\n') #################
                     sys.stdout.flush()
                     #Be sure that is on current directory
                     os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
                     
-                    ret = subprocess.call(['python', detectIPIpath, self.plotObject.dbname, self.ipifilename])
+                    ret = subprocess.call([recogpath, 'export', self.plotObject.dbname, self.ipifilename])
                     if ret != 0:
                         sys.stdout.write('ret = %d\n'%ret)
                         sys.stdout.flush()
@@ -450,7 +449,7 @@ class PickPoints:
             # deal with something that should never happen
             scale_factor = 1
             sys.stdout.write('ERROR\n')
-            sys.stdout.write(button+'\n')
+            sys.stdout.write('button: '+button+'\n')
             sys.stdout.flush()
             assert False
         # set new limits
@@ -553,7 +552,7 @@ class PlotData(QtGui.QDialog):
         self.datafile = datafile
         self.TS = self.TS
         
-        self.dialogIPI = IPIWindow(self.db, undoFilename, folder, self.datafile)
+        self.dialogIPI = IPIWindow(self.db, undoFilename, folder, self.datafile, self.spikesname)
         
     def __exit__(self):
         self.db.close()
@@ -1051,6 +1050,7 @@ if __name__ == '__main__':
     dbname = dbfiledir + '/' + dbf.split('/')[-1].split('.')[0] + '_undo.keys'
     if os.path.isdir(dbfiledir + '/' + datafilename) == False:
         os.makedirs(dbfiledir + '/' + datafilename)
+    datafilename = os.path.abspath(dbfiledir + '/' + datafilename)
     
     undoFilename = dbfiledir + '/' + datafilename + '/' + dbname
     
@@ -1060,6 +1060,8 @@ if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
 
+    sys.stdout.write(datafilename)
+    sys.stdout.flush()
     myapp = PlotData(app, dbf, spikesf, datafile, undoFilename, datafilename, (lowsaturation, highsaturation), winSize, stepSize)
 
     Pick = PickPoints(myapp, ipifilename)

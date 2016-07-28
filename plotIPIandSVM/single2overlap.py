@@ -121,12 +121,12 @@ class single2overlap(QtGui.QDialog):
         self.drawSpikePos(pos)
         if self.uiObject.fishAButton.isChecked() == True:
             # correctedPos -> position in SAMPLES from the beginning of the file
-            correctedPos = pos*freq/1000. + self.off_now/4/self.NChan
+            correctedPos = pos*freq/1000. + self.off_now
             self.posA = int(np.round(correctedPos))
             self.uiObject.fishBButton.setChecked(True)
         elif self.uiObject.fishBButton.isChecked() == True:
             # correctedPos -> position in SAMPLES from the beginning of the file
-            correctedPos = pos*freq/1000. + self.off_now/4/self.NChan
+            correctedPos = pos*freq/1000. + self.off_now
             self.posB = int(np.round(correctedPos))
             self.uiObject.fishAButton.setChecked(True)
         
@@ -240,12 +240,12 @@ class single2overlap(QtGui.QDialog):
         correctedPos_nR = entry_nR[ recogdb.dicFields['correctedPosB'] ]
         
         # 1000 is to plot in ms
-        sample2plot_pB = 1000.*(correctedPos_pB - self.off_pB/self.NChan/4.) / freq
-        sample2plot_pR = 1000.*(correctedPos_pR - self.off_pR/self.NChan/4.) / freq
-        sample2plot_nowB = 1000.*(correctedPos_nowB - self.off_now/self.NChan/4.) / freq
-        sample2plot_nowR = 1000.*(correctedPos_nowR - self.off_now/self.NChan/4.) / freq
-        sample2plot_nB = 1000.*(correctedPos_nB - self.off_nB/self.NChan/4.) / freq
-        sample2plot_nR = 1000.*(correctedPos_nR - self.off_nR/self.NChan/4.) / freq
+        sample2plot_pB = 1000.*(correctedPos_pB - self.off_pB) / freq
+        sample2plot_pR = 1000.*(correctedPos_pR - self.off_pR) / freq
+        sample2plot_nowB = 1000.*(correctedPos_nowB - self.off_now) / freq
+        sample2plot_nowR = 1000.*(correctedPos_nowR - self.off_now) / freq
+        sample2plot_nB = 1000.*(correctedPos_nB - self.off_nB) / freq
+        sample2plot_nR = 1000.*(correctedPos_nR - self.off_nR) / freq
         
         t_pB = 1000. * np.arange(NSamples_pB) / freq
         t_pR = 1000. * np.arange(NSamples_pR) / freq
@@ -254,8 +254,8 @@ class single2overlap(QtGui.QDialog):
         t_nR = 1000. * np.arange(NSamples_nR) / freq
         
         # Previous blue plot
-        
-        f.seek(self.off_pB)
+
+        f.seek(4*self.NChan*self.off_pB)
         self.data_pB = np.frombuffer(f.read(4*NSamples_pB*self.NChan), dtype=np.float32)
         
         self.zLine_pB = self.axPrev1.plot( (t_pB.min(), t_pB.max()), [0., 0.], 'k-.' )
@@ -267,7 +267,7 @@ class single2overlap(QtGui.QDialog):
 
         # Previous red plot
         
-        f.seek(self.off_pR)
+        f.seek(4*self.NChan*self.off_pR)
         self.data_pR = np.frombuffer(f.read(4*NSamples_pR*self.NChan), dtype=np.float32)
         
         self.zLine_pR = self.axPrev2.plot( (t_pR.min(), t_pR.max()), [0., 0.], 'k-.' )
@@ -279,7 +279,7 @@ class single2overlap(QtGui.QDialog):
 
         # Selected spike plot
         
-        f.seek(self.off_now)
+        f.seek(4*self.NChan*self.off_now)
         self.data_now = np.frombuffer(f.read(4*NSamples_now*self.NChan), dtype=np.float32)
         
         self.zLine_Spk = self.axSpike.plot( (t_now.min(), t_now.max()), [0., 0.], 'k-.' )
@@ -292,7 +292,7 @@ class single2overlap(QtGui.QDialog):
 
         # Next blue plot
         
-        f.seek(self.off_nB)
+        f.seek(4*self.NChan*self.off_nB)
         self.data_nB = np.frombuffer(f.read(4*NSamples_nB*self.NChan), dtype=np.float32)
         
         self.zLine_nB = self.axNext1.plot( (t_nB.min(), t_nB.max()), [0., 0.], 'k-.' )
@@ -304,7 +304,7 @@ class single2overlap(QtGui.QDialog):
 
         # Next red plot
         
-        f.seek(self.off_nR)
+        f.seek(4*self.NChan*self.off_nR)
         self.data_nR = np.frombuffer(f.read(4*NSamples_nR*self.NChan), dtype=np.float32)
         
         self.zLine_nR = self.axNext2.plot( (t_nR.min(), t_nR.max()), [0., 0.], 'k-.' )

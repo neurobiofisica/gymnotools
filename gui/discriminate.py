@@ -488,12 +488,18 @@ class DiscriminateWindow(QtGui.QDialog):
     def printAllStandardOutput(self):
         print('%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
-            print(program.readAllStandardOutput())
+            if sys.version_info.major == 3:
+                print(program.readAllStandardOutput().data().decode())
+            else:
+                print(program.readAllStandardOutput().data())
     
     def printAllStandardError(self):
         print('%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
-            print(program.readAllStandardError())
+            if sys.version_info.major == 3:
+                print(program.readAllStandardError().data().decode())
+            else:
+                print(program.readAllStandardError().data())
     
     def raiseLongTimeInformation(self):
         dialog = QtGui.QMessageBox()

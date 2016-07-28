@@ -1,6 +1,7 @@
 from PyQt4 import QtCore, QtGui
 from IPIClick_interface import *
 from single2overlap import single2overlap
+from windowfile import winFile
 
 import random
 
@@ -70,12 +71,13 @@ dicFields = {'presentFish': 'int',
 }
 
 class ModifySelector:
-    def __init__(self, db, undoFilename, folder, datafile):
+    def __init__(self, db, undoFilename, folder, datafile, spikesName):
         self.db = db
         self.undoFilename = undoFilename
         self.folder = folder
         
         self.single2overlapWindow = single2overlap(db, NChan, datafile)
+        self.spikesName = spikesName
         
         # if to avoid warning of loadtxt from empty file
         if os.stat(undoFilename).st_size != 0:
@@ -97,7 +99,7 @@ class ModifySelector:
         ActionNow = ''
         dicActions = {}
         hashUndo = 0
-        for l in modFile.xreadlines():
+        for l in modFile.readlines():
             Columns = l.split('\t')
             
             # Action identifier
@@ -502,6 +504,21 @@ class ModifySelector:
             undoFile.close()
         
         assert fish in ['A', 'B']
+
+        if sys.version_info.major == 3:
+            winF = winFile(open(self.spikesName, 'rb'))
+        else:
+            winF = winFile(open(self.spikesName, 'r'))
+
+        ret = winF.nextWin()
+        while ret is not None:
+            lastLen, off, samples, channels, center, sigs = ret
+            if off == key:
+                newCorrectedPos = off + center
+                break
+
+            ret = winF.nextWin()
+            
         
         keyundofile = open(self.folder + '/' + str(key) + '.undo', 'a')
         
@@ -525,17 +542,19 @@ class ModifySelector:
             newDistA = 0.
             newDistB = float('Inf')
             newDistAB = float('Inf')
+
+            newCorrectedPosA = newCorrectedPos
+            newCorrectedPosB = -1
         elif fish == 'B':
             newPresentFish = 2
             
             newDistA = float('Inf')
             newDistB = 0.
             newDistAB = float('Inf')
+
+            newCorrectedPosA = -1
+            newCorrectedPosB = newCorrectedPos
        
-        # Will pass dectectIPI again to select the better position
-        newCorrectedPosA = -1
-        newCorrectedPosB = -1
-        
         # UpdateDB
         recogdb.updateHeaderEntry(self.db, key, 'presentFish', newPresentFish, sync=False)
         
@@ -939,14 +958,14 @@ class IPIWindow(QtGui.QDialog):
     RUndoLabelSize = 100
     RUndoStep = 140
 
-    def __init__(self, db, undoFilename, folder, datafile):
+    def __init__(self, db, undoFilename, folder, datafile, spikesName):
         QtGui.QWidget.__init__(self)
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
         
         self.db = db
         
-        self.modify = ModifySelector(db, undoFilename, folder, datafile)
+        self.modify = ModifySelector(db, undoFilename, folder, datafile, spikesName)
 
         QtCore.QObject.connect(self.uiObject.okButton, QtCore.SIGNAL('clicked()'), self.okClicked)
         QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.close)
@@ -987,7 +1006,7 @@ class IPIWindow(QtGui.QDialog):
                     self.modify.single2overlapWindow.replot = False
                 self.show()
             # Create SVM Pair
-            elif option == 2:
+            '''elif option == 2:
                 self.hide()
                 self.modify.createSVMPair(self.off)
                 if self.modify.replot == True:
@@ -1021,7 +1040,7 @@ class IPIWindow(QtGui.QDialog):
                         self.iterate_from.append( (1, False, self.off) )
                         self.iterate_from.append( (-1, False, self.off) )
                         
-                self.show()
+                self.show()'''
             
         elif self.windowType == 'overlap':
             # Convert to single A
@@ -1243,7 +1262,11 @@ class IPIWindow(QtGui.QDialog):
             self.undoOptions.append( (RadioBut, Label) )
             
             LabelText = ''
-            for k in dicActions.iterkeys():
+            if sys.version_info.major == 3:
+                iterator = dicActions.keys
+            else:
+                iterator = dicActions.iterkeys
+            for k in iterator():
                 LabelText = LabelText + k + ': ' + str(dicActions[k][0]) + ' -> ' + str(dicActions[k][1]) + '\n'
             
             self.setUndoOpt(i, action.strip(), LabelText)
@@ -1269,7 +1292,7 @@ class IPIWindow(QtGui.QDialog):
 
             self.setOpt(0, 'Invert fish classification')
             self.setOpt(1, 'Convert to overlapping spike')
-            self.setOpt(2, 'Create SVM Pair')
+            #self.setOpt(2, 'Create SVM Pair')
 
         # Overlapping spike
         else:
