@@ -1285,7 +1285,7 @@ class IPIWindow(QtGui.QDialog):
             self.windowType = 'continuity'
             self.setMainText('Continuity spike selected')
 
-            for i in xrange(3):
+            for i in xrange(2):
                 self.options.append( QtGui.QRadioButton(self.uiObject.mainOptionsBox) )
                 self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
                 self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))

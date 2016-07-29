@@ -299,7 +299,7 @@ class DiscriminateWindow(QtGui.QDialog):
                                     ['--minwins=%s'%minWin, \
                                     '--onlyabove=%s'%onlyAbove, \
                                     '--saturation=%s,%s'%(lowSaturation,highSaturation), \
-                                    '--minprob=0.80', \
+                                    '--minprob=0.95', \
                                     TSName, \
                                     spikesName, \
                                     scaleName, \
@@ -486,20 +486,22 @@ class DiscriminateWindow(QtGui.QDialog):
 
         
     def printAllStandardOutput(self):
-        print('%s\n'%self.programname)
+        #print('%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
             if sys.version_info.major == 3:
-                print(program.readAllStandardOutput().data().decode())
+                sys.stdout.write(program.readAllStandardOutput().data().decode())
             else:
-                print(program.readAllStandardOutput().data())
+                sys.stdout.write(program.readAllStandardOutput().data())
+            sys.stdout.flush()
     
     def printAllStandardError(self):
-        print('%s\n'%self.programname)
+        #print('%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
             if sys.version_info.major == 3:
-                print(program.readAllStandardError().data().decode())
+                sys.stderr.write(program.readAllStandardError().data().decode())
             else:
-                print(program.readAllStandardError().data())
+                sys.stderr.write(program.readAllStandardError().data())
+            sys.stderr.flush()
     
     def raiseLongTimeInformation(self):
         dialog = QtGui.QMessageBox()
