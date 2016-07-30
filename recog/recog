@@ -18,7 +18,7 @@ else:
 
 NChan = 11
 freq = 45454.545454
-overlapRange = int(0.002*freq) ##########################
+overlapRange = int(0.003*freq)
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -66,7 +66,11 @@ class recog:
         self.templateA = sigs.copy() ###### Necessario? Nao irei alterar a variavel, apenas substitui-la
         self.templateAsize = self.samples
         self.lastCenterA = self.center
-        recogdb.writeEntry(self.db, self.off, 1, 0, 0, 1<<30, 1<<30, 0, self.off+self.center, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+        
+        if recogdb.verifyKey(self.db, self.off) is None:
+            recogdb.writeEntry(self.db, self.off, 1, 0, 0, 1<<30, 1<<30, 0, self.off+self.center, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+        else:
+            sys.stdout.write('SVM already in DB\n')
         self.tsoutput.write('1 %d\n'%(self.off+self.center))
 
         if self.lastTSA is None:
@@ -79,7 +83,11 @@ class recog:
         self.templateB = sigs.copy()
         self.templateBsize = self.samples
         self.lastCenterB = self.center
-        recogdb.writeEntry(self.db, self.off, 2, 0, 1<<30, 0, 1<<30, 0, -1, self.off+self.center, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+
+        if recogdb.verifyKey(self.db, self.off) is None:
+            recogdb.writeEntry(self.db, self.off, 2, 0, 1<<30, 0, 1<<30, 0, -1, self.off+self.center, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+        else:
+            sys.stdout.write('SVM already in DB\n')
         self.tsoutput.write('-1 %d\n'%(self.off+self.center))
 
         if self.lastTSB is None:
@@ -87,6 +95,15 @@ class recog:
         else:
             self.lastIPIB = self.off+self.center - self.lastTSB
             self.lastTSB = self.off+self.center
+
+    def predict_overlap(self, direction):
+        if direction >= 0:
+            cond1 = (self.off+self.center > self.lastTSB + self.lastIPIB - overlapRange)
+            cond2 = (self.off+self.center < self.lastTSB + self.lastIPIB + overlapRange)
+        else:
+            cond1 = (self.off+self.center > self.lastTSB + self.lastIPIB - overlapRange)
+            cond2 = (self.off+self.center < self.lastTSB + self.lastIPIB + overlapRange)
+            
 
     def iterate(self, direction, cont=False):
         self.direction = direction
@@ -135,6 +152,7 @@ class recog:
                             sys.stdout.write('%d\t%.03f%%\tOverlap A predicted'%(self.off, perc))
                             sys.stdout.flush()
                             self.continuity(sigs)
+
                         else:
 
                             print('%d\t%.03f%%\tEmmiting single A\t%.02f%% A'%(self.off, perc, 100*self.probA))
@@ -297,6 +315,37 @@ class recog:
             mindistDB = min(dbdistA, dbdistB, dbdistAB)
             if mindistDB < mindist:
                 print('Leaving DB as is')
+
+                # Update lastTS and lastIPI with DB data
+                idx = np.argmin( (dbdistA, dbdistB, dbdistAB) )
+                if idx == 0:
+                    if self.lastTSA is None:
+                        self.lastTSA = data[ recogdb.dicFields['correctedPosA'] ]
+                    else:
+                        lastTSA_new = data[ recogdb.dicFields['correctedPosA'] ]
+                        self.lastIPIA = lastTSA_new - self.lastTSA
+                        self.lastTSA = lastTSA_new
+                elif idx == 1:
+                    if self.lastTSB is None:
+                        self.lastTSB = data[ recogdb.dicFields['correctedPosB'] ]
+                    else:
+                        lastTSB_new = data[ recogdb.dicFields['correctedPosB'] ]
+                        self.lastIPIB = lastTSB_new - self.lastTSB
+                        self.lastTSB = lastTSB_new
+                else:
+                    if self.lastTSA is None:
+                        self.lastTSA = data[ recogdb.dicFields['correctedPosA'] ]
+                    else:
+                        lastTSA_new = data[ recogdb.dicFields['correctedPosA'] ]
+                        self.lastIPIA = lastTSA_new - self.lastTSA
+                        self.lastTSA = lastTSA_new
+                    if self.lastTSB is None:
+                        self.lastTSB = data[ recogdb.dicFields['correctedPosB'] ]
+                    else:
+                        lastTSB_new = data[ recogdb.dicFields['correctedPosB'] ]
+                        self.lastIPIB = lastTSB_new - self.lastTSB
+                        self.lastTSB = lastTSB_new
+
                 return None
 
         if distA < distB and distA < distAB:

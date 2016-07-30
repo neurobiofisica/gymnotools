@@ -65,8 +65,8 @@ def verifyKey(db,k):
         key = struct.pack('q',k)
 
     if db.has_key(key) == False:
-        sys.stderr.write( "key not found\n")
-        sys.stderr.flush()
+        #sys.stderr.write( "key not found\n")
+        #sys.stderr.flush()
         return None
 
     return key
