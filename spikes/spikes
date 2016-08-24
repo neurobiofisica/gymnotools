@@ -20,6 +20,7 @@ else:
 
 freq = 45454.545454
 winSize = 256
+chirpStep = int(0.300*freq)
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -34,7 +35,7 @@ parser.add_argument('timeseries_file', type=argparse.FileType('r'), help='Timese
 parser.add_argument('hilbert_file', help='Output Absolute sum of Hilbert Transform of the signal on I32 format')
 parser.add_argument('outfile', type=argparse.FileType('w'), help='Output spike window file')
 parser.add_argument('--chirps_file', type=argparse.FileType('r'), help='Chirp regions file')
-parser.add_argument('--chirps_gain', type=float, default=0.5, help='Thresold ratio on chirp regions')
+parser.add_argument('--chirps_gain', type=float, default=0.3, help='Thresold ratio on chirp regions')
 parser.add_argument('-d', '--detection', type=float, default=1.00, help='Theshold for detecting a spike')
 parser.add_argument('-r', '--refractory', type=float, default=0.001, help='Refractory period for spike detection')
 parser.add_argument('-m', '--max_size', type=float, default=0.0035, help='Maximum size for a single spike')
@@ -79,7 +80,8 @@ sizein, = inarr.shape
 if args.useHilbert == True:
     h = np.memmap(args.hilbert_file, np.float32, 'r')
 else:
-    print('Generating new Hilbert file')
+    sys.stdout.write('Generating new Hilbert file')
+    sys.stdout.flush()
     h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//11 - 4))
     for i in xrange(nchan):
         sys.stdout.write('%d'%i)
@@ -94,25 +96,39 @@ else:
     h = scipy.signal.lfilter(a, [1], h)[(n-1)//2:]
 
 if args.chirps_file is not None:
-    chirps = np.loadtxt(args.chirps_file, unpack=True, dtype=np.int)
+    chirps = np.loadtxt(args.chirps_file, unpack=True, dtype=np.int64)
     nChirps = chirps.shape[1]
 outputFile = args.outfile
 #plt.plot(h[:10000])
 #plt.show()
 
 idxAbove = np.array([], dtype=np.int)
-thresholds = []
 last = 0
-print('Applying threshold...')
+sys.stdout.write('Applying threshold...\n')
+sys.stdout.flush()
 if args.chirps_file is not None:
+    thresholds = {}
     for n in range(nChirps):
+        sys.stdout.write('%.03f%%\r'%((100.*n)/nChirps))
+        sys.stdout.flush()
         beg, end = chirps[:, n]
         idxAbovelow, = np.where( h[last:beg] > threshold )
         idxAbovelow += last
-        th = h[beg:end].max() * chirpGain
-        idxAbovehigh, = np.where( h[beg:end] > th ) #############
-        thresholds.append(th)
-        idxAbovehigh += beg
+        b = beg
+        idxAbovehigh = np.array([], dtype=np.int)
+        while b < end:
+            sys.stdout.write('\t\t%d - %d                        \r'%(b-beg,end-beg))
+            sys.stdout.flush()
+            if b+chirpStep < end:
+                e = b+chirpStep
+            else:
+                e = end
+            th = h[b:e].max() * chirpGain
+            idxAbovehigh_now, = np.where( h[b:e] > th ) #############
+            thresholds.update({b:th})
+            idxAbovehigh_now += b
+            idxAbovehigh = np.concatenate( (idxAbovehigh, idxAbovehigh_now) )
+            b += chirpStep
         idxAbove = np.concatenate( (idxAbove, idxAbovelow, idxAbovehigh))
         last = end
     idxAbovelow, = np.where( h[last:] > threshold )
@@ -120,6 +136,8 @@ if args.chirps_file is not None:
     idxAbove = np.concatenate( (idxAbove, idxAbovelow) )
 else:
     idxAbove, = np.where( h > threshold )
+
+sys.stdout.write('\n')
 
 locs, = np.where( np.diff(idxAbove) > refrac )
 
@@ -133,9 +151,14 @@ lastLen = 0
 #possiveisSpikes = [None for i in range(tamlocs)]
 beg = idxAbove[0]
 n = 0
+if args.chirps_file is not None:
+    thkeys = list(thresholds.keys())
+    thkeys.sort()
+    lastthkey = thkeys[-1]
+offset=0
 for num,i in enumerate(locs):
     if num % 300 == 0:
-        sys.stdout.write('\rWindowing: %.03f%%'%( 100.*num / (1.*tamlocs) ))
+        sys.stdout.write('\rWindowing: %d - %.03f%%'%(offset, 100.*num / (1.*tamlocs) ))
         sys.stdout.flush()
 
     if beg - winSize//2 > 0:
@@ -160,13 +183,18 @@ for num,i in enumerate(locs):
         onChirp = False
 
     if onChirp == True:
-        th = thresholds[chirpIdx]
+        if offset < lastthkey:
+            nIdx = next(n for n,k in enumerate(thkeys) if k > offset) 
+            th = thresholds[thkeys[nIdx]]
+        else:
+            th = thresholds[lastthkey]
     else:
         th = threshold
 
     PS = h[offset : offsetend]
     if PS.size < 20:
-        print('Window too small %ld'%offset)
+        sys.stdout.write('Window too small (%d) %ld\n'%(offsetend-offset, offset))
+        sys.stdout.flush()
         continue
     possiveisSpikesSig =  [ np.array(inarr[c+11*offset: c + 11*offsetend: 11]) for c in range(11) ] 
         
@@ -292,16 +320,18 @@ for num,i in enumerate(locs):
 
     if single == True:
         if size != winSize:
-            print('--')
-            print(size)
-            print('--')
+            sys.stdout.write('--')
+            sys.stdout.write(str(size))
+            sys.stdout.write('--')
+            sys.stdout.flush()
             continue
     if offset+b not in offsets:
         writewin(outputFile, (lastLen, offset+b, size, njanelas, center, listjanelas) )
         offsets[num] = offset+b
         lastLen = 6*4 + njanelas*4*(1 + size)
         if lastLen > 400*njanelas*4:
-            print(' Too large window: %d samples'%(lastLen/njanelas/4))
+            sys.stdout.write(' Too large window: %d samples'%(lastLen/njanelas/4))
+            sys.stdout.flush()
             plt.plot(PS)
             plt.show()
     #else:
