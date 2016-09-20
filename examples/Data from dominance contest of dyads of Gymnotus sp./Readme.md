@@ -16,7 +16,7 @@ oscillations). This dataset was used in two of our most recent papers
 below](https://github.com/thmosqueiro/gymnotools/tree/master/examples/JPhysiol_Paris%20Example%20Reading%20Data#relevant-papers)).
 
 <img
-src="https://github.com/thmosqueiro/gymnotools/raw/master/examples/JPhysiol_Paris%20Example%20Reading%20Data/Example%20of%20Plot.png"
+src="https://github.com/thmosqueiro/gymnotools/raw/master/examples/Data%20from%20dominance%20contest%20of%20dyads%20of%20Gymnotus%20sp./Example%20of%20Plot.png"
 width=500px style="float: left; margin: 0 0 10px 10px;" />
 
 
