@@ -8,11 +8,16 @@ completely free to swim, *a challenge* is to detect which pulses were
 discharged by each of the fish. The figure below gives a glimpse of
 the dataset: there are two time series where fish 1 and 2 were alone
 in the aquarium (top panels), and a third time series where both fish
-were in the same aquarium, free to move and interact. This dataset was
-used in two of our most recent papers ([see
+were in the same aquarium, free to move and interact. A rich
+repertoire of electrical behaviors can be observed, such as (i) _offs_
+(moments of silence) and (ii) _chirps_ (small and noisy
+oscillations). This dataset was used in two of our most recent papers
+([see
 below](https://github.com/thmosqueiro/gymnotools/tree/master/examples/JPhysiol_Paris%20Example%20Reading%20Data#relevant-papers)).
 
-<img src="https://github.com/thmosqueiro/gymnotools/raw/master/examples/JPhysiol_Paris%20Example%20Reading%20Data/Example%20of%20Plot.png"  width=500px style="float: left; margin: 0 0 10px 10px;" />
+<img
+src="https://github.com/thmosqueiro/gymnotools/raw/master/examples/JPhysiol_Paris%20Example%20Reading%20Data/Example%20of%20Plot.png"
+width=500px style="float: left; margin: 0 0 10px 10px;" />
 
 
 Download the dataset
@@ -20,7 +25,19 @@ Download the dataset
 
 The dataset is publicly available at [FigShare]() (URL will be
 provided shortly), and contains 3 different recordings from 11
-different channels. The compressed size of the dataset is _4.66 GB_.
+different channels. The compressed size of the dataset is _4.66
+GB_.
+
+List of files:
+
+* _Guariento_etal_2016_Training_Fish1.zip:_ One fish alone in the
+  aquarium.
+
+* _Guariento_etal_2016_Training_Fish1.zip:_ Another fish alone in the
+  aquarium.
+
+* _Guariento_etal_2016_both_fish_interacting.zip:_ Time series with
+  both fish freely interaction.
 
 
 Relevant papers
