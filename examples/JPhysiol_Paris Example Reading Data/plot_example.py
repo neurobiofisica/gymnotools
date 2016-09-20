@@ -8,7 +8,7 @@ import pylab as pl
 
 # Parameters
 tf      = 300.   # in miliseconds
-channel = 2      # channel id
+channel = 4      # channel id
 
 # Definitions
 freq    = 45454.545454
@@ -39,8 +39,8 @@ ax_f1.set_title("Fish 1")
 ax_f1.set_xlabel("Time (ms)")
 ax_f1.set_xticks(np.arange(0,301,100))
 ax_f1.set_ylabel("Electrode potential (V)")
-ax_f1.set_ylim(-0.3,0.3)
-ax_f1.set_yticks(np.arange(-0.3,0.31,0.15))
+ax_f1.set_ylim(-0.2,0.2)
+ax_f1.set_yticks(np.arange(-0.2,0.21,0.1))
 
 
 # Plotting fish 2
@@ -52,12 +52,12 @@ ax_f2.set_title("Fish 2")
 ax_f2.set_xlabel("Time (ms)")
 ax_f2.set_xticks(np.arange(0,301,100))
 ax_f2.set_ylabel("Electrode potential (V)")
-ax_f2.set_ylim(-0.3,0.3)
-ax_f2.set_yticks(np.arange(-0.3,0.31,0.15))
+ax_f2.set_ylim(-0.2,0.2)
+ax_f2.set_yticks(np.arange(-0.2,0.21,0.1))
 
 
 # Plotting both fish together
-X = np.memmap("15o04001.abf.memampf32", dtype=np.float32)
+X = np.memmap("15o03000.abf.memampf32", dtype=np.float32)
 Ch = X[channel::11]
 ax_2f.plot(t, Ch[:npoints], '-', color=color)
 
@@ -65,8 +65,8 @@ ax_2f.set_title("Both fish ")
 ax_2f.set_xlabel("Time (ms)")
 ax_2f.set_xticks(np.arange(0,301,50))
 ax_2f.set_ylabel("Electrode potential (V)")
-ax_2f.set_ylim(-0.3,0.3)
-ax_2f.set_yticks(np.arange(-0.3,0.31,0.15))
+ax_2f.set_ylim(-0.2,0.2)
+ax_2f.set_yticks(np.arange(-0.2,0.21,0.1))
 
 
 

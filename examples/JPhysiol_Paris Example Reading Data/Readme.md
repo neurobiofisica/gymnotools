@@ -1,10 +1,18 @@
-JPhysiol_Paris Example Reading Data
+Data from dominance contest of dyads of Gymnotus sp.
 ====
 
-We present a simple example of how to load and plot a dataset that we have recently shared publicly, containing time series of electric pulses from dyads of freely moving Gymnotus carapo.
+We present a simple example of how to load and plot a dataset that we
+have recently shared publicly, containing time series of electric
+pulses from dyads of freely moving Gymnotus sp. Because both fish are
+completely free to swim, *a challenge* is to detect which pulses were
+discharged by each of the fish. The figure below gives a glimpse of
+the dataset: there are two time series where fish 1 and 2 were alone
+in the aquarium (top panels), and a third time series where both fish
+were in the same aquarium, free to move and interact. This dataset was
+used in two of our most recent papers ([see
+below](https://github.com/thmosqueiro/gymnotools/tree/master/examples/JPhysiol_Paris%20Example%20Reading%20Data#relevant-papers)).
 
 <img src="https://github.com/thmosqueiro/gymnotools/raw/master/examples/JPhysiol_Paris%20Example%20Reading%20Data/Example%20of%20Plot.png"  width=500px style="float: left; margin: 0 0 10px 10px;" />
-
 
 
 Download the dataset
