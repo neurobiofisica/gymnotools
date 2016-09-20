@@ -1,9 +1,9 @@
 JPhysiol_Paris Example Reading Data
 ====
 
+We present a simple example of how to load and plot a dataset that we have recently shared publicly, containing time series of electric pulses from dyads of freely moving Gymnotus carapo.
 
-
-<img src="" style="width: 80%; float: left; margin: 0 0 10px 10px;" />
+<img src="https://github.com/thmosqueiro/gymnotools/raw/master/examples/JPhysiol_Paris%20Example%20Reading%20Data/Example%20of%20Plot.png"  width=500px style="float: left; margin: 0 0 10px 10px;" />
 
 
 
