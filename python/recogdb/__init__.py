@@ -150,6 +150,18 @@ def fishrec(tup):
             read_data[ dicFields['probB'] ], \
             fishwins
 
+def delete(db, k):
+    key = verifyKey(db, k)
+    if key is None:
+        return None
+
+    try: 
+        db.pop(key)
+    except:
+        sys.stderr.write('pop failed\n')
+        sys.stderr.flush()
+        return None
+
 def readHeaderEntry(db,k):
     key = verifyKey(db,k)
     if key is None:
