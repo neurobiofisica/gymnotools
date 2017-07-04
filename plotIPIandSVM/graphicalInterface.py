@@ -7,7 +7,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -21,25 +21,25 @@ try:
         return QtGui.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
     def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+        return QtWidgets.QApplication.translate(context, text, disambig)
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName(_fromUtf8("Dialog"))
         Dialog.resize(1200, 900)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(Dialog.sizePolicy().hasHeightForWidth())
         Dialog.setSizePolicy(sizePolicy)
-        self.formLayoutWidget = QtGui.QWidget(Dialog)
+        self.formLayoutWidget = QtWidgets.QWidget(Dialog)
         self.formLayoutWidget.setGeometry(QtCore.QRect(0, 7, 1201, 891))
         self.formLayoutWidget.setObjectName(_fromUtf8("formLayoutWidget"))
-        self.verticalLayout = QtGui.QVBoxLayout(self.formLayoutWidget)
-        self.verticalLayout.setMargin(0)
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.formLayoutWidget)
+        self.verticalLayout.setContentsMargins(0,0,0,0)
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.graphIPI = graphIPI(self.formLayoutWidget)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.graphIPI.sizePolicy().hasHeightForWidth())

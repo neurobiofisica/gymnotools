@@ -2,10 +2,21 @@
 # -*- coding: utf-8 -*-
 
 import struct, sys, os, subprocess, inspect
+from operator import itemgetter
 import argparse
 
 import matplotlib
-matplotlib.use("Qt4Agg")
+matplotlib.use("Qt5Agg")
+'''def patch_qt4agg():
+    import matplotlib.backends.backend_qt4agg as backend
+    code = """
+def draw( self ):
+    FigureCanvasAgg.draw(self)
+    self.repaint()
+FigureCanvasQTAgg.draw = draw    
+"""
+    exec(code, backend.__dict__)
+patch_qt4agg()'''
 
 import numpy as np
 
@@ -15,7 +26,7 @@ from matplotlib.ticker import FuncFormatter
 from matplotlib.widgets import Button
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from graphicalInterface import Ui_Dialog #########
 from IPIWindow import IPIWindow #########
 
@@ -33,7 +44,12 @@ sys.path.append( os.path.realpath('../') )
 recogpath = '../recog/recog'
 import recogdb
 
-SPKSIZE = 256
+# Constants
+lowSat = -9.9
+highSat = 9.9
+freq = 50000.
+NChan = 8
+
 
 # Defines (zorder -> used of selecting picker)
 IPIDATABLUE = 100 # The dots will be on top of every other plot
@@ -47,11 +63,9 @@ OPTIONS = 7
 FIGIPI = 1
 FIGSIG = 2
 
-# Constants
-lowSat = -9.8
-highSat = 9.8
-freq = 45454.545454
-NChan = 11
+SPKSIZE = 512
+DEFAULTSUR = int(freq*0.100) # s
+
 
 ###### Auxiliary funcs ####
 
@@ -101,6 +115,10 @@ class PickPoints:
         self.plotObject = plotObject
         self.fig = plotObject.fig
         self.ax = plotObject.ax
+
+        self.sigfig = plotObject.sigfig
+
+        self.dialogIPI = plotObject.dialogIPI
         
         self.ipifilename = ipifilename
 
@@ -119,6 +137,10 @@ class PickPoints:
         self.cidbpress = self.fig.canvas.mpl_connect('button_press_event', self.button_press)
         self.cidmotion = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
         self.cidbrelease = self.fig.canvas.mpl_connect('button_release_event', self.button_release)
+
+        self.cidsigscroll = self.sigfig.canvas.mpl_connect('scroll_event', self.sig_scroll)
+        self.cidsigrelease = self.sigfig.canvas.mpl_connect('button_release_event', self.sig_release)
+        self.cidsigmotion = self.sigfig.canvas.mpl_connect('motion_notify_event', self.sig_on_motion)
 
         self.b = True
         self.r = True
@@ -198,39 +220,44 @@ class PickPoints:
 
             sample = int(round(xdata[ind]*freq))
             key = self.plotObject.offsDic[sample]
-            off, data, spkwin = recogdb.readHeaderEntry(self.plotObject.db,key)
+            ret = recogdb.readHeaderEntry(self.plotObject.db,key)
+            if ret is not None:
+                off, data, spkwin = ret
+            else:
+                off, data, spkwin = None, None, None
 
             if zorder == IPIDATABLUE:
                 color = 'b'
 
                 # Draw a line over the point
-                self.plotObject.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY0[:2],'b-')
+                self.plotObject.pltsvmstrongB = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY0[:2],'b-', lw=1)
 
             elif zorder == IPIDATARED:
                 color = 'r'
 
                 # Draw a line over the point
-                self.plotObject.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY1[:2],'r-')
+                self.plotObject.pltsvmstrongR = self.ax.plot([sample/freq,sample/freq],self.plotObject.SVMY1[:2],'r-', lw=1)
 
-            
-            Parameters = ( data[ recogdb.dicFields['presentFish'] ], \
-                self.plotObject.sec2hms(sample / freq, None), \
-                off, \
-                data[ recogdb.dicFields['direction'] ], \
-                data[ recogdb.dicFields['svm'] ], \
-                data[ recogdb.dicFields['probA'] ], \
-                data[ recogdb.dicFields['probB'] ], \
-                data[ recogdb.dicFields['distA'] ], \
-                data[ recogdb.dicFields['distB'] ], \
-                data[ recogdb.dicFields['distAB'] ], \
-            )
+            if off is not None:
+                Parameters = ( data[ recogdb.dicFields['presentFish'] ], \
+                    self.plotObject.sec2hms(sample / freq, None), \
+                    off, \
+                    data[ recogdb.dicFields['direction'] ], \
+                    data[ recogdb.dicFields['svm'] ], \
+                    data[ recogdb.dicFields['probA'] ], \
+                    data[ recogdb.dicFields['probB'] ], \
+                    data[ recogdb.dicFields['distA'] ], \
+                    data[ recogdb.dicFields['distB'] ], \
+                    data[ recogdb.dicFields['distAB'] ], \
+                )
 
             self.fig.canvas.draw() # To make SVM lines bold
             central = (xdata[ind], color)
             self.plotObject.selectedIPI = central
             self.plotObject.plotSigData()
             if self.options == True:
-                self.plotObject.dialogIPI.fillTextBoxes(Parameters)
+                if off is not None:
+                    self.plotObject.dialogIPI.fillTextBoxes(Parameters)
                 self.plotObject.dialogIPI.exec_()
                 # Switch option to 'off' state
                 self.options = not(self.options)
@@ -243,7 +270,8 @@ class PickPoints:
                     self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
                     
                     # This is for recreating the local singlefish and probs files
-                    self.plotObject.loadDataFromDB()
+                    ##### The following code was only useful when there was SVM pair, so we iterate_from on SVM borders. It is useless now.
+                    """self.plotObject.loadDataFromDB()
                     
                     oldDir = os.getcwd()
                     while len(self.plotObject.dialogIPI.iterate_from) != 0:
@@ -277,9 +305,10 @@ class PickPoints:
                             sys.stdout.flush()
                             assert ret == 0
                         
-                        self.plotObject.db.sync()
-                       
-                    sys.stdout.write('recog export\n') #################
+                        self.plotObject.db.sync()"""
+                     
+                    # I'll integrate the export to the loadDataFromDB  
+                    """sys.stdout.write('recog export\n') #################
                     sys.stdout.flush()
                     #Be sure that is on current directory
                     os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
@@ -294,8 +323,8 @@ class PickPoints:
                     
                     sys.stdout.write(os.path.abspath(oldDir)+'\n')
                     sys.stdout.flush()
-                    os.chdir( os.path.abspath(oldDir) )
- 
+                    os.chdir( os.path.abspath(oldDir) )"""
+
                     self.plotObject.loadDataFromDB()
                     self.plotObject.formatSVM2Plot()
                     self.plotObject.formatModified2Plot()
@@ -384,7 +413,17 @@ class PickPoints:
         self.initialPos = (event.xdata, event.ydata)
         PickPoints.lock = self
 
+    def sig_on_motion(self,event):
+        if event.xdata is not None:
+            X = self.plotObject.sec2hms(event.xdata, None)
+            Y = self.plotObject.sec2msus(event.ydata, None)
+            self.plotObject.statusBar().showMessage("<Cursor> Time: %s\t-\tVoltage: %s"%(X, Y))
+
     def on_motion(self, event):
+        if event.xdata is not None:
+            X = self.plotObject.sec2hms(event.xdata, None)
+            Y = event.ydata
+            self.plotObject.statusBar().showMessage("<Cursor> Time: %s\t-\tIPI: %s"%(X, Y))
         if PickPoints.lock is not self:
             return
         cur_xlim = self.ax.get_xlim()
@@ -401,7 +440,64 @@ class PickPoints:
         self.ax.set_ylim([ cur_ylim[0] - ydisplacement,
             cur_ylim[1] - ydisplacement ])
 
-        self.fig.canvas.draw()
+        self.fig.canvas.draw_idle()
+
+    def sig_scroll(self,event):
+        xm, xM = self.plotObject.sigaxes[0].get_xlim()
+        xmean = (xm+xM)/2.
+        xran = max(abs(xmean-xm), abs(xmean-xM))
+        xran = max(0.001, abs((-0.005*event.step) + xran))
+        xm = xmean-xran
+        xM = xmean+xran
+        # All sigaxes share the X axis
+        self.plotObject.sigaxes[0].set_xlim( (xm, xM) )
+        self.sigfig.canvas.draw_idle()
+
+    def sig_release(self,event):
+        if event.xdata is None:
+            return
+        if event.button == 1:
+            while len(self.plotObject.auxLines) != 0:
+                self.plotObject.auxLines.pop().remove()
+            for i in xrange(NChan):
+                ax = self.plotObject.sigaxes[i]
+                self.plotObject.auxLines.append(ax.axvline(event.xdata, color='k', lw=2, alpha=0.4))
+            self.sigfig.canvas.draw_idle()
+        elif event.button == 3:
+            key = int(event.xdata*freq)
+
+            dialog = QtWidgets.QMessageBox()
+            dialog.setModal(True)
+            dialog.setWindowTitle('Insert EOD')
+            dialog.setText('Insert EOD from fish:')
+            dialog.addButton(QtWidgets.QPushButton('A (Blue)'), QtWidgets.QMessageBox.YesRole) #0
+            dialog.addButton(QtWidgets.QPushButton('B (Red)'), QtWidgets.QMessageBox.NoRole) #1
+            dialog.addButton(QtWidgets.QMessageBox.Cancel)
+            
+            ret = dialog.exec_()
+
+            if ret == QtWidgets.QMessageBox.Cancel:
+                return
+            elif ret == 0: # Fish A
+                self.dialogIPI.modify.insertIPI(key, 1, winSize=SPKSIZE)
+
+                self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+                self.plotObject.loadDataFromDB()
+                self.plotObject.formatSVM2Plot()
+                self.plotObject.formatModified2Plot()
+                
+                self.plotObject.replotData()
+                self.plotObject.app.restoreOverrideCursor()
+            elif ret == 1: # Fish B
+                self.dialogIPI.modify.insertIPI(key, 2, winSize=SPKSIZE)
+
+                self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+                self.plotObject.loadDataFromDB()
+                self.plotObject.formatSVM2Plot()
+                self.plotObject.formatModified2Plot()
+                
+                self.plotObject.replotData()
+                self.plotObject.app.restoreOverrideCursor()
 
     def button_release(self, event):
         if event.button != 3:
@@ -495,13 +591,14 @@ class PickPoints:
 
 
 
-class PlotData(QtGui.QDialog):
+class PlotData(QtWidgets.QMainWindow):
     DPI = 80
 
-    def __init__(self, app, dbf, spikesf, datafile, undoFilename, folder, saturation, winSize, stepSize, parent=None):
+    def __init__(self, app, dbf, spikesf, datafile, undoFilename, folder, ipifilename, saturation, winSize, stepSize, parent=None):
         self.app = app
         
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QMainWindow.__init__(self)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setFocusPolicy( QtCore.Qt.ClickFocus )
         self.setFocus()
         
@@ -522,6 +619,7 @@ class PlotData(QtGui.QDialog):
         self.scatterFlag = True
 
         self.spikesname = spikesf.name
+        self.ipifilename = ipifilename
 
         self.undoFilename = undoFilename
 
@@ -546,20 +644,29 @@ class PlotData(QtGui.QDialog):
         self.formatterX = FuncFormatter(self.sec2hms)
         self.formatterY = FuncFormatter(self.sec2msus)
 
-        self.plotData(0, self.winSize, plotSVM=True) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
+        self.plotData(0, self.winSize, plotSVM=False) # Creates self.fig and self.ui.graphIPI.canvas.ax.attributes
         self.createSigFig() # Creates self.sigfig, self.ui.graphwave.canvas.sigaxes attributes
 
         self.datafile = datafile
         self.TS = self.TS
         
         self.dialogIPI = IPIWindow(self.db, undoFilename, folder, self.datafile, self.spikesname)
+
+        self.statusBar().showMessage("")
+
+        self.selectedIPI = None
         
-    def __exit__(self):
+    def closeEvent(self, event):
         self.db.close()
+        print('')
+        super(QtWidgets.QMainWindow, self).closeEvent(event)
         
     def loadDataFromDB(self):
         self.offsDic = {}
         self.correctedPosDic = {}
+
+        P = []
+        I = []
         
         P1 = []
         Modified1 = []
@@ -602,6 +709,9 @@ class PlotData(QtGui.QDialog):
             if presentFish == 1:
                 Tam1 += 1
                 P1.append(correctedPosA)
+                P.append(correctedPosA)
+                I.append(1)
+                
                 direction1.append(direction)
                 probs1.append( (probA, probB) )
                 dists1.append( (distA, distB, distAB) )
@@ -614,6 +724,9 @@ class PlotData(QtGui.QDialog):
             elif presentFish == 2:
                 Tam2 += 1
                 P2.append(correctedPosB)
+                P.append(correctedPosB)
+                I.append(-1)
+
                 direction2.append(direction)
                 probs2.append( (probA, probB) )
                 dists2.append( (distA, distB, distAB) )
@@ -626,6 +739,9 @@ class PlotData(QtGui.QDialog):
             else:
                 Tam1 += 1
                 P1.append(correctedPosA)
+                P.append(correctedPosA)
+                I.append(1)
+
                 direction1.append(direction)
                 probs1.append( (probA, probB) )
                 dists1.append( (distA, distB, distAB) )
@@ -633,6 +749,9 @@ class PlotData(QtGui.QDialog):
                 
                 Tam2 += 1
                 P2.append(correctedPosB)
+                P.append(correctedPosB)
+                I.append(-1)
+
                 direction2.append(direction)
                 probs2.append( (probA,probB) )
                 dists2.append( (distA, distB, distAB) )
@@ -641,6 +760,15 @@ class PlotData(QtGui.QDialog):
                 if (svm == 'm') or (svm == 'v'):
                     Modified1.append(correctedPosA)
                     Modified2.append(correctedPosB)
+
+        S = [i[0] for i in sorted(enumerate(P), key=lambda x:x[1])]
+        P = itemgetter(*S)(P)
+        I = itemgetter(*S)(I)
+        ipifile = open(self.ipifilename,'w')
+        for i in range(len(P)):
+            ipifile.write('%d %d\n'%(I[i],P[i]))
+        ipifile.flush()
+        ipifile.close()
         
         self.TS = ( np.sort(np.array(P1))/freq, np.sort(np.array(P2))/freq )
         self.Modified = ( np.sort(np.array(Modified1))/freq, np.sort(np.array(Modified2))/freq )
@@ -708,7 +836,7 @@ class PlotData(QtGui.QDialog):
         
         self.plotData(Xlimits[0],Xlimits[1], plotSVM=True)
         self.ax.set_ylim(Ylimits)
-        self.fig.canvas.draw()
+        self.fig.canvas.draw_idle()
         
         
 
@@ -724,31 +852,40 @@ class PlotData(QtGui.QDialog):
             self.sigaxes[i].xaxis.set_major_locator(plt.LinearLocator(numticks=5))
             self.sigaxes[i].yaxis.set_major_locator(plt.LinearLocator(numticks=3))
             self.sigaxes[i].grid()
-            self.sigaxes[i].plot( [], [], 'k-')
+            self.sigaxes[i].plot( [], [], 'k-', lw=1)
         for ax in self.sigaxes[:-NColumns]:
             plt.setp(ax.get_xticklabels(), visible=False)
             plt.setp(ax.xaxis.get_offset_text(), visible=False)
 
         self.lines = []
+        self.auxLines = []
 
-    def plotSigData(self, spksurroudings=25*SPKSIZE):
+    def plotSigData(self, spksurroudings=DEFAULTSUR):
+        if self.selectedIPI == None:
+            return
         while len(self.lines) != 0:
             self.lines.pop().remove()
+        while len(self.auxLines) != 0:
+            self.auxLines.pop().remove()
+
+        loadsurr = 10*spksurroudings
          
         centralts, color = self.selectedIPI
         nextP1 = next(n for n,spk in enumerate(self.TS[0]) if spk >= centralts)
-        surrP1 = self.TS[0][nextP1-10:nextP1+10]
+        surrP1 = self.TS[0][nextP1-25:nextP1+25]
 
         nextP2 = next(n for n,spk in enumerate(self.TS[1]) if spk >= centralts)
-        surrP2 = self.TS[1][nextP2-10:nextP2+10]
+        surrP2 = self.TS[1][nextP2-25:nextP2+25]
 
-        samples = int(round(centralts * freq)) - spksurroudings/2 # The timestamp is on the zero crossing
+        samples = int(round(centralts * freq)) - loadsurr/2 # The timestamp is on the zero crossing
         f = self.datafile
         f.seek(int(round(samples*NChan*4)))
-        data = np.frombuffer(f.read(4*spksurroudings*NChan), dtype=np.float32)
+        data = np.frombuffer(f.read(4*loadsurr*NChan), dtype=np.float32)
         nsamples = data.size // NChan
 
         t = np.arange(samples, samples+nsamples) / freq
+        tmin = centralts - (spksurroudings/freq)
+        tmax = centralts + (spksurroudings/freq)
 
         ymax = max(data)
         ymin = min(data)
@@ -757,15 +894,16 @@ class PlotData(QtGui.QDialog):
             ax = self.sigaxes[i]
             ax.get_lines()[0].set_xdata(t)
             ax.get_lines()[0].set_ydata(data[i::NChan])
-            ax.set_xlim( (t[0],t[-1]) )
-            ax.set_ylim( (-ylim, ylim) )
+            ax.set_ylim( (data[i::NChan].min(), data[i::NChan].max()) ) # Auto scale
+            ax.set_xlim( (tmin,tmax) )
+            #ax.set_ylim( (-ylim, ylim) )# Remove auto scale
             for ts in surrP1:
                 self.lines.append(ax.axvline(ts, color='b',lw=2,alpha=0.4, picker=4))
             for ts in surrP2:
                 self.lines.append(ax.axvline(ts, color='r',lw=2,alpha=0.4, picker=4))
             self.lines.append(ax.axvline(centralts,color=color,lw=2,alpha=1))
         
-        self.sigfig.canvas.draw()
+        self.sigfig.canvas.draw_idle()
     
     def removeWaveplots(self):
         while len(self.lines) != 0:
@@ -841,7 +979,7 @@ class PlotData(QtGui.QDialog):
         except:
             pass
 
-    def plotData(self, minX, maxX, plotSVM = False):
+    def plotData(self, minX, maxX, plotSVM = True):
 
         L = maxX - minX
         MIN = minX
@@ -898,16 +1036,13 @@ class PlotData(QtGui.QDialog):
                 pass
             
             # Plot SVM Lines
-            self.SVMplotB = self.ax.plot(self.SVM2Plot[0], self.SVMY0, 'b-.', alpha=0.3, lw=2)
-            self.SVMplotR = self.ax.plot(self.SVM2Plot[1], self.SVMY1, 'r-.', alpha=0.3, lw=2)
+            #self.SVMplotB = self.ax.plot(self.SVM2Plot[0], self.SVMY0, 'b-.', alpha=0.3, lw=2)
+            #self.SVMplotR = self.ax.plot(self.SVM2Plot[1], self.SVMY1, 'r-.', alpha=0.3, lw=2)
             
             # Plot Modified Lines
             self.ModifiedplotB = self.ax.plot(self.Modified2Plot0, self.ModifiedY0, 'c--', alpha=0.3, lw=2)
             self.ModifiedplotR = self.ax.plot(self.Modified2Plot1, self.ModifiedY1, 'm--', alpha=0.3, lw=2)
 
-            # Lines and dots are plotter separately for picker act only on dots
-            self.IPIplotR = self.ax.plot(self.TS[1][1:], np.diff(self.TS[1]), 'r-')
-            self.IPIplotB = self.ax.plot(self.TS[0][1:], np.diff(self.TS[0]), 'b-')
             
         try:
             self.scatter1d.remove()
@@ -976,6 +1111,10 @@ class PlotData(QtGui.QDialog):
         else:
             self.isScatter = False
 
+            # Lines and dots are plotter separately for picker act only on dots
+            self.IPIplotR = self.ax.plot(self.TS[1][1:], np.diff(self.TS[1]), 'r-', lw=1)
+            self.IPIplotB = self.ax.plot(self.TS[0][1:], np.diff(self.TS[0]), 'b-', lw=1)
+
             self.plot1 = self.ax.plot(self.TS[0][minIdxX1:maxIdxX1][1:], np.diff(self.TS[0][minIdxX1:maxIdxX1]), 'b.', mew=2, picker=5, zorder=IPIDATABLUE)
             self.plot2 = self.ax.plot(self.TS[1][minIdxX2:maxIdxX2][1:], np.diff(self.TS[1][minIdxX2:maxIdxX2]), 'r.', mew=2, picker=5, zorder=IPIDATARED)
 
@@ -1014,8 +1153,8 @@ if __name__ == '__main__':
     parser.add_argument('spikes_file', type=argparse.FileType('r'+openmode), help='Location of the file generated by the spikes tool')
     parser.add_argument('ipi_file', type=str, help='Location of the file with the timestamps, in the case of the DB is modified')
     parser.add_argument('--saturation', type=str, help='low,high saturation level')
-    parser.add_argument('--stepSize', type=float, default=90., help='Step size for moving on the IPI time series. Default = 90s')
-    parser.add_argument('--winSize', type=float, default=120., help='Window size for plotting the IPI time series. Default = 120s')
+    parser.add_argument('--stepSize', type=float, default=60., help='Step size for moving on the IPI time series. Default = 90s')
+    parser.add_argument('--winSize', type=float, default=90., help='Window size for plotting the IPI time series. Default = 120s')
 
     args = parser.parse_args()
     dbf = args.db_file
@@ -1058,11 +1197,11 @@ if __name__ == '__main__':
     undoFilename = '/tmp/teste.undo'
     open(undoFilename,'a').close()
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
     sys.stdout.write(datafilename)
     sys.stdout.flush()
-    myapp = PlotData(app, dbf, spikesf, datafile, undoFilename, datafilename, (lowsaturation, highsaturation), winSize, stepSize)
+    myapp = PlotData(app, dbf, spikesf, datafile, undoFilename, datafilename, ipifilename, (lowsaturation, highsaturation), winSize, stepSize)
 
     Pick = PickPoints(myapp, ipifilename)
 

@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from single2overlapInterface import *
 
 import sys, os, inspect
@@ -19,20 +19,20 @@ except AttributeError:
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
     def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+        return QtWidgets.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
     def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+        return QtWidgets.QApplication.translate(context, text, disambig)
     
-spkSize = 256
-freq = 45454.54545454
+spkSize = 512
+freq = 50000.
 saturationLow = -10
 saturationHigh = 10
     
-class single2overlap(QtGui.QDialog):
+class single2overlap(QtWidgets.QDialog):
     
     def __init__(self, db, NChan, datafile):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self.uiObject = Ui_single2overlap()
         self.uiObject.setupUi(self)
         
@@ -50,9 +50,9 @@ class single2overlap(QtGui.QDialog):
         self.uiObject.channelSelector.setMaximum(NChan-1)
         self.uiObject.channelNumber.setText(_translate("single2overlap", str(self.curChan), None))
         
-        QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.cancel)
-        QtCore.QObject.connect(self.uiObject.okButton, QtCore.SIGNAL('clicked()'), self.okClick)
-        QtCore.QObject.connect(self.uiObject.channelSelector, QtCore.SIGNAL('valueChanged(int)'), self.movingChannels)
+        self.uiObject.cancelButton.clicked.connect(self.cancel)
+        self.uiObject.okButton.clicked.connect(self.okClick)
+        self.uiObject.channelSelector.valueChanged.connect(self.movingChannels)
 
         self.NChan = NChan
         self.replot = False
@@ -108,27 +108,30 @@ class single2overlap(QtGui.QDialog):
             self.close()
     
     def spikeClick(self,event):
-        pos = 1000*np.round((event.xdata/1000.)*freq) / freq
-        self.drawSpikePos(pos)
-    
-    def spikeMove(self,event):
-        if event.button == 1:
+        if event.xdata is not None:
             pos = 1000*np.round((event.xdata/1000.)*freq) / freq
             self.drawSpikePos(pos)
     
+    def spikeMove(self,event):
+        if event.button == 1:
+            if event.xdata is not None:
+                pos = 1000*np.round((event.xdata/1000.)*freq) / freq
+                self.drawSpikePos(pos)
+    
     def spikeRelease(self,event):
-        pos = 1000*np.round((event.xdata/1000.)*freq) / freq
-        self.drawSpikePos(pos)
-        if self.uiObject.fishAButton.isChecked() == True:
-            # correctedPos -> position in SAMPLES from the beginning of the file
-            correctedPos = pos*freq/1000. + self.off_now
-            self.posA = int(np.round(correctedPos))
-            self.uiObject.fishBButton.setChecked(True)
-        elif self.uiObject.fishBButton.isChecked() == True:
-            # correctedPos -> position in SAMPLES from the beginning of the file
-            correctedPos = pos*freq/1000. + self.off_now
-            self.posB = int(np.round(correctedPos))
-            self.uiObject.fishAButton.setChecked(True)
+        if event.xdata is not None:
+            pos = 1000*np.round((event.xdata/1000.)*freq) / freq
+            self.drawSpikePos(pos)
+            if self.uiObject.fishAButton.isChecked() == True:
+                # correctedPos -> position in SAMPLES from the beginning of the file
+                correctedPos = pos*freq/1000. + self.off_now
+                self.posA = int(np.round(correctedPos))
+                self.uiObject.fishBButton.setChecked(True)
+            elif self.uiObject.fishBButton.isChecked() == True:
+                # correctedPos -> position in SAMPLES from the beginning of the file
+                correctedPos = pos*freq/1000. + self.off_now
+                self.posB = int(np.round(correctedPos))
+                self.uiObject.fishAButton.setChecked(True)
         
     
     def drawSpikePos(self, pos):

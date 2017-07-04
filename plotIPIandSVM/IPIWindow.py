@@ -1,4 +1,4 @@
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from IPIClick_interface import *
 from single2overlap import single2overlap
 from windowfile import winFile
@@ -24,14 +24,14 @@ except AttributeError:
         return s
 
 try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
+    _encoding = QtWidgets.QApplication.UnicodeUTF8
     def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+        return QtWidgets.QApplication.translate(context, text, disambig, _encoding)
 except AttributeError:
     def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+        return QtWidgets.QApplication.translate(context, text, disambig)
 
-NChan = 11
+NChan = 8
 
 INVERTION = 0
 SINGLE2OVERLAP = 1
@@ -43,6 +43,7 @@ SVMINVERTION = 6
 SVMREMOVE = 7
 RECOGFUTURE = 8
 RECOGPAST = 9
+DELETION = 10
 
 dicUndo = {INVERTION: 'Continuity invertion',
            SINGLE2OVERLAP: 'Single spike converted to overlap',
@@ -54,6 +55,7 @@ dicUndo = {INVERTION: 'Continuity invertion',
            SVMREMOVE: 'SVM removed', 
            RECOGFUTURE: 'Continuity enforced from this SVM to the future', 
            RECOGPAST: 'Continuity enforced from this SVM to the past', 
+           DELETION: 'Remove spike from DB (IT WILL NOT BE POSSIBLE TO UNDO THIS OPERATION!', 
 }
 
 dicFields = {'presentFish': 'int',
@@ -75,6 +77,8 @@ class ModifySelector:
         self.db = db
         self.undoFilename = undoFilename
         self.folder = folder
+
+        self.datafile = datafile
         
         self.single2overlapWindow = single2overlap(db, NChan, datafile)
         self.spikesName = spikesName
@@ -160,6 +164,33 @@ class ModifySelector:
         if os.stat(keyundofile.name).st_size == 0:
             os.remove(keyundofile.name)
 
+    def insertIPI(self, key, presentFish, winSize=256):
+
+        databeg = key - (winSize // 2)   
+        self.datafile.seek(4*databeg*NChan)
+        data = np.frombuffer(self.datafile.read(4*winSize*NChan), dtype=np.float32)
+
+        sigs = [data[i::NChan] for i in range(NChan)]
+
+        if presentFish == 1:
+            recogdb.writeEntry(self.db, key, presentFish, 1, \
+                            0, 1<<30, 1<<30, \
+                            0, \
+                            key, -1, \
+                            'm', -1, \
+                            1.0, 0.0, \
+                            sigs)
+        elif presentFish == 2:
+            recogdb.writeEntry(self.db, key, presentFish, 1, \
+                            1<<30, 0, 1<<30, \
+                            0, \
+                            -1, key, \
+                            'm', -1, \
+                            0.0, 1.0, \
+                            sigs)
+        else:
+            print('Please insert single fish and then edit later')
+
     def invertIPI(self, key):
         if key not in self.undoKeys:
             undoFile = open(self.undoFilename, 'a')
@@ -240,6 +271,67 @@ class ModifySelector:
         
         keyundofile.close()
     
+    def delete(self, key):
+        if key not in self.undoKeys:
+            undoFile = open(self.undoFilename, 'a')
+            undoFile.write('%d\n'%key)
+            undoFile.flush()
+            undoFile.close()
+        
+        keyundofile = open(self.folder + '/' + str(key) + '.undo', 'a')
+        
+        off, read_data, spkdata = recogdb.readHeaderEntry(self.db, key)
+        
+        # Store old SVM data on DB (it will change to 'm' - Manually)
+        oldSVM = read_data[ recogdb.dicFields['svm'] ]
+
+        # Store old direction data
+        oldDirection = read_data[ recogdb.dicFields['direction'] ]
+
+        # Store old flags data
+        oldFlags = read_data[ recogdb.dicFields['flags'] ]
+
+        # Store probs and pairSVM data
+        oldPairSVM = read_data[ recogdb.dicFields['pairsvm'] ]
+        oldProbA = read_data[ recogdb.dicFields['probA'] ]
+        oldProbB = read_data[ recogdb.dicFields['probB'] ]
+        
+        # Store old 'presentFish' data
+        oldFish = read_data[ recogdb.dicFields['presentFish'] ]
+        
+        # Store old correctedPos data - The fields must be inverted
+        oldCorrectedPosA = read_data[ recogdb.dicFields['correctedPosA'] ]
+        oldCorrectedPosB = read_data[ recogdb.dicFields['correctedPosB'] ]
+        
+        # Store the old dists fields - They are put to a minimum acording the the fish
+        # So the continuity will no overwrite them
+        oldDistA = read_data[ recogdb.dicFields['distA'] ]
+        oldDistB = read_data[ recogdb.dicFields['distB'] ]
+        oldDistAB = read_data[ recogdb.dicFields['distAB'] ]
+        
+        # Update DB
+        recogdb.delete(self.db, off)
+        
+        # Action identifier
+        hashUndo = random.randint(0, 2**64-1)
+        keyundofile.write( '%s\t%d\n'%(dicUndo[DELETION], hashUndo) )
+        
+        # Modified fields
+        keyundofile.write( '\t%s\t%c\t%c\n'%('svm', oldSVM, '0') )
+        keyundofile.write( '\t%s\t%d\t%d\n'%('presentFish', oldFish, -1) )
+        keyundofile.write( '\t%s\t%d\t%d\n'%('direction', oldDirection, -1) )
+        keyundofile.write( '\t%s\t%d\t%d\n'%('correctedPosA', oldCorrectedPosA, -1) )
+        keyundofile.write( '\t%s\t%d\t%d\n'%('correctedPosB', oldCorrectedPosB, -1) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distA', oldDistA, -1) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distB', oldDistB, -1) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('distAB', oldDistAB, -1) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('flags', oldFlags, -1) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('pairsvm', oldPairSVM, -1) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('probA', oldProbA, -1) )
+        keyundofile.write( '\t%s\t%f\t%f\n'%('probB', oldProbB, -1) )
+        
+        keyundofile.close()
+
     def convert2overlap(self,key):
         prevB, data_pB = recogdb.getNearest(self.db, -1, key, 1, overlap=True)
         prevR, data_pR = recogdb.getNearest(self.db, -1, key, 2, overlap=True)
@@ -351,28 +443,28 @@ class ModifySelector:
         svmP = dataP[ recogdb.dicFields['svm'] ]
         Prev = (fishP != 3) and (svmP != 's') # False if overlap or svm
         
-        msgbox = QtGui.QMessageBox()
+        msgbox = QtWidgets.QMessageBox()
         msgbox.setText('Create SVM with the next or with the previous? (Only non-SVM single spikes can be used)')
 
         returnValues = []
         
         if Prev == True:
-            msgbox.addButton(QtGui.QPushButton('Previous'), QtGui.QMessageBox.NoRole)
+            msgbox.addButton(QtWidgets.QPushButton('Previous'), QtWidgets.QMessageBox.NoRole)
             returnValues.append(offP)
         else:
-            msgbox.addButton(QtGui.QMessageBox.NoButton)
+            msgbox.addButton(QtWidgets.QMessageBox.NoButton)
             
-        msgbox.addButton(QtGui.QMessageBox.Cancel)
+        msgbox.addButton(QtWidgets.QMessageBox.Cancel)
         
         if Next == True:
-            msgbox.addButton(QtGui.QPushButton('Next'), QtGui.QMessageBox.YesRole)
+            msgbox.addButton(QtWidgets.QPushButton('Next'), QtWidgets.QMessageBox.YesRole)
             returnValues.append(offN)
         else:
-            msgbox.addButton(QtGui.QMessageBox.NoButton)
+            msgbox.addButton(QtWidgets.QMessageBox.NoButton)
             
         ret = msgbox.exec_()
         
-        if ret == QtGui.QMessageBox.Cancel:
+        if ret == QtWidgets.QMessageBox.Cancel:
             self.replot = False
             return None
         
@@ -953,13 +1045,13 @@ class ModifySelector:
         return (action, offP, offN, pair_svm, hashUndo)
 
 
-class IPIWindow(QtGui.QDialog):
+class IPIWindow(QtWidgets.QDialog):
     RButSize = 30
     RUndoLabelSize = 100
     RUndoStep = 140
 
     def __init__(self, db, undoFilename, folder, datafile, spikesName):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
         
@@ -967,9 +1059,9 @@ class IPIWindow(QtGui.QDialog):
         
         self.modify = ModifySelector(db, undoFilename, folder, datafile, spikesName)
 
-        QtCore.QObject.connect(self.uiObject.okButton, QtCore.SIGNAL('clicked()'), self.okClicked)
-        QtCore.QObject.connect(self.uiObject.cancelButton, QtCore.SIGNAL('clicked()'), self.close)
-        QtCore.QObject.connect(self.uiObject.undoButton, QtCore.SIGNAL('clicked()'), self.undoClicked)
+        self.uiObject.okButton.clicked.connect(self.okClicked)
+        self.uiObject.cancelButton.clicked.connect(self.close)
+        self.uiObject.undoButton.clicked.connect(self.undoClicked)
         
         self.replot=False
         self.iterate_from = []
@@ -1004,6 +1096,12 @@ class IPIWindow(QtGui.QDialog):
                 if self.modify.single2overlapWindow.replot == True:
                     self.replot = True
                     self.modify.single2overlapWindow.replot = False
+                self.show()
+            # Deletion
+            elif option == 2:
+                self.hide()
+                self.modify.delete(self.off)
+                self.replot = True
                 self.show()
             # Create SVM Pair
             '''elif option == 2:
@@ -1059,8 +1157,15 @@ class IPIWindow(QtGui.QDialog):
                     self.replot = True
                     self.modify.single2overlapWindow.replot = False
                 self.show()
+            # Delete spike
+            elif option == 3:
+                self.hide()
+                self.modify.delete(self.off)
+                self.replot = True
+                self.show()
+                
             
-        elif self.windowType == 'svm':
+        '''elif self.windowType == 'svm':
             # Invert SVM
             if option == 0:
                 self.modify.invertSVM(self.off)
@@ -1148,7 +1253,7 @@ class IPIWindow(QtGui.QDialog):
                 keyundofile2.write( '%s\t%d\n'%(action[ret], hashUndo) )
                 
                 keyundofile1.close()
-                keyundofile2.close()
+                keyundofile2.close()'''
                 
         
         self.close()
@@ -1218,7 +1323,7 @@ class IPIWindow(QtGui.QDialog):
         self.close()
     
     def createMainOptions(self,text):
-        self.uiObject.mainOptionsBox = QtGui.QGroupBox(self.uiObject.gridLayoutWidget)
+        self.uiObject.mainOptionsBox = QtWidgets.QGroupBox(self.uiObject.gridLayoutWidget)
         self.uiObject.mainOptionsBox.setObjectName(_fromUtf8("MainOptionsBox"))
         self.uiObject.mainOptionsLayout.addWidget(self.uiObject.mainOptionsBox, 0, 0, 1, 1)
         self.uiObject.mainOptionsBox.deleteLater()
@@ -1242,13 +1347,13 @@ class IPIWindow(QtGui.QDialog):
         self.undoOptions = []
         i = 0
         for action, dicActions, hashUndo in modList:
-            RadioBut =  QtGui.QRadioButton(self.uiObject.scrollAreaWidgetContents)
+            RadioBut =  QtWidgets.QRadioButton(self.uiObject.scrollAreaWidgetContents)
             RadioBut.setObjectName(_fromUtf8('undo' + str(i)))
             RadioBut.setMinimumHeight(self.RButSize)
             self.uiObject.verticalLayout.addWidget(RadioBut)
             RadioBut.deleteLater()
             
-            Label = QtGui.QLabel(self.uiObject.scrollAreaWidgetContents)
+            Label = QtWidgets.QLabel(self.uiObject.scrollAreaWidgetContents)
             Label.setObjectName(_fromUtf8('undolabel' + str(i)))
             Label.setMinimumHeight(self.RUndoLabelSize)
             self.uiObject.verticalLayout.addWidget(Label)
@@ -1285,13 +1390,14 @@ class IPIWindow(QtGui.QDialog):
             self.windowType = 'continuity'
             self.setMainText('Continuity spike selected')
 
-            for i in xrange(2):
-                self.options.append( QtGui.QRadioButton(self.uiObject.mainOptionsBox) )
+            for i in xrange(3):
+                self.options.append( QtWidgets.QRadioButton(self.uiObject.mainOptionsBox) )
                 self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
                 self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
             self.setOpt(0, 'Invert fish classification')
             self.setOpt(1, 'Convert to overlapping spike')
+            self.setOpt(2, 'Delete spike')
             #self.setOpt(2, 'Create SVM Pair')
 
         # Overlapping spike
@@ -1299,14 +1405,15 @@ class IPIWindow(QtGui.QDialog):
             self.windowType = 'overlap'
             self.setMainText('Overlapping spikes selected')
 
-            for i in xrange(3):
-                self.options.append( QtGui.QRadioButton(self.uiObject.mainOptionsBox) )
+            for i in xrange(4):
+                self.options.append( QtWidgets.QRadioButton(self.uiObject.mainOptionsBox) )
                 self.options[-1].setGeometry(QtCore.QRect(0, self.RButSize*(1+i), 300, self.RButSize))
                 self.options[-1].setObjectName(_fromUtf8('opt' + str(i)))
 
             self.setOpt(0, 'Convert to single A spike')
             self.setOpt(1, 'Convert to single B spike')
             self.setOpt(2, 'Change spike positioning')
+            self.setOpt(3, 'Delete spike')
 
         '''# SVM spike
         else:
