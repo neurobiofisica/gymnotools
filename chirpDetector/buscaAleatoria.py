@@ -7,8 +7,8 @@ if sys.version_info.major == 3:
     xrange = range
     raw_input = input
 
-nChan = 11
-freq = 45454.545454
+nChan = 8
+freq = 50000.
 winSize = int(freq * 0.5) # 0.5s
 A = np.memmap(sys.argv[1], dtype='float32')
 
@@ -31,7 +31,7 @@ if os.path.isfile('without_chirps.txt') == True:
         print('Appending to end of file')
         nonchirpsFile = open('without_chirps.txt', 'a')
 else:
-    chirpsFile = open('without_chirps.txt', 'w')
+    nonchirpsFile = open('without_chirps.txt', 'w')
 
 class getWindow(object):
     def __init__(self):

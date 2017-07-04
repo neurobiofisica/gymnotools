@@ -5,9 +5,9 @@ from matplotlib.widgets import Button
 
 chirps = np.load('chirps.npy')
 
-A = np.memmap('15o03000_1decimo.abf.memampf32', dtype='float32')
-nChan = 11
-freq = 45454.545454
+A = np.memmap(sys.argv[1], dtype='float32')
+nChan = 8
+freq = 50000.
 winSize = int(freq * 0.5)
 
 ch = []

@@ -85,7 +85,9 @@ if crossValidate == True:
     scores = np.zeros( (Nshuffles, nfolds) )
     idxs = np.arange(0, Ndata, 1)
 
+    print('\nCross validate:')
     for shf in range(Nshuffles):
+        print('\t%d'%shf)
 
         # Shuffling
         np.random.shuffle(idxs)
@@ -99,12 +101,13 @@ if crossValidate == True:
                                                                 cv=nfolds)
 
     # Printing average scores
+    print('\nAverage scores:')
     print(scores)
     print(scores.mean())
 
 # Running random a forest
 clf_rf = ensemble.RandomForestClassifier(n_estimators=200).fit(Features,Classes)
 if scoreVerbosity == True:
-    print ("RandomForest score: %4.3f" % clf_rf.score(Xtest,Ytest) )
+    print ("\nRandomForest score: %4.3f" % clf_rf.score(Xtest,Ytest) )
 
 pickle.dump( clf_rf, open("RandonForestChirpModel_abs__tmp.pickle", 'wb'), protocol=2)

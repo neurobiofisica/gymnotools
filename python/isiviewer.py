@@ -5,9 +5,9 @@ import numpy as np
 import struct, re, sys, os
 import cPickle as pickle
 
-samplingrate = 45454.54545454
-spksamples = 256
-nchannels = 11
+samplingrate = 50000.
+spksamples = 512
+nchannels = 8
 maxamp = 9
 
 def spikerange(recog, i, start, end):
