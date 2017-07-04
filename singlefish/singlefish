@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+from __future__ import division
 import sys
 import svm
 import pickle
@@ -9,7 +10,10 @@ import windowfile
 import numpy as np
 import argparse
 
-freq = 45454.545454
+
+nChan = 8
+winSize = 512
+freq = 50000.
 numFeatures = 20
 
 class MyParser(argparse.ArgumentParser):
@@ -33,7 +37,7 @@ parser.add_argument('-z', '--saturation', type=str, help='low,high saturation le
 parser.add_argument('-w', '--minwins', type=int, default=1, help='Minimum windows needed to analyze with SVM')
 parser.add_argument('-p', '--minprob', type=float, default=0.80, help='Minimum SVM probability to consider as single-fish')
 parser.add_argument('-d', '--maxdist', type=float, help='Maximum distance (in seconds) to the next or previous spike')
-parser.add_argument('-s', '--maxsize', type=int, default=0.00354, help='Maximum size (in seconds) of a single-fish spike window')
+parser.add_argument('-s', '--maxsize', type=int, default=0.005, help='Maximum size (in seconds) of a single-fish spike window')
 
 args = parser.parse_args()
 
@@ -52,9 +56,7 @@ minprob = args.minprob
 minOverlapChan = 5
 
 
-nChan = 11
-winSize = 256
-numFeatures = winSize/2+9*winSize
+numFeatures = int((winSize/2) + winSize*(1 + np.log2(winSize)))
 bytesPerSample = nChan * 4
 
 def readScaleFile(scaleFile):
@@ -63,8 +65,8 @@ def readScaleFile(scaleFile):
 
     f = scaleFile.read()
     t = len(f)
-    minval = np.fromstring(f[:t/2], dtype=np.float32)
-    maxval = np.fromstring(f[t/2:], dtype=np.float32)
+    minval = np.fromstring(f[:t//2], dtype=np.float32)
+    maxval = np.fromstring(f[t//2:], dtype=np.float32)
 
     return minval, maxval
 
@@ -77,6 +79,7 @@ def applyFilter(featureData, selectedFeatures):
 inI32 = np.memmap(args.timeseries_file, mode='r', dtype=np.float32)
 inSpkFile = args.spikes_file.name
 
+print(inSpkFile)
 inSpk = windowfile.readwinsExAllCh(open(inSpkFile, 'r'))
 offs = np.array(list( windowfile.readwinsEx2(open(inSpkFile, 'r')) ))
 
