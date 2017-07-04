@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import pymp
 import numpy as np
 import recogdb
 import struct
@@ -10,14 +11,19 @@ import argparse
 
 from windowfile import winFile
 
+NChan = 8
+freq = 50000.
+
+jump = False
+startOn = int(40*freq)
+onDirection = 1
+
 if sys.version_info.major == 3:
     xrange = range
     mode = 'b'
 else:
     mode = ''
 
-NChan = 11
-freq = 45454.545454
 overlapRange = int(0.003*freq)
 
 class MyParser(argparse.ArgumentParser):
@@ -71,7 +77,11 @@ class recog:
             recogdb.writeEntry(self.db, self.off, 1, 0, 0, 1<<30, 1<<30, 0, self.off+self.center, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
         else:
             sys.stdout.write('SVM already in DB\n')
-        self.tsoutput.write('1 %d\n'%(self.off+self.center))
+        if jump:
+            if self.off >= startOn and self.direction == onDirection: #################################
+                self.tsoutput.write('1 %d\n'%(self.off+self.center))
+        else:
+            self.tsoutput.write('1 %d\n'%(self.off+self.center))
 
         if self.lastTSA is None:
             self.lastTSA = self.off+self.center
@@ -88,7 +98,11 @@ class recog:
             recogdb.writeEntry(self.db, self.off, 2, 0, 1<<30, 0, 1<<30, 0, -1, self.off+self.center, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
         else:
             sys.stdout.write('SVM already in DB\n')
-        self.tsoutput.write('-1 %d\n'%(self.off+self.center))
+        if jump:
+            if self.off >= startOn and self.direction == onDirection: #################################
+                self.tsoutput.write('-1 %d\n'%(self.off+self.center))
+        else:
+            self.tsoutput.write('-1 %d\n'%(self.off+self.center))
 
         if self.lastTSB is None:
             self.lastTSB = self.off+self.center
@@ -146,6 +160,8 @@ class recog:
             #print(self.off)
 
             if self.off == self.pair[1]:
+
+
                 if self.pair[0] == 1:
                     if self.lastTSB is not None and self.lastIPIB is not None:
                         if (self.off+self.center > self.lastTSB + self.lastIPIB - overlapRange) and (self.off+self.center < self.lastTSB + self.lastIPIB + overlapRange):
@@ -187,31 +203,38 @@ class recog:
                 self.continuity(sigs)
 
     def continuity(self, sigs):
+        if jump:
+            if self.off < startOn and self.direction == onDirection: #################################
+                return
         tamA = self.templateAsize
         tamB = self.templateBsize
 
         zfill = max(self.templateAsize, self.templateBsize) // 2
-        data = np.array([])
-        tempA = np.array([])
-        tempB = np.array([])
+        data = np.array([], dtype=np.float32)
+        tempA = np.array([], dtype=np.float32)
+        tempB = np.array([], dtype=np.float32)
         for ch, s in sigs.items():
+            #if s.size > 800:
+            #    print('\nToo large spike (%d). Truncating on 800...'%(s.size))
+            #    s = s[:800]
+
             data = np.concatenate( (data, np.concatenate( (np.zeros(zfill), s, np.zeros(zfill)) )) )
             tempA = np.concatenate( (tempA, self.templateA[ch], np.zeros(2*zfill+s.size-tamA)) )
             tempB = np.concatenate( (tempB, self.templateB[ch], np.zeros(2*zfill+s.size-tamB)) )
         
-        dif = np.zeros(data.size)
+        dif = np.zeros(data.size, dtype=np.float32)
 
-        tempsA = np.zeros((self.samples+2*zfill - tamA, tempA.size))
+        tempsA = np.zeros((self.samples+2*zfill - tamA, tempA.size), dtype=np.float32)
         for i in xrange(self.samples+2*zfill - tamA):
             tempsA[i,i:] = tempA[:tempA.size-i]
-        tempsB = np.zeros((self.samples+2*zfill - tamB, tempB.size))
+        tempsB = np.zeros((self.samples+2*zfill - tamB, tempB.size), dtype=np.float32)
         for i in xrange(self.samples+2*zfill - tamB):
             tempsB[i,i:] = tempB[:tempB.size-i]
 
         # Minimize A
         sys.stdout.write('A ')
         sys.stdout.flush()
-        distAm = np.array( [np.sum(np.absolute(data-tempsA[i,:])) for i in xrange(self.samples+2*zfill - tamA)] )
+        distAm = np.array( [np.sum(np.absolute(data-tempsA[i,:])) for i in xrange(self.samples+2*zfill - tamA)] , dtype=np.float32)
         posA = distAm.argmin()
         distA = distAm[posA]
         '''distA = np.inf
@@ -225,7 +248,7 @@ class recog:
         # Minimize B
         sys.stdout.write('B ')
         sys.stdout.flush()
-        distBm = np.array( [np.sum(np.absolute(data-tempsB[i,:])) for i in xrange(self.samples+2*zfill - tamB)] )
+        distBm = np.array( [np.sum(np.absolute(data-tempsB[i,:])) for i in xrange(self.samples+2*zfill - tamB)] , dtype=np.float32)
         posB = distBm.argmin()
         distB = distBm[posB]
         '''distB = np.inf
@@ -236,23 +259,57 @@ class recog:
                 distB = distB_now
                 posB = i'''
 
-        import pymp
-        distABm = pymp.shared.array( (self.samples+2*zfill - tamA, self.samples+2*zfill - tamB) ,dtype='float32')
+        distABm = pymp.shared.array( (self.samples+2*zfill - tamA, self.samples+2*zfill - tamB) ,dtype=np.float32)
         distABm.fill(np.inf)
+        datap = pymp.shared.array( data.size, dtype=np.float32)
+        datap[:] = data[:]
 
         sys.stdout.write('AB ')
+        #sys.stdout.write('\n')
         sys.stdout.flush()
-        with pymp.Parallel(4) as p:
-            for i in xrange(self.samples+2*zfill - tamA):
+        with pymp.Parallel(8) as p:
+            for i in p.range(self.samples+2*zfill - tamA):
+                #if i % 30 == 0:
+                    #sys.stdout.write('%.02f%%\t%d\r'%((100.*i) / (self.samples+2*zfill - tamA), self.samples+2*zfill - tamA))
+                    #sys.stdout.flush()
                 tA = tempsA[i,:]
-                for j in p.range(self.samples+2*zfill - tamB):
-                    distABm[i,j] = np.sum(np.absolute(data - tA - tempsB[j,:]))
-                
+                for j in range(self.samples+2*zfill - tamB):
+                    distABm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
+        
         posA_AB, posB_AB = np.unravel_index(distABm.argmin(), distABm.shape)
         distAB = distABm[posA_AB, posB_AB]
 
-        sys.stdout.write('distsOk ')
-        sys.stdout.flush()
+        '''if self.off == 35211:
+            import matplotlib.pyplot as plt
+            plt.figure(1)
+            plt.subplot(211)
+            plt.plot(distAm)
+            print('')
+            print('%f %d'%(distAm.min(), posA))
+            plt.subplot(212)
+            plt.plot(distBm)
+            print('%f %d'%(distBm.min(), posB))
+            plt.figure(3)
+            plt.imshow(distABm)
+            print('%f %d %d'%(distABm.min(), posA_AB, posB_AB))
+            plt.colorbar()
+
+            plt.figure(2)
+            ax1 = plt.subplot(311)
+            plt.plot(tempA)
+            np.save('/tmp/tempA.npy',tempA)
+            plt.subplot(312,sharey=ax1,sharex=ax1)
+            plt.plot(tempB)
+            np.save('/tmp/tempB.npy',tempB)
+            plt.subplot(313,sharey=ax1,sharex=ax1)
+            plt.plot(data)
+            np.save('/tmp/data.npy',data)
+            plt.show()
+            sys.exit(-1)'''
+
+
+        #sys.stdout.write('distsOk ')
+        #sys.stdout.flush()
         if False:
             import matplotlib.pyplot as plt
 
@@ -300,6 +357,8 @@ class recog:
             plt.colorbar()
 
             plt.show()
+        else:
+            del distABm
 
         ###########################################
         ############### Verificar se existe no db #
@@ -314,7 +373,8 @@ class recog:
             dbdistAB = data[ recogdb.dicFields['distAB'] ]
             mindistDB = min(dbdistA, dbdistB, dbdistAB)
             if mindistDB < mindist:
-                print('Leaving DB as is')
+                #sys.stdout.write('Leaving DB as is')
+                sys.stdout.write('L ')
 
                 # Update lastTS and lastIPI with DB data
                 idx = np.argmin( (dbdistA, dbdistB, dbdistAB) )
@@ -349,8 +409,13 @@ class recog:
                 return None
 
         if distA < distB and distA < distAB:
-            recogdb.writeEntry(self.db, self.off, 1, self.direction, distA, distB, distAB, 0, self.off+posA, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
-            self.tsoutput.write('1 %d\n'%(self.off+posA))
+            if jump:
+                if self.off >= startOn and self.direction == onDirection: #################################
+                    recogdb.writeEntry(self.db, self.off, 1, self.direction, distA, distB, distAB, 0, self.off+posA, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+                    self.tsoutput.write('1 %d\n'%(self.off+posA))
+            else:
+                recogdb.writeEntry(self.db, self.off, 1, self.direction, distA, distB, distAB, 0, self.off+posA, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+                self.tsoutput.write('1 %d\n'%(self.off+posA))
             sys.stdout.write('\tsingle A')
             sys.stdout.flush()
 
@@ -366,8 +431,13 @@ class recog:
                 self.lastTSA = self.off+posA
 
         elif distB < distA and distB < distAB:
-            recogdb.writeEntry(self.db, self.off, 2, self.direction, distA, distB, distAB, 0, -1, self.off+posB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
-            self.tsoutput.write('-1 %d\n'%(self.off+posB))
+            if jump:
+                if self.off >= startOn and self.direction == onDirection: #################################
+                    recogdb.writeEntry(self.db, self.off, 2, self.direction, distA, distB, distAB, 0, -1, self.off+posB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+                    self.tsoutput.write('-1 %d\n'%(self.off+posB))
+            else:
+                recogdb.writeEntry(self.db, self.off, 2, self.direction, distA, distB, distAB, 0, -1, self.off+posB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+                self.tsoutput.write('-1 %d\n'%(self.off+posB))
             sys.stdout.write('\tsingle B')
             sys.stdout.flush()
 
@@ -383,15 +453,29 @@ class recog:
                 self.lastTSB = self.off+posB
 
         elif distAB <= distA and distAB <= distB:
-            recogdb.writeEntry(self.db, self.off, 3, self.direction, distA, distB, distAB, 0, self.off+posA_AB, self.off+posB_AB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+            if jump:
+                if self.off >= startOn and self.direction == onDirection: #################################
+                    recogdb.writeEntry(self.db, self.off, 3, self.direction, distA, distB, distAB, 0, self.off+posA_AB, self.off+posB_AB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
+            else:
+                recogdb.writeEntry(self.db, self.off, 3, self.direction, distA, distB, distAB, 0, self.off+posA_AB, self.off+posB_AB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
             if posA < posB:
-                self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
-                self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
+                if jump:
+                    if self.off >= startOn and self.direction == onDirection: #################################
+                        self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
+                        self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
+                else:
+                    self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
+                    self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
                 sys.stdout.write('\toverlap AB')
                 sys.stdout.flush()
             else:
-                self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
-                self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
+                if jump:
+                    if self.off >= startOn and self.direction == onDirection: #################################
+                        self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
+                        self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
+                else:
+                    self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
+                    self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
                 sys.stdout.write('\toverlap BA')
                 sys.stdout.flush()
 
@@ -412,6 +496,9 @@ class recog:
 
     def export(self):
         print('exporting data to' + self.tsoutput.name)
+        P = np.zeros(2*50*3600*10) # 10h acquisition at 50 pulses per second maximum
+        I = np.zeros(2*50*3600*10)
+        idx = 0
         for rec in self.db.iteritems():
             key, bindata = rec
             off, = struct.unpack('q', key)
@@ -419,20 +506,41 @@ class recog:
             #sys.stdout.flush()
             presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB, spkdata = recogdb.parseDBHeader(bindata)
             if presentFish == 1:
-                self.tsoutput.write('1 %d\n'%correctedPosA)
+                P[idx] = correctedPosA
+                I[idx] = 1
+                idx += 1
+                #self.tsoutput.write('1 %d\n'%correctedPosA)
             elif presentFish == 2:
-                self.tsoutput.write('-1 %d\n'%correctedPosB)
+                P[idx] = correctedPosB
+                I[idx] = -1
+                idx += 1
+                #self.tsoutput.write('-1 %d\n'%correctedPosB)
             elif presentFish == 3:
-                if correctedPosA < correctedPosB:
+                P[idx] = correctedPosA
+                I[idx] = 1
+                idx += 1
+                P[idx] = correctedPosB
+                I[idx] = -1
+                idx += 1
+                '''if correctedPosA < correctedPosB:
                     self.tsoutput.write('1 %d\n'%correctedPosA)
                     self.tsoutput.write('-1 %d\n'%correctedPosB)
                 else:
                     self.tsoutput.write('-1 %d\n'%correctedPosB)
-                    self.tsoutput.write('1 %d\n'%correctedPosA)
+                    self.tsoutput.write('1 %d\n'%correctedPosA)'''
             else:
                 print('error on presentFish DB field')
-            self.tsoutput.flush()
-
+            #self.tsoutput.flush()
+        print('finish DB reading operation')
+        P = P[:idx]
+        I = I[:idx]
+        S = [i[0] for i in sorted(enumerate(P), key=lambda x:x[1])]
+        from operator import itemgetter
+        P = itemgetter(*S)(P)
+        I = itemgetter(*S)(I)
+        for i in range(idx):
+            self.tsoutput.write('%d %d\n'%(I[i], P[i]))
+        self.tsoutput.flush()
 
 if __name__ == '__main__':
     description = 'Apply SVM model on spikes window file with 2 fishes'
@@ -445,7 +553,7 @@ if __name__ == '__main__':
     iterate_parser.add_argument('spikes_file', type=argparse.FileType(mode+'r'), help='Spikes window file')
     iterate_parser.add_argument('singlefish_file', type=argparse.FileType(mode+'r'), help='Singlefish file')
     iterate_parser.add_argument('probs_file', type=argparse.FileType('r'), help='Spike probability file')
-    iterate_parser.add_argument('ts_output', type=argparse.FileType('w'), help='Timestamps output file')
+    iterate_parser.add_argument('ts_output', type=argparse.FileType('a'), help='Timestamps output file')
     iterate_parser.add_argument('-z', '--saturation', type=str, help='low,high saturation levels')
     iterate_parser.add_argument('-d', '--direction', type=int, default=1, help='Scan direction (positive or negative)')
 
@@ -456,7 +564,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.mode == 'iterate':
-        db = recogdb.openDB(args.db_file, 'w')
+        db = recogdb.openDB(args.db_file, 'rw')
         wins = winFile(args.spikes_file)
         svmpairs = np.loadtxt(args.singlefish_file, dtype=np.int64)
         svmpairsTam = svmpairs.shape[0]
