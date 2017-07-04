@@ -59,6 +59,7 @@ class winFile:
     def end(self):
         while self.nextWin() != None:
             pass
+        self.f.seek( self.f.tell() - self.nowLen )
         self.beg = False
 
 
@@ -167,8 +168,8 @@ def writewin(f, win):
             f.write(struct.pack('i',ch[0]))
             f.write(ch[1].tostring())
     elif sys.version_info.major == 3:
-        f.write(struct.pack('i',win[0]).decode())
-        f.write(struct.pack('qiii', win[1], win[2], win[3], win[4]).decode())
+        f.write(struct.pack('i',win[0]))
+        f.write(struct.pack('qiii', win[1], win[2], win[3], win[4]))
         for ch in win[5]:
-            f.write(struct.pack('i',ch[0]).decode())
+            f.write(struct.pack('i',ch[0]))
             f.write(ch[1].tostring())
