@@ -12,14 +12,17 @@ import argparse
 
 from windowfile import writewin
 
+minAmp = 0.035
+medfiltsize= 0.0010
+
 if sys.version_info.major == 3:
     xrange = range
     mode = 'b'
 else:
     mode = ''
 
-freq = 45454.545454
-winSize = 256
+freq = 50000.
+winSize = 512
 chirpStep = int(0.300*freq)
 
 class MyParser(argparse.ArgumentParser):
@@ -33,7 +36,7 @@ parser = MyParser(description=description, formatter_class=argparse.RawTextHelpF
 
 parser.add_argument('timeseries_file', type=argparse.FileType('r'), help='Timeseries (I32) file')
 parser.add_argument('hilbert_file', help='Output Absolute sum of Hilbert Transform of the signal on I32 format')
-parser.add_argument('outfile', type=argparse.FileType('w'), help='Output spike window file')
+parser.add_argument('outfile', type=argparse.FileType('wb'), help='Output spike window file')
 parser.add_argument('--chirps_file', type=argparse.FileType('r'), help='Chirp regions file')
 parser.add_argument('--chirps_gain', type=float, default=0.3, help='Thresold ratio on chirp regions')
 parser.add_argument('-d', '--detection', type=float, default=1.00, help='Theshold for detecting a spike')
@@ -41,7 +44,7 @@ parser.add_argument('-r', '--refractory', type=float, default=0.001, help='Refra
 parser.add_argument('-m', '--max_size', type=float, default=0.0035, help='Maximum size for a single spike')
 parser.add_argument('-n', '--numtaps', type=int, default=301, help='Number of taps for high pass filter on Hilbert Transform')
 parser.add_argument('-z', '--saturation', type=str, help='low,high saturation level to filter out')
-parser.add_argument('-c', '--cutoff', type=float, default=1., help='Cutoff frequency of high pass filter')
+parser.add_argument('-c', '--cutoff', type=float, default=1., help='Cutoff frequency of low pass filter')
 parser.add_argument('-o', '--onlyabove', type=float, default=0.005, help='Only output spikes above this value')
 parser.add_argument('-f', '--fixedwin', help='Fixed window(use for single-fish data files)', action='store_true')
 parser.add_argument('-u', '--useHilbert', help='use already generated Hilbert file', action='store_true')
@@ -50,7 +53,7 @@ parser.add_argument('-u', '--useHilbert', help='use already generated Hilbert fi
 args = parser.parse_args()
 
 threshold = args.detection
-cutoff = args.cutoff / freq
+cutoff = args.cutoff
 onlyAbove = args.onlyabove
 refrac = int(args.refractory * freq)
 maxSize = int(args.max_size * freq)
@@ -72,7 +75,7 @@ den = [ 1.000000000000000, -0.445897866413142, -0.101209607292324, -0.0479388887
 def myabshilbert(x):
     return np.sqrt(scipy.signal.lfilter(num, den, x)[4:]**2 + x[:-4]**2)
 
-nchan = 11
+nchan = 8
 
 inarr = np.memmap(args.timeseries_file, dtype=np.float32, mode='r')
 sizein, = inarr.shape
@@ -80,20 +83,28 @@ sizein, = inarr.shape
 if args.useHilbert == True:
     h = np.memmap(args.hilbert_file, np.float32, 'r')
 else:
-    sys.stdout.write('Generating new Hilbert file')
+    sys.stdout.write('Generating new Hilbert file\n')
     sys.stdout.flush()
-    h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//11 - 4))
+    h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//nchan - 4))
     for i in xrange(nchan):
-        sys.stdout.write('%d'%i)
+        sys.stdout.write('\t%d\r'%i)
         sys.stdout.flush()
         h += myabshilbert(inarr[i::nchan])
 
-    n = args.numtaps
-    a = scipy.signal.firwin(n, cutoff=cutoff, window='hanning')
-    a = -a
-    a[n//2] += 1
 
-    h = scipy.signal.lfilter(a, [1], h)[(n-1)//2:]
+    kern_size = int(medfiltsize*freq)
+    if (kern_size % 2) == 0:
+        kern_size += 1
+    sys.stdout.write('median\n')
+    sys.stdout.flush()
+    h[:] = scipy.signal.medfilt(h, kernel_size=kern_size) + 0.1*h
+
+    n = args.numtaps
+    a = scipy.signal.firwin(n, [70, 1500], pass_zero=False, window='hanning', nyq=freq/2)
+
+    sys.stdout.write('low pass\n')
+    sys.stdout.flush()
+    h[:] = np.convolve(h, a, mode='same')
 
 if args.chirps_file is not None:
     chirps = np.loadtxt(args.chirps_file, unpack=True, dtype=np.int64)
@@ -196,7 +207,8 @@ for num,i in enumerate(locs):
         sys.stdout.write('Window too small (%d) %ld\n'%(offsetend-offset, offset))
         sys.stdout.flush()
         continue
-    possiveisSpikesSig =  [ np.array(inarr[c+11*offset: c + 11*offsetend: 11]) for c in range(11) ] 
+    possiveisSpikesSig =  [ np.array(inarr[c+nchan*offset: c + nchan*offsetend: nchan]) for c in range(nchan) ]
+
         
     #possiveisSpikes[num] = PS 
     #l[num] = len(PS) 
@@ -215,7 +227,7 @@ for num,i in enumerate(locs):
     begin = 0
     counter = 0
     for n,s in enumerate(PS[:Mi][::-1]):
-        if s < th:
+        if s < th*1.1:
             counter += 1
         else:
             counter = 0
@@ -229,7 +241,7 @@ for num,i in enumerate(locs):
     fim = PS.size-1
     counter = 0
     for n,s in enumerate(PS[Mi:]):
-        if s < th:
+        if s < th*1.1:
             counter += 1
         else:
             counter = 0
@@ -246,12 +258,12 @@ for num,i in enumerate(locs):
     # Fill borders with DC sample
     if flagOverlapBegin == False:
         for c in range(nchan):
-            possiveisSpikesSig[c][:begin] = possiveisSpikesSig[c][begin]
-            #possiveisSpikesSig[c][:begin] = 0
+            #possiveisSpikesSig[c][:begin] = possiveisSpikesSig[c][begin]
+            possiveisSpikesSig[c][:begin] = 0
     if flagOverlapEnd == False:
         for c in range(nchan):
-            possiveisSpikesSig[c][fim:] = possiveisSpikesSig[c][fim]
-            #possiveisSpikesSig[c][fim:] = 0
+            #possiveisSpikesSig[c][fim:] = possiveisSpikesSig[c][fim]
+            possiveisSpikesSig[c][fim:] = 0
 
     #print('%d\t%d\t%d'%(flagOverlapEnd, flagOverlapBegin, flagOverlapSize))
     if (flagOverlapEnd == False and flagOverlapBegin == False) or single == True:
@@ -295,6 +307,11 @@ for num,i in enumerate(locs):
         center = Mi - b
         janelas = [possiveisSpikesSig[c][b:e] for c in range(nchan)]'''
 
+    tooSmall = True
+    for pspk in janelas:
+        if np.any(pspk > minAmp):
+            tooSmall = False
+
     if single == True:
         njanelas = 0
         listjanelas = []
@@ -312,7 +329,7 @@ for num,i in enumerate(locs):
             else:
                 continue
     else:
-        njanelas = 11
+        njanelas = nchan
         listjanelas = [(n,s) for n,s in enumerate(janelas)]
     
     if njanelas == 0:
@@ -326,14 +343,16 @@ for num,i in enumerate(locs):
             sys.stdout.flush()
             continue
     if offset+b not in offsets:
+        if lastLen < 0 or offset+b < 0 or tooSmall:
+            continue
         writewin(outputFile, (lastLen, offset+b, size, njanelas, center, listjanelas) )
         offsets[num] = offset+b
         lastLen = 6*4 + njanelas*4*(1 + size)
-        if lastLen > 400*njanelas*4:
-            sys.stdout.write(' Too large window: %d samples'%(lastLen/njanelas/4))
+        if lastLen > 700*njanelas*4:
+            sys.stdout.write(' Too large window: %d samples\n'%(lastLen/njanelas/4))
             sys.stdout.flush()
-            plt.plot(PS)
-            plt.show()
+            #plt.plot(PS)
+            #plt.show()
     #else:
     #    print('Will not print same offset twice')
 
