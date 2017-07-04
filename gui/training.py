@@ -2,17 +2,19 @@ import os, sys, inspect
 import re
 
 import matplotlib
-matplotlib.use("Qt4Agg")
+matplotlib.use("Qt5Agg")
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtWidgets, QtGui
 try:
-    from PyQt4.QtCore import QString
+    from PyQt5.QtCore import QString
 except:
     QString = str
 from .training_interface import Ui_trainingWindow
+
+from .clickAux import ClickQLabel, ClickQLineEdit
 
 # Default SVM values TODO: pegar de aquivo externo
 defcStart = -5.0
@@ -23,12 +25,12 @@ defgStart = -15.0
 defgStep = 2.0
 defgStop = 3.0
 
-class TrainingWindow(QtGui.QDialog):
+class TrainingWindow(QtWidgets.QDialog):
 
     def __init__(self, app, parent=None):
         self.app = app
 
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self.setFocusPolicy( QtCore.Qt.StrongFocus )
         self.setFocus()
 
@@ -130,7 +132,7 @@ class TrainingWindow(QtGui.QDialog):
                                self.ui.saveSVMLineEdit, \
                                self.ui.loadSVMLineEdit, \
                                )
-        
+
         # Program objects -> they must be parameters for the GarbageCollector
         # do not clean them
         self.verifySpikes1Program = QtCore.QProcess()
@@ -196,25 +198,30 @@ class TrainingWindow(QtGui.QDialog):
         True, \
         ]
         '''for layout in self.ParametersLayout:
-            if isinstance(layout, QtGui.QLayout):
+            if isinstance(layout, QtWidgets.QLayout):
                 for i in xrange(layout.count()):
                     try:
                         layout.itemAt(i).widget().hide()
                     except:
                         pass
-            elif isinstance(layout, QtGui.QWidget):
+            elif isinstance(layout, QtWidgets.QWidget):
                 layout.hide()'''
         
         for label in self.titleLabels:
-            QtCore.QObject.connect(label, QtCore.SIGNAL('clicked()'), self.expandLayout)
+            label.clicked.connect(self.expandLayout)
+            #QtCore.QObject.connect(label, QtCore.SIGNAL('clicked()'), self.expandLayout)
         
         # Connect load features file to load slice info
-        QtCore.QObject.connect(self.ui.loadFeatures1LineEdit, QtCore.SIGNAL('textChanged(QString)'), self.sliceInfo)
-        QtCore.QObject.connect(self.ui.loadFeatures2LineEdit, QtCore.SIGNAL('textChanged(QString)'), self.sliceInfo)
+        self.ui.loadFeatures1LineEdit.textChanged.connect(self.sliceInfo)
+        self.ui.loadFeatures2LineEdit.textChanged.connect(self.sliceInfo)
+        #QtCore.QObject.connect(self.ui.loadFeatures1LineEdit, QtCore.SIGNAL('textChanged(QString)'), self.sliceInfo)
+        #QtCore.QObject.connect(self.ui.loadFeatures2LineEdit, QtCore.SIGNAL('textChanged(QString)'), self.sliceInfo)
         
         # Connect cValue and gValue to warning window
-        QtCore.QObject.connect(self.ui.cValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
-        QtCore.QObject.connect(self.ui.gValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
+        self.ui.cValueLineEdit.clicked.connect(self.SVMValuesWarningWindow)
+        self.ui.gValueLineEdit.clicked.connect(self.SVMValuesWarningWindow)
+        #QtCore.QObject.connect(self.ui.cValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
+        #QtCore.QObject.connect(self.ui.gValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
         
         self.connectFileFields()
         self.connectUnlockFields()
@@ -227,58 +234,71 @@ class TrainingWindow(QtGui.QDialog):
         self.initialClickState()
     
     def saveParameters(self):
-        saveFilename = QtGui.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.trainparameters) (*.trainparameters);;All files (*.*) (*.*)')
-        saveFile = open(saveFilename, 'w')
-        for element in self.lineFieldsList:
-            if isinstance(element, QtGui.QLineEdit):
-                saveFile.write( '%s\t%s\n'%(element.objectName(), element.text()) )
-            elif isinstance(element, QtGui.QCheckBox):
-                saveFile.write( '%s\t%s\n'%(element.objectName(), element.isChecked()) )
-        saveFile.close()
+        saveFilename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.trainparameters) (*.trainparameters);;All files (*.*) (*.*)')
+        if saveFilename[0] != u'':
+            saveFile = open(saveFilename[0], 'w')
+            for element in self.lineFieldsList:
+                if isinstance(element, QtWidgets.QLineEdit):
+                    saveFile.write( '%s\t%s\n'%(element.objectName(), element.text()) )
+                elif isinstance(element, QtWidgets.QCheckBox):
+                    saveFile.write( '%s\t%s\n'%(element.objectName(), element.isChecked()) )
+            saveFile.close()
 
     def loadParameters(self):
-        loadFilename = QtGui.QFileDialog.getOpenFileName(self, 'Load Parameters File', '', 'Parameters File (*.trainparameters) (*.trainparameters);;All files (*.*) (*.*)')
-        loadFile = open(loadFilename, 'r')
-        for line in loadFile.xreadlines():
-            objectName, Value = line.split('\t')
-            Value = Value.strip()
-            if Value != '':
-                for element in self.lineFieldsList:
-                    if element.objectName() == objectName:
-                        if isinstance(element, QtGui.QLineEdit):
-                            element.setText(Value)
-                        elif isinstance(element, QtGui.QCheckBox):
-                            print(Value)
-                            if Value == 'True':
-                                print('%s: setting true'%element.objectName())
-                                element.setChecked(True)
-                            else:
-                                print('%s: setting false'%element.objectName())
-                                element.setChecked(False)
-                        break
+        loadFilename = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Parameters File', '', 'Parameters File (*.trainparameters) (*.trainparameters);;All files (*.*) (*.*)')
+        if loadFilename[0] != u'':
+            loadFile = open(loadFilename[0], 'r')
+            for line in loadFile.readlines():
+                objectName, Value = line.split('\t')
+                Value = Value.strip()
+                if Value != '':
+                    for element in self.lineFieldsList:
+                        if element.objectName() == objectName:
+                            if isinstance(element, QtWidgets.QLineEdit):
+                                element.setText(Value)
+                            elif isinstance(element, QtWidgets.QCheckBox):
+                                if Value == 'True':
+                                    element.setChecked(True)
+                                else:
+                                    element.setChecked(False)
+                            break
     
     def connectButtons(self):
-        QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
-        QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
+        self.ui.saveParametersBut.clicked.connect(self.saveParameters)
+        self.ui.loadParametersBut.clicked.connect(self.loadParameters)
+        self.ui.verifySpikes1But.clicked.connect(self.verifySpikes1)
+        self.ui.verifySpikes2But.clicked.connect(self.verifySpikes2)
+        self.ui.detectSpikes1But.clicked.connect(self.detectSpikes1)
+        self.ui.detectSpikes2But.clicked.connect(self.detectSpikes2)
+        self.ui.extractFeaturesBut.clicked.connect(self.extractFeatures)
+        self.ui.sliceFish1But.clicked.connect(self.sliceRandom1)
+        self.ui.sliceFish2But.clicked.connect(self.sliceRandom2)
+        self.ui.defaultSVMValuesBut.clicked.connect(self.defaultSVMValues)
+        self.ui.optimizeSVMBut.clicked.connect(self.SVMToolOptim)
+        self.ui.trainSVMBut.clicked.connect(self.SVMToolTrain)
+        self.ui.generateROCBut.clicked.connect(self.generateROC)
+
+        #QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
+        #QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
         
-        QtCore.QObject.connect(self.ui.verifySpikes1But, QtCore.SIGNAL('clicked()'), self.verifySpikes1)
-        QtCore.QObject.connect(self.ui.verifySpikes2But, QtCore.SIGNAL('clicked()'), self.verifySpikes2)
+        #QtCore.QObject.connect(self.ui.verifySpikes1But, QtCore.SIGNAL('clicked()'), self.verifySpikes1)
+        #QtCore.QObject.connect(self.ui.verifySpikes2But, QtCore.SIGNAL('clicked()'), self.verifySpikes2)
         
-        QtCore.QObject.connect(self.ui.detectSpikes1But, QtCore.SIGNAL('clicked()'), self.detectSpikes1)
-        QtCore.QObject.connect(self.ui.detectSpikes2But, QtCore.SIGNAL('clicked()'), self.detectSpikes2)
+        #QtCore.QObject.connect(self.ui.detectSpikes1But, QtCore.SIGNAL('clicked()'), self.detectSpikes1)
+        #QtCore.QObject.connect(self.ui.detectSpikes2But, QtCore.SIGNAL('clicked()'), self.detectSpikes2)
         
-        QtCore.QObject.connect(self.ui.extractFeaturesBut, QtCore.SIGNAL('clicked()'), self.extractFeatures)
+        #QtCore.QObject.connect(self.ui.extractFeaturesBut, QtCore.SIGNAL('clicked()'), self.extractFeatures)
         
-        QtCore.QObject.connect(self.ui.sliceFish1But, QtCore.SIGNAL('clicked()'), self.sliceRandom1)
-        QtCore.QObject.connect(self.ui.sliceFish2But, QtCore.SIGNAL('clicked()'), self.sliceRandom2)
+        #QtCore.QObject.connect(self.ui.sliceFish1But, QtCore.SIGNAL('clicked()'), self.sliceRandom1)
+        #QtCore.QObject.connect(self.ui.sliceFish2But, QtCore.SIGNAL('clicked()'), self.sliceRandom2)
         
-        QtCore.QObject.connect(self.ui.defaultSVMValuesBut, QtCore.SIGNAL('clicked()'), self.defaultSVMValues)
+        #QtCore.QObject.connect(self.ui.defaultSVMValuesBut, QtCore.SIGNAL('clicked()'), self.defaultSVMValues)
         
-        QtCore.QObject.connect(self.ui.optimizeSVMBut, QtCore.SIGNAL('clicked()'), self.SVMToolOptim)
+        #QtCore.QObject.connect(self.ui.optimizeSVMBut, QtCore.SIGNAL('clicked()'), self.SVMToolOptim)
         
-        QtCore.QObject.connect(self.ui.trainSVMBut, QtCore.SIGNAL('clicked()'), self.SVMToolTrain)
+        #QtCore.QObject.connect(self.ui.trainSVMBut, QtCore.SIGNAL('clicked()'), self.SVMToolTrain)
         
-        QtCore.QObject.connect(self.ui.generateROCBut, QtCore.SIGNAL('clicked()'), self.generateROC)
+        #QtCore.QObject.connect(self.ui.generateROCBut, QtCore.SIGNAL('clicked()'), self.generateROC)
     
     def isReturnCodeOk(self, ret):
         if ret != 0:
@@ -321,8 +341,9 @@ class TrainingWindow(QtGui.QDialog):
                 pass
             else:
                 return None
-            
-        QtCore.QObject.connect(self.verifySpikes1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes1Finish)
+        
+        self.verifySpikes1Program.finished.connect(verifySpikes1Finish)    
+        #QtCore.QObject.connect(self.verifySpikes1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes1Finish)
         
     def verifySpikes2(self):
         print('winview 2')
@@ -345,7 +366,8 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
             
-        QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes2Finish)
+        self.verifySpikes2Program.finished.connect(verifySpikes2Finish)    
+        #QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes2Finish)
     
     def detectSpikes1(self):
         print('spikes 1')
@@ -401,16 +423,18 @@ class TrainingWindow(QtGui.QDialog):
                 self.ui.loadSpikes1LineEdit.setText(saveSpikes)
             else:
                 return None
-            
-        QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikes1Finish)
-        QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.detectSpikes1Program.finished.connect(detectSpikes1Finish)
+        self.detectSpikes1Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.detectSpikes1Program.readyReadStandardError.connect(self.printAllStandardError)    
+        #QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikes1Finish)
+        #QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
         
     def detectSpikes2(self):
         print('spikes 2')
         TSName = self.ui.loadTS2LineEdit.text()
-        hilbName = self.ui.saveLoadHilb1LineEdit.text()
+        hilbName = self.ui.saveLoadHilb2LineEdit.text()
         lowSat = self.ui.lowSaturation2LineEdit.text()
         highSat = self.ui.highSaturation2LineEdit.text()
         taps = self.ui.taps2LineEdit.text()
@@ -458,9 +482,12 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
             
-        QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikes2Finish)
-        QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.detectSpikes2Program.finished.connect(detectSpikes2Finish)
+        self.detectSpikes2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.detectSpikes2Program.readyReadStandardError.connect(self.printAllStandardError)    
+        #QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikes2Finish)
+        #QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     
     def extractFeatures(self):
@@ -522,12 +549,18 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
-        QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresComputeFinish)
-        QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresComputeFinish)
-        QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
-        QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.featuresCompute1Program.finished.connect(featuresComputeFinish)
+        self.featuresCompute1Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.featuresCompute1Program.readyReadStandardError.connect(self.printAllStandardError)    
+        self.featuresCompute2Program.finished.connect(featuresComputeFinish)
+        self.featuresCompute2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.featuresCompute2Program.readyReadStandardError.connect(self.printAllStandardError)    
+        #QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresComputeFinish)
+        #QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresComputeFinish)
+        #QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        #QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresRescalePrepare(self):        
         print('features rescale prepare')
@@ -555,9 +588,12 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
                 
-        QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresRescalePrepareFinish)
-        QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.featuresRescalePrepareProgram.finished.connect(featuresRescalePrepareFinish)
+        self.featuresRescalePrepareProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.featuresRescalePrepareProgram.readyReadStandardError.connect(self.printAllStandardError)    
+        #QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresRescalePrepareFinish)
+        #QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresRescaleApply(self):
         print('features rescale apply')
@@ -585,9 +621,12 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
-        QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresRescaleApplyFinish)
-        QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.featuresRescaleApplyProgram.finished.connect(featuresRescaleApplyFinish)
+        self.featuresRescaleApplyProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.featuresRescaleApplyProgram.readyReadStandardError.connect(self.printAllStandardError)    
+        #QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresRescaleApplyFinish)
+        #QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresFilterPrepare(self):
         print('features filter prepare')
@@ -617,9 +656,12 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
                 
-        QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterPrepareFinish)
-        QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.featuresFilterPrepareProgram.finished.connect(featuresFilterPrepareFinish)
+        self.featuresFilterPrepareProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.featuresFilterPrepareProgram.readyReadStandardError.connect(self.printAllStandardError)    
+        #QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterPrepareFinish)
+        #QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
         
     def featuresFilterApply(self):
@@ -669,12 +711,18 @@ class TrainingWindow(QtGui.QDialog):
                 self.app.restoreOverrideCursor()
                 self.dialog.hide()
         
-        QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterApplyFinish)
-        QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterApplyFinish)
-        QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
-        QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.featuresFilterApply1Program.finished.connect(featuresFilterApplyFinish)
+        self.featuresFilterApply1Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.featuresFilterApply1Program.readyReadStandardError.connect(self.printAllStandardError)    
+        self.featuresFilterApply2Program.finished.connect(featuresFilterApplyFinish)
+        self.featuresFilterApply2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+        self.featuresFilterApply2Program.readyReadStandardError.connect(self.printAllStandardError)    
+        #QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterApplyFinish)
+        #QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterApplyFinish)
+        #QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        #QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresFinish(self):
         print('end features')
@@ -700,10 +748,13 @@ class TrainingWindow(QtGui.QDialog):
                 stdout = self.sliceInfo1Program.readAllStandardOutput()
                 stderr = self.sliceInfo1Program.readAllStandardError()
                 if stdout != '':
-                    text, self.NWindows1 = self.formatInfoText(str(stdout))
+                    if len(str(stdout))>1:
+                        text, self.NWindows1 = self.formatInfoText(str(stdout))
+                        self.ui.sliceInfoFish1Label.setText(text)
                 else:
-                    text, self.NWindows1 = self.formatInfoText(str(stderr))
-                self.ui.sliceInfoFish1Label.setText(text)
+                    if len(str(stderr))>1:
+                        text, self.NWindows1 = self.formatInfoText(str(stderr))
+                        self.ui.sliceInfoFish1Label.setText(text)
             else:
                 return None
         
@@ -713,10 +764,13 @@ class TrainingWindow(QtGui.QDialog):
                 stdout = self.sliceInfo2Program.readAllStandardOutput()
                 stderr = self.sliceInfo2Program.readAllStandardError()
                 if stdout != '':
-                    text, self.NWindows2 = self.formatInfoText(str(stdout))
+                    if len(str(stdout))>1:
+                        text, self.NWindows2 = self.formatInfoText(str(stdout))
+                        self.ui.sliceInfoFish2Label.setText(text)
                 else:
-                    text, self.NWindows2 = self.formatInfoText(str(stderr))
-                self.ui.sliceInfoFish2Label.setText(text)
+                    if len(str(stderr))>1:
+                        text, self.NWindows2 = self.formatInfoText(str(stderr))
+                        self.ui.sliceInfoFish2Label.setText(text)
             else:
                 return None
         
@@ -729,12 +783,14 @@ class TrainingWindow(QtGui.QDialog):
                 self.sliceInfo1Program.start('./../slice/slice', \
                                              ['info', \
                                               featuresName])
-                QtCore.QObject.connect(self.sliceInfo1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), fillInfoLabel1)
+                self.sliceInfo1Program.finished.connect(fillInfoLabel1)
+                #QtCore.QObject.connect(self.sliceInfo1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), fillInfoLabel1)
             else:
                 self.sliceInfo2Program.start('./../slice/slice', \
                                              ['info', \
                                               featuresName])
-                QtCore.QObject.connect(self.sliceInfo2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), fillInfoLabel2)
+                self.sliceInfo2Program.finished.connect(fillInfoLabel2)
+                #QtCore.QObject.connect(self.sliceInfo2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), fillInfoLabel2)
    
     def sliceRandom1(self):
         featuresName = self.ui.loadFeatures1LineEdit.text()
@@ -769,11 +825,14 @@ class TrainingWindow(QtGui.QDialog):
                     self.ui.crossLoadFish1LineEdit.setText(self.ui.crossSaveFish1LineEdit.text())
                     self.ui.testingLoadFish1LineEdit.setText(self.ui.testingSaveFish1LineEdit.text())
             
-            QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), sliceRandomFinish)
-            QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-            QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+            self.sliceRandom1Program.finished.connect(sliceRandomFinish)
+            self.sliceRandom1Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+            self.sliceRandom1Program.readyReadStandardError.connect(self.printAllStandardError)    
+            #QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), sliceRandomFinish)
+            #QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+            #QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         else:
-            QtGui.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities must be on the interval (0,1), and their sum on the interval [0,1]', QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities must be on the interval (0,1), and their sum on the interval [0,1]', QtWidgets.QMessageBox.Ok)
     
     def sliceRandom2(self):
         featuresName = self.ui.loadFeatures2LineEdit.text()
@@ -808,13 +867,17 @@ class TrainingWindow(QtGui.QDialog):
                     self.ui.crossLoadFish2LineEdit.setText(self.ui.crossSaveFish2LineEdit.text())
                     self.ui.testingLoadFish2LineEdit.setText(self.ui.testingSaveFish2LineEdit.text())
             
-            QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), sliceRandomFinish)
-            QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-            QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+            self.sliceRandom2Program.finished.connect(sliceRandomFinish)
+            self.sliceRandom2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
+            self.sliceRandom2Program.readyReadStandardError.connect(self.printAllStandardError)    
+            #QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), sliceRandomFinish)
+            #QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+            #QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         else:
-            QtGui.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities and their sum must be on the interval [0,1]', QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities and their sum must be on the interval [0,1]', QtWidgets.QMessageBox.Ok)
     
     def formatInfoText(self,text):
+        print(repr(text.split('\n')))
         NWindows = int(text.split('\n')[-3].split(' ')[-1])
         output = ''
         for line in text.split('\n')[-5:]:
@@ -828,26 +891,27 @@ class TrainingWindow(QtGui.QDialog):
         path = ''
         fileFilter = QString(self.fileFieldsExtension[field]) + QString(';;All files (*.*) (*.*)')
         if self.fieldsType[field] == 'load':
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
+            filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
         elif self.fieldsType[field] == 'save':
-            filename = QtGui.QFileDialog.getSaveFileName(self, 'Save file', path, fileFilter )
+            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', path, fileFilter )
         if filename != '':
-            field.setText(filename)
+            field.setText(filename[0])
         else:
             pass
     
     def raiseLongTimeInformation(self):
-        dialog = QtGui.QMessageBox()
+        dialog = QtWidgets.QMessageBox()
         dialog.setWindowTitle('Information')
         dialog.setText("This may take a while...\nTime for a coffee!\n")
         dialog.setModal(True)
-        self.CancelBut = dialog.addButton(QtGui.QMessageBox.Cancel)
-        QtCore.QObject.connect(self.CancelBut, QtCore.SIGNAL('clicked()'), self.cancelApp)
+        self.CancelBut = dialog.addButton(QtWidgets.QMessageBox.Cancel)
+        self.CancelBut.clicked.connect(self.cancelApp)
+        #QtCore.QObject.connect(self.CancelBut, QtCore.SIGNAL('clicked()'), self.cancelApp)
         dialog.show()
         return dialog
     
     def raiseParameterError(self, text):
-        QtGui.QMessageBox.critical(self, "ERROR", text + "Please check your parameters.", QtGui.QMessageBox.Ok )
+        QtWidgets.QMessageBox.critical(self, "ERROR", text + "Please check your parameters.", QtWidgets.QMessageBox.Ok )
     
     def cancelApp(self):
         print('Cancelled.')
@@ -1028,9 +1092,15 @@ class TrainingWindow(QtGui.QDialog):
                 fish = 2
             
             if fish == 1:
-                prob = np.floor(1e6*(float(text) / float(self.NWindows1)))/1e6
+                if self.NWindows1 != 0:
+                    prob = np.floor(1e6*(float(text) / float(self.NWindows1)))/1e6
+                else:
+                    prob = -1
             else:
-                prob = np.floor(1e6*(float(text) / float(self.NWindows2)))/1e6
+                if self.NWindows2 != 0:
+                    prob = np.floor(1e6*(float(text) / float(self.NWindows2)))/1e6
+                else:
+                    prob = -1
             
             if prob < 0 or prob > 1:
                 NSamplesField.setStyleSheet('QLineEdit { background-color: #ff0000; }')
@@ -1074,9 +1144,11 @@ class TrainingWindow(QtGui.QDialog):
             NSamplesField.blockSignals(False)
         
         for field in self.sliceFieldsNSamples_Prob.keys():
-            QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), numberSamplesConnection)
+            field.textChanged.connect(numberSamplesConnection)
+            #QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), numberSamplesConnection)
         for field in self.sliceFieldsProb_NSamples.keys():
-            QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), probabilityConnection)
+            field.textChanged.connect(probabilityConnection)
+            #QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), probabilityConnection)
         
         def updateTesting(text):
             sender = self.sender()
@@ -1102,7 +1174,8 @@ class TrainingWindow(QtGui.QDialog):
             outField.setText(output)
             
         for field in self.testingDependency:
-            QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), updateTesting)
+            field.textChanged.connect(updateTesting)
+            #QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), updateTesting)
         
     
     def defaultSVMValues(self):
@@ -1118,8 +1191,8 @@ class TrainingWindow(QtGui.QDialog):
         field = self.sender()
         
         if field.text() == '':
-            QtGui.QMessageBox.critical(self, "WARNING", 'We recommend that you optimize the parameters instead of selecting them directly.\n' + 
-                                       'If you with the select them directly, do it at your own risk.', QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "WARNING", 'We recommend that you optimize the parameters instead of selecting them directly.\n' + 
+                                       'If you with the select them directly, do it at your own risk.', QtWidgets.QMessageBox.Ok)
     
     def SVMToolOptim(self):
         train1Name = self.ui.trainingLoadFish1LineEdit.text()
@@ -1141,17 +1214,17 @@ class TrainingWindow(QtGui.QDialog):
            gStart == '' or \
            gStop == '' or \
            gStep == '':
-            QtGui.QMessageBox.critical(self, "ERROR", 'Please complete all Start, Stop, Step value to optimize parameters\n(Or click on the default values)', QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "ERROR", 'Please complete all Start, Stop, Step value to optimize parameters\n(Or click on the default values)', QtWidgets.QMessageBox.Ok)
             return None
         
         if float(cStop) <= float(cStart) or \
            float(gStop) <= float(gStart):
-            QtGui.QMessageBox.critical(self, "ERROR", 'cStop and gStop must be greater than cStart and gStart ', QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "ERROR", 'cStop and gStop must be greater than cStart and gStart ', QtWidgets.QMessageBox.Ok)
             return None
         
         if float(cStep) <= 0 or \
            float(gStep) <= 0:
-            QtGui.QMessageBox.critical(self, "ERROR", 'cStep and gStep must be greater than 0', QtGui.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, "ERROR", 'cStep and gStep must be greater than 0', QtWidgets.QMessageBox.Ok)
             return None
         
         dialog = self.raiseLongTimeInformation()
@@ -1176,7 +1249,7 @@ class TrainingWindow(QtGui.QDialog):
                                         cross2Name, \
                                          ])
         
-        def getOuput():
+        def getOutput():
             stdout = self.svmtoolOptimProgram.readAllStandardOutput()
             self.svmOutput = self.svmOutput + stdout
             if stdout != '':
@@ -1206,10 +1279,13 @@ class TrainingWindow(QtGui.QDialog):
                 self.ui.gValueLineEdit.setText(str(parse.group(3)))
             else:
                 return None
-        
-        QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOuput)
-        QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardError()'), getOuput)
-        QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolOptimFinish)
+       
+        self.svmtoolOptimProgram.readyReadStandardOutput.connect(getOutput) 
+        self.svmtoolOptimProgram.readyReadStandardError.connect(getOutput) 
+        self.svmtoolOptimProgram.finished.connect(svmtoolOptimFinish)
+        #QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOutput)
+        #QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardError()'), getOutput)
+        #QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolOptimFinish)
         
     def SVMToolTrain(self):
         SVMModelName = self.ui.saveSVMLineEdit.text()
@@ -1240,9 +1316,12 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
         
-        QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), SVMToolTrainFinish)
-        QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardOutput()'),self.printAllStandardOutput)
-        QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardError()'),self.printAllStandardError)
+        self.svmtoolTrainProgram.finished.connect(SVMToolTrainFinish)
+        self.svmtoolTrainProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.svmtoolTrainProgram.readyReadStandardError.connect(self.printAllStandardError)
+        #QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), SVMToolTrainFinish)
+        #QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardOutput()'),self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardError()'),self.printAllStandardError)
     
     def generateROC(self):
         self.svmModelName = self.ui.loadSVMLineEdit.text()
@@ -1304,9 +1383,12 @@ class TrainingWindow(QtGui.QDialog):
             else:
                 return None
         
-        QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOutput)
-        QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardError()'), getOutput)
-        QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolROCFinish)
+        self.svmtoolROCProgram.readyReadStandardOutput.connect(getOutput)
+        self.svmtoolROCProgram.readyReadStandardError.connect(getOutput)
+        self.svmtoolROCProgram.finished.connect(svmtoolROCFinish)
+        #QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOutput)
+        #QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardError()'), getOutput)
+        #QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolROCFinish)
     
     def plotROC(self):
         f = plt.figure(1, figsize=(10,10))
@@ -1723,12 +1805,14 @@ class TrainingWindow(QtGui.QDialog):
                        self.ui.testingLoadFish1LineEdit: self.testingAndSVMUnlocker, \
                        self.ui.testingLoadFish2LineEdit: self.testingAndSVMUnlocker, \
                        }
-        
+
         for field in self.Fields.keys():
-            if isinstance(field, QtGui.QLineEdit):
-                QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
-            elif isinstance(field, QtGui.QCheckBox):
-                QtCore.QObject.connect(field, QtCore.SIGNAL('stateChanged(int)'), self.tryUnlock)
+            if isinstance(field, QtWidgets.QLineEdit):
+                field.textChanged.connect(self.tryUnlock)
+                #QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
+            elif isinstance(field, QtWidgets.QCheckBox):
+                field.stateChanged.connect(self.tryUnlock)
+                #QtCore.QObject.connect(field, QtCore.SIGNAL('stateChanged(int)'), self.tryUnlock)
     
     def connectFileFields(self):
         
@@ -1763,7 +1847,8 @@ class TrainingWindow(QtGui.QDialog):
                            ]
         
         for field in FileFields:
-            QtCore.QObject.connect(field, QtCore.SIGNAL('clicked()'), self.fileFieldHandler)
+            field.clicked.connect(self.fileFieldHandler)
+            #QtCore.QObject.connect(field, QtCore.SIGNAL('clicked()'), self.fileFieldHandler)
 
     def verifyField(self, field):
         data = field.text()
@@ -1833,24 +1918,24 @@ class TrainingWindow(QtGui.QDialog):
         
         if self.isLayoutShown[idx]:
             label.setText( label.text()[:-2] + ' v' )
-            if isinstance(layout, QtGui.QLayout):
+            if isinstance(layout, QtWidgets.QLayout):
                 for i in xrange(layout.count()):
                     try:
                         layout.itemAt(i).widget().hide()
                     except:
                         pass
-            elif isinstance(layout, QtGui.QWidget):
+            elif isinstance(layout, QtWidgets.QWidget):
                 layout.hide()
         
         else:
             label.setText( label.text()[:-2] + ' >' )
-            if isinstance(layout, QtGui.QLayout):
+            if isinstance(layout, QtWidgets.QLayout):
                 for i in xrange(layout.count()):
                     try:
                         layout.itemAt(i).widget().show()
                     except:
                         pass
-            elif isinstance(layout, QtGui.QWidget):
+            elif isinstance(layout, QtWidgets.QWidget):
                 layout.show()
 
         self.isLayoutShown[idx] = not(self.isLayoutShown[idx])
@@ -1858,7 +1943,7 @@ class TrainingWindow(QtGui.QDialog):
 
 if __name__ == '__main__':
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
 
     myapp = TrainingWindow(app)
 

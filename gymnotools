@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtCore, QtWidgets
 import os, inspect, sys
 
 def chooserDialog():
-    dialog = QtGui.QMessageBox()
+    dialog = QtWidgets.QMessageBox()
     dialog.setWindowTitle('Gymnotools')
     dialog.setText('Please choose train or discriminate mode:\n')
     dialog.setModal(True)
-    dialog.addButton(QtGui.QPushButton('Train'), QtGui.QMessageBox.YesRole) #0
-    dialog.addButton(QtGui.QPushButton('Discriminate'), QtGui.QMessageBox.NoRole) #1
-    dialog.addButton(QtGui.QMessageBox.Close)
+    dialog.addButton(QtWidgets.QPushButton('Train'), QtWidgets.QMessageBox.YesRole) #0
+    dialog.addButton(QtWidgets.QPushButton('Discriminate'), QtWidgets.QMessageBox.NoRole) #1
+    dialog.addButton(QtWidgets.QMessageBox.Close)
     
     ansDic = {0: 'train', \
               1: 'discriminate', \
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     if curr_dir != file_dir:
         os.chdir(file_dir)
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     ret, ansDic = chooserDialog()
     
     if ret in ansDic:

@@ -1,10 +1,12 @@
 import os, sys, inspect
 
+import recogdb
+
 import numpy as np
 
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtWidgets, QtGui
 try:
-    from PyQt4.QtCore import QString
+    from PyQt5.QtCore import QString
 except:
     QString = str
 from .discriminate_interface import Ui_discriminateWindow
@@ -12,11 +14,11 @@ from .discriminate_interface import Ui_discriminateWindow
 sys.path.append( os.path.realpath('../') )
 #from python.plotIPIandSVM import plotIPIandSVM
 
-class DiscriminateWindow(QtGui.QDialog):
+class DiscriminateWindow(QtWidgets.QDialog):
     def __init__(self, app, parent=None):
         self.app = app
         
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self.setFocusPolicy( QtCore.Qt.StrongFocus )
         self.setFocus()
         
@@ -115,17 +117,18 @@ class DiscriminateWindow(QtGui.QDialog):
                              True, \
                              ]
         '''for layout in self.ParametersLayout:
-            if isinstance(layout, QtGui.QLayout):
+            if isinstance(layout, QtWidgets.QLayout):
                 for i in xrange(layout.count()):
                     try:
                         layout.itemAt(i).widget().hide()
                     except:
                         pass
-            elif isinstance(layout, QtGui.QWidget):
+            elif isinstance(layout, QtWidgets.QWidget):
                 layout.hide()'''
         
         for label in self.titleLabels:
-            QtCore.QObject.connect(label, QtCore.SIGNAL('clicked()'), self.expandLayout)
+            label.clicked.connect(self.expandLayout)
+            #QtCore.QObject.connect(label, QtCore.SIGNAL('clicked()'), self.expandLayout)
         
         self.defineFieldsType()
         self.connectFileFields()
@@ -138,21 +141,31 @@ class DiscriminateWindow(QtGui.QDialog):
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
     
     def connectButtons(self):
-        QtCore.QObject.connect(self.ui.detectChirpsBut, QtCore.SIGNAL('clicked()'), self.detectChirps)
+        self.ui.detectChirpsBut.clicked.connect(self.detectChirps)
+        self.ui.saveParametersBut.clicked.connect(self.saveParameters)
+        self.ui.loadParametersBut.clicked.connect(self.loadParameters)
+        self.ui.detectSpikesBut.clicked.connect(self.detectSpikes)
+        self.ui.verifySpikesBut.clicked.connect(self.verifySpikes)
+        self.ui.applySVMBut.clicked.connect(self.applySVM)
+        self.ui.applyContinuityBut.clicked.connect(self.applyContinuity)
+        self.ui.detectTimestampsBut.clicked.connect(self.detectTimestamps)
+        self.ui.verifyCorrectTimestampsBut.clicked.connect(self.verifyAndCorrect)
 
-        QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
-        QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
+        #QtCore.QObject.connect(self.ui.detectChirpsBut, QtCore.SIGNAL('clicked()'), self.detectChirps)
+
+        #QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
+        #QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
         
-        QtCore.QObject.connect(self.ui.detectSpikesBut, QtCore.SIGNAL('clicked()'), self.detectSpikes)
-        QtCore.QObject.connect(self.ui.verifySpikesBut, QtCore.SIGNAL('clicked()'), self.verifySpikes)
+        #QtCore.QObject.connect(self.ui.detectSpikesBut, QtCore.SIGNAL('clicked()'), self.detectSpikes)
+        #QtCore.QObject.connect(self.ui.verifySpikesBut, QtCore.SIGNAL('clicked()'), self.verifySpikes)
         
-        QtCore.QObject.connect(self.ui.applySVMBut, QtCore.SIGNAL('clicked()'), self.applySVM)
+        #QtCore.QObject.connect(self.ui.applySVMBut, QtCore.SIGNAL('clicked()'), self.applySVM)
         
-        QtCore.QObject.connect(self.ui.applyContinuityBut, QtCore.SIGNAL('clicked()'), self.applyContinuity)
+        #QtCore.QObject.connect(self.ui.applyContinuityBut, QtCore.SIGNAL('clicked()'), self.applyContinuity)
         
-        QtCore.QObject.connect(self.ui.detectTimestampsBut, QtCore.SIGNAL('clicked()'), self.detectTimestamps)
+        #QtCore.QObject.connect(self.ui.detectTimestampsBut, QtCore.SIGNAL('clicked()'), self.detectTimestamps)
         
-        QtCore.QObject.connect(self.ui.verifyCorrectTimestampsBut, QtCore.SIGNAL('clicked()'), self.verifyAndCorrect)
+        #QtCore.QObject.connect(self.ui.verifyCorrectTimestampsBut, QtCore.SIGNAL('clicked()'), self.verifyAndCorrect)
 
     def detectChirps(self):
         print('detectaChirp')
@@ -186,9 +199,12 @@ class DiscriminateWindow(QtGui.QDialog):
             else:
                 return None
 
-        QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectChirpsFinish)
-        QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.detectChirpsProgram.finished.connect(detectChirpsFinish)
+        self.detectChirpsProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.detectChirpsProgram.readyReadStandardError.connect(self.printAllStandardError)
+        #QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectChirpsFinish)
+        #QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
 
 
     
@@ -205,11 +221,13 @@ class DiscriminateWindow(QtGui.QDialog):
         saveSpikes = self.ui.saveSpikesLineEdit.text()
         useHilb = self.ui.useHilbCheckBox.isChecked()
 
-        listArgs = ['--chirps_file=%s'%chirpsFile, \
-                            '--detection=%s'%(threshold), \
+        #listArgs = ['--chirps_file=%s'%chirpsFile, \
+        listArgs = ['--detection=%s'%(threshold), \
                             '--refractory=%s'%(refractory), \
                             '--max_size=%s'%(maxSize), \
                             '--detection=%s'%threshold, \
+                            '--numtaps=%s'%taps, \
+                            '--cutoff=%s'%cutoff, \
                             TSName, \
                             hilbName, \
                             saveSpikes]
@@ -219,9 +237,6 @@ class DiscriminateWindow(QtGui.QDialog):
             listArgs.insert(3, '--numtaps=%s'%taps)
             listArgs.insert(4, '--cutoff=%s'%cutoff)
 
-        print(repr(useHilb))
-        print(listArgs)
-        
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
@@ -240,10 +255,13 @@ class DiscriminateWindow(QtGui.QDialog):
                 self.ui.loadSpikesLineEdit.setText(saveSpikes)
             else:
                 return None
-        
-        QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikesFinish)
-        QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+
+        self.detectSpikesProgram.finished.connect(detectSpikesFinish)
+        self.detectSpikesProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.detectSpikesProgram.readyReadStandardError.connect(self.printAllStandardError)        
+        #QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikesFinish)
+        #QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def verifySpikes(self):
         print('winview')
@@ -268,7 +286,8 @@ class DiscriminateWindow(QtGui.QDialog):
                 print('stderr:\n' + self.verifySpikesProgram.readAllStandardError())
                 return None
         
-        QtCore.QObject.connect(self.verifySpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikesFinish)
+        self.verifySpikesProgram.finished.connect(verifySpikesFinish)
+        #QtCore.QObject.connect(self.verifySpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikesFinish)
     
     def applySVM(self):
         print('singlefish')
@@ -299,7 +318,7 @@ class DiscriminateWindow(QtGui.QDialog):
                                     ['--minwins=%s'%minWin, \
                                     '--onlyabove=%s'%onlyAbove, \
                                     '--saturation=%s,%s'%(lowSaturation,highSaturation), \
-                                    '--minprob=0.95', \
+                                    '--minprob=0.99', \
                                     TSName, \
                                     spikesName, \
                                     scaleName, \
@@ -321,9 +340,12 @@ class DiscriminateWindow(QtGui.QDialog):
                 print('stderr:\n' + self.applySVMProgram.readAllStandardError())
                 return None
         
-        QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), applySVMFinish)
-        QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.applySVMProgram.finished.connect(applySVMFinish)
+        self.applySVMProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.applySVMProgram.readyReadStandardError.connect(self.printAllStandardError)
+        #QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), applySVMFinish)
+        #QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def applyContinuity(self):
         print('recog')
@@ -337,25 +359,28 @@ class DiscriminateWindow(QtGui.QDialog):
         self.TSoutput = '/tmp/' + self.saveDBName.split('/')[-1].split('.')[0] + '.timestamps'
        
         if os.path.isfile(self.saveDBName):
-            dialog = QtGui.QMessageBox()
+            dialog = QtWidgets.QMessageBox()
             dialog.setModal(True)
             dialog.setWindowTitle('Warning')
             dialog.setText('You want to override the original DB or apply over it?\n' + \
                            '(when applying over it, it will only substitute the spikes that' + \
                            'had euclidean distance inferior to the stored on the DB)')
-            dialog.addButton(QtGui.QPushButton('Override'), QtGui.QMessageBox.YesRole) #0
-            dialog.addButton(QtGui.QPushButton('Apply over'), QtGui.QMessageBox.NoRole) #1
-            dialog.addButton(QtGui.QMessageBox.Cancel)
+            dialog.addButton(QtWidgets.QPushButton('Override'), QtWidgets.QMessageBox.YesRole) #0
+            dialog.addButton(QtWidgets.QPushButton('Apply over'), QtWidgets.QMessageBox.NoRole) #1
+            dialog.addButton(QtWidgets.QMessageBox.Cancel)
             
             ret = dialog.exec_()
             
-            if ret == QtGui.QMessageBox.Cancel:
+            if ret == QtWidgets.QMessageBox.Cancel:
                 return None
             elif ret == 0: #Override
                 print('Removing DB file...')
                 os.remove(self.saveDBName)
+                recogdb.openDB(self.saveDBName, 'w')
             else: #ret == 1 -> Apply over
                 pass
+        else:
+            recogdb.openDB(self.saveDBName, 'w')
         
         self.recogPassed = False
         self.recog(1)
@@ -400,9 +425,12 @@ class DiscriminateWindow(QtGui.QDialog):
                 return None
         
         
-        QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), recogFinish)
-        QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.applyContinuityProgram.finished.connect(recogFinish)
+        self.applyContinuityProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.applyContinuityProgram.readyReadStandardError.connect(self.printAllStandardError)
+        #QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), recogFinish)
+        #QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     
     def mean_stdWinLen(self, winlenFilename):
@@ -439,9 +467,12 @@ class DiscriminateWindow(QtGui.QDialog):
                 print('stderr:\n' + self.detectSpikesProgram.readAllStandardError())
                 return None
         
-        QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectTimestampsFinish)
-        QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.detectTimestampsProgram.finished.connect(detectTimestampsFinish)
+        self.detectTimestampsProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.detectTimestampsProgram.readyReadStandardError.connect(self.printAllStandardError)
+        #QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectTimestampsFinish)
+        #QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def verifyAndCorrect(self):
         print('plotIPIandSVM')
@@ -479,9 +510,12 @@ class DiscriminateWindow(QtGui.QDialog):
                 print('error')
                 return None
 
-        QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), plotIPIandSVMFinish)
-        QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.plotIPIandSVMProgram.finished.connect(plotIPIandSVMFinish)
+        self.plotIPIandSVMProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.plotIPIandSVMProgram.readyReadStandardError.connect(self.printAllStandardError)
+        #QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), plotIPIandSVMFinish)
+        #QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
+        #QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
 
 
         
@@ -504,12 +538,13 @@ class DiscriminateWindow(QtGui.QDialog):
             sys.stderr.flush()
     
     def raiseLongTimeInformation(self):
-        dialog = QtGui.QMessageBox()
+        dialog = QtWidgets.QMessageBox()
         dialog.setWindowTitle('Information')
         dialog.setText("This may take a while...\nTime for a coffee!\n")
         dialog.setModal(True)
-        self.CancelBut = dialog.addButton(QtGui.QMessageBox.Cancel)
-        QtCore.QObject.connect(self.CancelBut, QtCore.SIGNAL('clicked()'), self.cancelApp)
+        self.CancelBut = dialog.addButton(QtWidgets.QMessageBox.Cancel)
+        self.CancelBut.clicked.connect(self.cancelApp)
+        #QtCore.QObject.connect(self.CancelBut, QtCore.SIGNAL('clicked()'), self.cancelApp)
         dialog.show()
         return dialog
     
@@ -533,27 +568,29 @@ class DiscriminateWindow(QtGui.QDialog):
             return True
     
     def raiseParameterError(self, text):
-        QtGui.QMessageBox.critical(self, "ERROR", text + "Please check your parameters.", QtGui.QMessageBox.Ok )
+        QtWidgets.QMessageBox.critical(self, "ERROR", text + "Please check your parameters.", QtWidgets.QMessageBox.Ok )
     
     def saveParameters(self):
-        saveFilename = QtGui.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.discparameters) (*.discparameters);;All files (*.*) (*.*)')
-        saveFile = open(saveFilename, 'w')
-        for element in self.lineFieldsList:
-            if isinstance(element, QtGui.QLineEdit):
-                saveFile.write( '%s\t%s\n'%(element.objectName(), element.text()) )
-        saveFile.close()
+        saveFilename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.discparameters) (*.discparameters);;All files (*.*) (*.*)')
+        if saveFilename[0] != u'':
+            saveFile = open(saveFilename[0], 'w')
+            for element in self.lineFieldsList:
+                if isinstance(element, QtWidgets.QLineEdit):
+                    saveFile.write( '%s\t%s\n'%(element.objectName(), element.text()) )
+            saveFile.close()
 
     def loadParameters(self):
-        loadFilename = QtGui.QFileDialog.getOpenFileName(self, 'Load Parameters File', '', 'Parameters File (*.discparameters) (*.discparameters);;All files (*.*) (*.*)')
-        loadFile = open(loadFilename, 'r')
-        for line in loadFile.readlines():
-            objectName, Value = line.split('\t')
-            Value = Value.strip()
-            if Value != '':
-                for element in self.lineFieldsList:
-                    if element.objectName() == objectName:
-                        element.setText(Value)
-                        break
+        loadFilename = QtWidgets.QFileDialog.getOpenFileName(self, 'Load Parameters File', '', 'Parameters File (*.discparameters) (*.discparameters);;All files (*.*) (*.*)')
+        if loadFilename[0] != u'':
+            loadFile = open(loadFilename[0], 'r')
+            for line in loadFile.readlines():
+                objectName, Value = line.split('\t')
+                Value = Value.strip()
+                if Value != '':
+                    for element in self.lineFieldsList:
+                        if element.objectName() == objectName:
+                            element.setText(Value)
+                            break
     
     def expandLayout(self):
         label = self.sender()
@@ -562,24 +599,24 @@ class DiscriminateWindow(QtGui.QDialog):
         
         if self.isLayoutShown[idx]:
             label.setText( label.text()[:-2] + ' v' )
-            if isinstance(layout, QtGui.QLayout):
+            if isinstance(layout, QtWidgets.QLayout):
                 for i in xrange(layout.count()):
                     try:
                         layout.itemAt(i).widget().hide()
                     except:
                         pass
-            elif isinstance(layout, QtGui.QWidget):
+            elif isinstance(layout, QtWidgets.QWidget):
                 layout.hide()
         
         else:
             label.setText( label.text()[:-2] + ' >' )
-            if isinstance(layout, QtGui.QLayout):
+            if isinstance(layout, QtWidgets.QLayout):
                 for i in xrange(layout.count()):
                     try:
                         layout.itemAt(i).widget().show()
                     except:
                         pass
-            elif isinstance(layout, QtGui.QWidget):
+            elif isinstance(layout, QtWidgets.QWidget):
                 layout.show()
 
         self.isLayoutShown[idx] = not(self.isLayoutShown[idx])
@@ -658,12 +695,12 @@ class DiscriminateWindow(QtGui.QDialog):
         path = ''
         fileFilter = QString(self.fileFieldsExtension[field]) + QString(';;All files (*.*) (*.*)')
         if self.fieldsType[field] == 'load':
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
+            filename = QtWidgets.QFileDialog.getOpenFileName(self, 'Load file', path, fileFilter)
         elif self.fieldsType[field] == 'save':
-            filename = QtGui.QFileDialog.getSaveFileName(self, 'Save file', path, fileFilter )
+            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', path, fileFilter )
         
         if filename != '':
-            field.setText(filename)
+            field.setText(filename[0])
         else:
             pass
     
@@ -689,7 +726,8 @@ class DiscriminateWindow(QtGui.QDialog):
                       )
         
         for field in FileFields:
-            QtCore.QObject.connect(field, QtCore.SIGNAL('clicked()'), self.fileFieldHandler)
+            field.clicked.connect(self.fileFieldHandler)
+            #QtCore.QObject.connect(field, QtCore.SIGNAL('clicked()'), self.fileFieldHandler)
     
     def connectUnlockFields(self):
         
@@ -889,10 +927,12 @@ class DiscriminateWindow(QtGui.QDialog):
                        }
         
         for field in self.Fields.keys():
-            if isinstance(field, QtGui.QLineEdit):
-                QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
-            elif isinstance(field, QtGui.QCheckBox):
-                QtCore.QObject.connect(field, QtCore.SIGNAL('stateChanged(int)'), self.tryUnlock)
+            if isinstance(field, QtWidgets.QLineEdit):
+                field.textChanged.connect(self.tryUnlock)
+                #QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
+            elif isinstance(field, QtWidgets.QCheckBox):
+                field.stateChanged.connect(self.tryUnlock)
+                #QtCore.QObject.connect(field, QtCore.SIGNAL('stateChanged(int)'), self.tryUnlock)
     
     def initialClickState(self):
         for tup in self.Fields.values():
@@ -946,7 +986,7 @@ class DiscriminateWindow(QtGui.QDialog):
 
 if __name__ == '__main__':
     
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     
     myapp = DiscriminateWindow(app)
     

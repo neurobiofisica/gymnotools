@@ -1,8 +1,8 @@
-from PyQt4 import QtGui, QtCore
+from PyQt5 import QtWidgets, QtCore
 import matplotlib
-matplotlib.use("Qt4Agg")
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+matplotlib.use("Qt5Agg")
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 from matplotlib.figure import Figure
 
@@ -15,15 +15,15 @@ class CanvasROC(FigureCanvas):
         self.ax.set_title('ROC Curve')
 
         FigureCanvas.__init__(self, self.fig)
-        FigureCanvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        FigureCanvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-class ROCWidget(QtGui.QWidget):
+class ROCWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
         self.canvas = CanvasROC()
 
-        self.vbl = QtGui.QVBoxLayout()
+        self.vbl = QtWidgets.QVBoxLayout()
         self.setLayout(self.vbl)
         self.vbl.addWidget(self.canvas)
 
