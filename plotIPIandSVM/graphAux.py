@@ -3,11 +3,14 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from matplotlib.figure import Figure
 
-import sys
+import sys,os
 if sys.version_info.major == 3:
     xrange = range
 
-NChan=8
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
+
 NColumns=2
 NRows = NChan/NColumns + NChan%NColumns
 

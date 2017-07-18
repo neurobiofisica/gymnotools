@@ -47,9 +47,10 @@ import recogdb
 # Constants
 lowSat = -9.9
 highSat = 9.9
-freq = 50000.
-NChan = 8
 
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
 
 # Defines (zorder -> used of selecting picker)
 IPIDATABLUE = 100 # The dots will be on top of every other plot
@@ -63,7 +64,7 @@ OPTIONS = 7
 FIGIPI = 1
 FIGSIG = 2
 
-SPKSIZE = 512
+SPKSIZE = winSize
 DEFAULTSUR = int(freq*0.100) # s
 
 

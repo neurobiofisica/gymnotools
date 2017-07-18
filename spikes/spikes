@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-
 from __future__ import division
+
+import sys,os
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
 
 import scipy.signal
 import numpy as np
@@ -21,8 +24,6 @@ if sys.version_info.major == 3:
 else:
     mode = ''
 
-freq = 50000.
-winSize = 512
 chirpStep = int(0.300*freq)
 
 class MyParser(argparse.ArgumentParser):
@@ -75,8 +76,6 @@ den = [ 1.000000000000000, -0.445897866413142, -0.101209607292324, -0.0479388887
 def myabshilbert(x):
     return np.sqrt(scipy.signal.lfilter(num, den, x)[4:]**2 + x[:-4]**2)
 
-nchan = 8
-
 inarr = np.memmap(args.timeseries_file, dtype=np.float32, mode='r')
 sizein, = inarr.shape
 
@@ -85,11 +84,11 @@ if args.useHilbert == True:
 else:
     sys.stdout.write('Generating new Hilbert file\n')
     sys.stdout.flush()
-    h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//nchan - 4))
-    for i in xrange(nchan):
+    h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//NChan - 4))
+    for i in xrange(NChan):
         sys.stdout.write('\t%d\r'%i)
         sys.stdout.flush()
-        h += myabshilbert(inarr[i::nchan])
+        h += myabshilbert(inarr[i::NChan])
 
 
     kern_size = int(medfiltsize*freq)
@@ -207,7 +206,7 @@ for num,i in enumerate(locs):
         sys.stdout.write('Window too small (%d) %ld\n'%(offsetend-offset, offset))
         sys.stdout.flush()
         continue
-    possiveisSpikesSig =  [ np.array(inarr[c+nchan*offset: c + nchan*offsetend: nchan]) for c in range(nchan) ]
+    possiveisSpikesSig =  [ np.array(inarr[c+NChan*offset: c + NChan*offsetend: NChan]) for c in range(NChan) ]
 
         
     #possiveisSpikes[num] = PS 
@@ -257,11 +256,11 @@ for num,i in enumerate(locs):
 
     # Fill borders with DC sample
     if flagOverlapBegin == False:
-        for c in range(nchan):
+        for c in range(NChan):
             #possiveisSpikesSig[c][:begin] = possiveisSpikesSig[c][begin]
             possiveisSpikesSig[c][:begin] = 0
     if flagOverlapEnd == False:
-        for c in range(nchan):
+        for c in range(NChan):
             #possiveisSpikesSig[c][fim:] = possiveisSpikesSig[c][fim]
             possiveisSpikesSig[c][fim:] = 0
 
@@ -271,26 +270,26 @@ for num,i in enumerate(locs):
         e = min((Mi+winSize//2), possiveisSpikesSig[0].size)
         size = e - (Mi-winSize//2)
         center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(nchan)]
+        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]
     elif flagOverlapEnd == True and flagOverlapBegin == False:
         b = Mi-winSize//2
         e = fim
         size = fim - (Mi-winSize//2)
         center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(nchan)]
+        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]
     elif flagOverlapEnd == False and flagOverlapBegin == True:
         b = begin
         e = min((Mi+winSize//2), possiveisSpikesSig[0].size)
         size = e - begin
         center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(nchan)]
+        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]
     #elif flagOverlapEnd == True and flagOverlapBegin == True:
     else:
         b = begin
         e = fim
         size = fim - begin
         center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(nchan)]
+        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]
     #print("%d\t%d\t%d\t%d\t%d\t%.03f"%(flagOverlapBegin, flagOverlapEnd, begin, fim, janelas[0].size, 100.*num / (1.*tamlocs)))
    
     if flagOverlapSize == True and single == False:
@@ -298,14 +297,14 @@ for num,i in enumerate(locs):
         e = fim
         size = fim - begin
         center = Mi - b
-        janelas = [possiveisSpikesSig[c][begin:fim] for c in range(nchan)]
+        janelas = [possiveisSpikesSig[c][begin:fim] for c in range(NChan)]
 
     '''if b - e < winSize and single == False:
         b = max(0, Mi-winSize//2)
         e = min(Mi+winSize//2, possiveisSpikesSig[0].size)
         size = e - b
         center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(nchan)]'''
+        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]'''
 
     tooSmall = True
     for pspk in janelas:
@@ -329,7 +328,7 @@ for num,i in enumerate(locs):
             else:
                 continue
     else:
-        njanelas = nchan
+        njanelas = NChan
         listjanelas = [(n,s) for n,s in enumerate(janelas)]
     
     if njanelas == 0:
@@ -357,7 +356,7 @@ for num,i in enumerate(locs):
     #    print('Will not print same offset twice')
 
     if debug == True:
-        for c in xrange(nchan):
+        for c in xrange(NChan):
             plt.plot(janelas[c], 'k-', alpha=0.1)
 
         '''print("%d\t%d\t%d\t%d"%(flagOverlapBegin, flagOverlapEnd, begin, fim))

@@ -23,9 +23,12 @@ try:
 except AttributeError:
     def _translate(context, text, disambig):
         return QtWidgets.QApplication.translate(context, text, disambig)
+
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
     
-spkSize = 512
-freq = 50000.
+spkSize = winSize
 saturationLow = -10
 saturationHigh = 10
     

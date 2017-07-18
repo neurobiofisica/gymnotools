@@ -11,6 +11,10 @@ import sys, os
 if sys.version_info.major == 3:
     xrange = range
 
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
+
 if os.getcwd().split('/')[-1] == 'gui':
     sys.path.append( os.path.realpath('../python') )
 elif os.getcwd().split('/')[-1] == 'plotIPIandSVM':
@@ -30,8 +34,6 @@ try:
 except AttributeError:
     def _translate(context, text, disambig):
         return QtWidgets.QApplication.translate(context, text, disambig)
-
-NChan = 8
 
 INVERTION = 0
 SINGLE2OVERLAP = 1
@@ -164,7 +166,7 @@ class ModifySelector:
         if os.stat(keyundofile.name).st_size == 0:
             os.remove(keyundofile.name)
 
-    def insertIPI(self, key, presentFish, winSize=256):
+    def insertIPI(self, key, presentFish, winSize=winSize):
 
         databeg = key - (winSize // 2)   
         self.datafile.seek(4*databeg*NChan)

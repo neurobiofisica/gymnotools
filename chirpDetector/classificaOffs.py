@@ -2,11 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from matplotlib.mlab import find
-import sys
+import sys, os
 
-freq = 45454.545454
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
+
 idx0 = 0
-nchan = 11
 around = 40
 
 win = int(0.25*freq)
@@ -42,9 +44,9 @@ class Geral(object):
         self.idx += 1
         self.ob = Ob[self.idx]
         self.oe = Oe[self.idx]
-        for i in range(nchan):
-            sig1 = S[ i + nchan*min(self.ob-win, self.ob+win) : i + nchan*max(self.ob-win, self.ob+win) : nchan ]
-            sig2 = S[ i + nchan*min(self.oe+win, self.oe-win) : i + nchan*max(self.oe+win, self.oe-win) : nchan ]
+        for i in range(NChan):
+            sig1 = S[ i + NChan*min(self.ob-win, self.ob+win) : i + NChan*max(self.ob-win, self.ob+win) : NChan ]
+            sig2 = S[ i + NChan*min(self.oe+win, self.oe-win) : i + NChan*max(self.oe+win, self.oe-win) : NChan ]
             self.l1[i].set_ydata(3*i + 3*sig1)
             self.l2[i].set_ydata(3*i + 3*sig2)
             self.l1[i].set_xdata( np.linspace(min(self.ob-win, self.ob+win), max(self.ob-win, self.ob+win), sig1.size) )
@@ -56,8 +58,8 @@ class Geral(object):
         self.ax2.set_title('%d - %d'%(self.idx, Oe.size))
         self.ax1.set_xlim( (min(self.ob-win, self.ob+win), max(self.ob-win, self.ob+win)) )
         self.ax2.set_xlim( (min(self.oe-win, self.oe+win), max(self.oe-win, self.oe+win)) )
-        self.ax1.set_ylim((-10, 3*nchan+10))
-        self.ax2.set_ylim((-10, 3*nchan+10))
+        self.ax1.set_ylim((-10, 3*NChan+10))
+        self.ax2.set_ylim((-10, 3*NChan+10))
         self.fig.canvas.draw()
 
     def plotLines(self):
@@ -66,17 +68,17 @@ class Geral(object):
 
         for i in range(around):
             x = P1[idx1-i]
-            y = (-10, 3*nchan+10)
+            y = (-10, 3*NChan+10)
             ax1.plot((x,x), y, 'b-', lw=10, alpha=0.3)
             x = P2[idx2-i]
-            y = (-10, 3*nchan+10)
+            y = (-10, 3*NChan+10)
             ax1.plot((x,x), y, 'r-', lw=10, alpha=0.3)
         for i in range(around):
             x = P1[idx1+i]
-            y = (-10, 3*nchan+10)
+            y = (-10, 3*NChan+10)
             ax1.plot((x,x), y, 'b-', lw=10, alpha=0.3)
             x = P2[idx2+i]
-            y = (-10, 3*nchan+10)
+            y = (-10, 3*NChan+10)
             ax1.plot((x,x), y, 'r-', lw=10, alpha=0.3)
 
         idx1 = next(n for n,p in enumerate(P1) if p > self.oe)
@@ -84,17 +86,17 @@ class Geral(object):
 
         for i in range(around):
             x = P1[idx1-i]
-            y = (-10, 3*nchan+10)
+            y = (-10, 3*NChan+10)
             ax2.plot((x,x), y, 'b-', lw=10, alpha=0.3)
             x = P2[idx2-i]
-            y = (-10, 3*nchan+10)
+            y = (-10, 3*NChan+10)
             ax2.plot((x,x), y, 'r-', lw=10, alpha=0.3)
         for i in range(around):
             x = P1[idx1+i]
-            y = (-10, 3*nchan+10)
+            y = (-10, 3*NChan+10)
             ax2.plot((x,x), y, 'b-', lw=10, alpha=0.3)
             x = P2[idx2+i]
-            y = (-10, 3*nchan+10)
+            y = (-10, 3*NChan+10)
             ax2.plot((x,x), y, 'r-', lw=10, alpha=0.3)
 
 
@@ -104,7 +106,7 @@ ax1 = fig.add_subplot(121)
 ax2 = fig.add_subplot(122)
 l1 = []
 l2 = []
-for i in range(nchan):
+for i in range(NChan):
     l1tmp, = ax1.plot([], [])
     l2tmp, = ax2.plot([], [])
     l1.append(l1tmp)

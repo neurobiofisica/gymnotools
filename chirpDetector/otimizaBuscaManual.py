@@ -1,12 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
+import sys, os
+
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
 
 CHIRPONOFF = 20
 
-nchan = 11
 idx0 = 0
-freq = 45454.545454
 winsize = int(0.5*freq)
 
 if sys.argv[1] not in ['-b', '-e']:
@@ -28,7 +30,7 @@ else:
 fig = plt.figure(1, figsize=(26,14))
 ax = fig.add_subplot(111)
 l = []
-for i in range(nchan):
+for i in range(NChan):
     ltmp, = ax.plot([], []) 
     l.append(ltmp)
 ax.plot([], 'ko', mew=5, label='\'d\' Dots on', zorder=CHIRPONOFF)
@@ -52,13 +54,13 @@ class Geral(object):
     def nex(self):
         self.idx += 1
         self.c = C[self.idx]
-        for i in range(nchan):
-            sig = S[ i + nchan*min(self.c, self.c+win) : i + nchan*max(self.c, self.c+win) : nchan ]
+        for i in range(NChan):
+            sig = S[ i + NChan*min(self.c, self.c+win) : i + NChan*max(self.c, self.c+win) : NChan ]
             self.l[i].set_ydata(3*i + 3*sig)
             self.l[i].set_xdata( np.linspace(min(self.c, self.c+win), max(self.c, self.c+win), sig.size) )
         self.ax.set_title( '%d - %d'%(self.idx, C.size) )
         self.ax.set_xlim( (min(self.c, self.c+win), max(self.c, self.c+win)) )
-        self.ax.set_ylim( (-10, 3*nchan+10) )
+        self.ax.set_ylim( (-10, 3*NChan+10) )
         self.fig.canvas.draw()
     
 callback = Geral(fig, ax, l, idx0)
@@ -71,12 +73,12 @@ callback = Geral(fig, ax, l, idx0)
 
 '''for n in range(idx0, C.size):
     c = C[n]
-    for i in range(nchan):
-        sig = S[ i + nchan*c : i + nchan*(c+win) : nchan ]
+    for i in range(NChan):
+        sig = S[ i + NChan*c : i + NChan*(c+win) : NChan ]
         l[i].set_ydata(3*i + sig)
         l[i].set_xdata( np.linspace(min(c, c+win), max(c, c+win), sig.size) )
     ax.set_title( '%d - %d'%(n, C.size) )
     ax.set_xlim( (min(c, c+win), max(c, c+win)) )
-    ax.set_ylim( (-10, 3*nchan+10) )
+    ax.set_ylim( (-10, 3*NChan+10) )
     plt.show()'''
 plt.show()

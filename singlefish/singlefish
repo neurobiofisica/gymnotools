@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division
-import sys
+import sys, os
 import svm
 import pickle
 import pygymnext
@@ -10,11 +10,11 @@ import windowfile
 import numpy as np
 import argparse
 
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
 
-nChan = 8
-winSize = 512
-freq = 50000.
-numFeatures = 20
+numFeatures = 20 #TODO: Pass as a parameters
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -57,7 +57,7 @@ minOverlapChan = 5
 
 
 numFeatures = int((winSize/2) + winSize*(1 + np.log2(winSize)))
-bytesPerSample = nChan * 4
+bytesPerSample = NChan * 4
 
 def readScaleFile(scaleFile):
     minval = np.zeros(numFeatures)
@@ -155,12 +155,12 @@ for n, (curOff, winSamples, sigs) in enumerate(inSpk):
         cause = 'd'
 
     # Verify which channels can be used to feed the SVM
-    assert(len(sigs) <= nChan)
+    assert(len(sigs) <= NChan)
 
     numWinOk = 0
     if winSamples == winSize:
-        winOk = np.zeros(nChan, dtype=np.bool)
-        maxAmp = np.zeros(nChan, dtype=np.float32)
+        winOk = np.zeros(NChan, dtype=np.bool)
+        maxAmp = np.zeros(NChan, dtype=np.float32)
 
         for m, (ch, sig) in enumerate(sigs.items()):
             abssig = np.abs(sig)
