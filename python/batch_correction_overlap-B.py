@@ -3,8 +3,8 @@ import recogdb
 import struct
 import sys
 
-keybeg = 356604502
-keyend = 356637225
+keybeg = 356625319
+keyend = 356631058
 
 db = recogdb.openDB(sys.argv[1], 'rw')
 
@@ -27,34 +27,20 @@ while (off <= keyend):
     oldDistB = read_data[ recogdb.dicFields['distB'] ]
     oldDistAB = read_data[ recogdb.dicFields['distAB'] ]
 
-    if oldFish == 1:
+    if oldFish == 3:
         newFish = 2
         newCorrectedPosA = -1
-        newCorrectedPosB = oldCorrectedPosA
+        newCorrectedPosB = oldCorrectedPosB
         newDistA = float('Inf')
         newDistB = 0.
         newDistAB = float('Inf')
-    elif oldFish == 2:
-        newFish = 1
-        newCorrectedPosA = oldCorrectedPosB
-        newCorrectedPosB = -1
-        newDistA = 0.
-        newDistB = float('Inf')
-        newDistAB = float('Inf')
-    else:
-        newFish = 3
-        newCorrectedPosA = oldCorrectedPosB
-        newCorrectedPosB = oldCorrectedPosA
-        newDistA = float('Inf')
-        newDistB = float('Inf')
-        newDistAB = 0.
 
-    recogdb.updateHeaderEntry(db, key, 'presentFish', newFish, sync=False)
-    recogdb.updateHeaderEntry(db, key, 'correctedPosA', newCorrectedPosA, sync=False)
-    recogdb.updateHeaderEntry(db, key, 'correctedPosB', newCorrectedPosB, sync=False)
-    recogdb.updateHeaderEntry(db, key, 'distA', newDistA, sync=False)
-    recogdb.updateHeaderEntry(db, key, 'distB', newDistB, sync=False)
-    recogdb.updateHeaderEntry(db, key, 'distAB', newDistAB, sync=True)
+        recogdb.updateHeaderEntry(db, key, 'presentFish', newFish, sync=False)
+        recogdb.updateHeaderEntry(db, key, 'correctedPosA', newCorrectedPosA, sync=False)
+        recogdb.updateHeaderEntry(db, key, 'correctedPosB', newCorrectedPosB, sync=False)
+        recogdb.updateHeaderEntry(db, key, 'distA', newDistA, sync=False)
+        recogdb.updateHeaderEntry(db, key, 'distB', newDistB, sync=False)
+        recogdb.updateHeaderEntry(db, key, 'distAB', newDistAB, sync=True)
 
     off, bindata = db.next()
     off, = struct.unpack('=q', off)

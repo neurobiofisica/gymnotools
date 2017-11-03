@@ -3,7 +3,7 @@ import recogdb
 import struct
 import sys
 
-freq = 50000.
+freq = 45454.545454
 
 fish = 2
 keybeg = 169451424
