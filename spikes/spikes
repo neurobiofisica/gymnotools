@@ -15,8 +15,16 @@ import argparse
 
 from windowfile import writewin
 
-minAmp = 0.035
-medfiltsize= 0.0010
+def gmean(arr, kernel_size=3):
+    tam = arr.size
+    out = np.memmap('/tmp/tmp.f32', dtype=np.float32, shape=(tam+kernel_size,), mode='w+')
+    out[:] = [ np.prod(arr[max(0,n):min(n+kernel_size,tam)])**(1./kernel_size) for n in range(-kernel_size//2,tam+kernel_size//2) ]
+    return out[kernel_size//2:tam+kernel_size//2]
+
+#medfiltsize= 0.0010
+gmeansize = 31
+
+hmin = 0.060
 
 if sys.version_info.major == 3:
     xrange = range
@@ -24,6 +32,8 @@ if sys.version_info.major == 3:
 else:
     mode = ''
 
+tol = int(0.0005*freq)
+nchan = NChan
 chirpStep = int(0.300*freq)
 
 class MyParser(argparse.ArgumentParser):
@@ -43,7 +53,7 @@ parser.add_argument('--chirps_gain', type=float, default=0.3, help='Thresold rat
 parser.add_argument('-d', '--detection', type=float, default=1.00, help='Theshold for detecting a spike')
 parser.add_argument('-r', '--refractory', type=float, default=0.001, help='Refractory period for spike detection')
 parser.add_argument('-m', '--max_size', type=float, default=0.0035, help='Maximum size for a single spike')
-parser.add_argument('-n', '--numtaps', type=int, default=301, help='Number of taps for high pass filter on Hilbert Transform')
+parser.add_argument('-n', '--numtaps', type=int, default=10001, help='Number of taps for high pass filter on Hilbert Transform')
 parser.add_argument('-z', '--saturation', type=str, help='low,high saturation level to filter out')
 parser.add_argument('-c', '--cutoff', type=float, default=1., help='Cutoff frequency of low pass filter')
 parser.add_argument('-o', '--onlyabove', type=float, default=0.005, help='Only output spikes above this value')
@@ -60,6 +70,7 @@ refrac = int(args.refractory * freq)
 maxSize = int(args.max_size * freq)
 single = args.fixedwin
 chirpGain = args.chirps_gain
+outputFile = args.outfile
 
 saturation = args.saturation
 satL = -9.9 # TODO: pegar do .h
@@ -76,6 +87,7 @@ den = [ 1.000000000000000, -0.445897866413142, -0.101209607292324, -0.0479388887
 def myabshilbert(x):
     return np.sqrt(scipy.signal.lfilter(num, den, x)[4:]**2 + x[:-4]**2)
 
+
 inarr = np.memmap(args.timeseries_file, dtype=np.float32, mode='r')
 sizein, = inarr.shape
 
@@ -84,290 +96,315 @@ if args.useHilbert == True:
 else:
     sys.stdout.write('Generating new Hilbert file\n')
     sys.stdout.flush()
-    h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//NChan - 4))
-    for i in xrange(NChan):
+    h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//nchan - 4))
+    for i in xrange(nchan):
         sys.stdout.write('\t%d\r'%i)
         sys.stdout.flush()
-        h += myabshilbert(inarr[i::NChan])
+        h += myabshilbert(inarr[i::nchan])
 
 
-    kern_size = int(medfiltsize*freq)
-    if (kern_size % 2) == 0:
-        kern_size += 1
-    sys.stdout.write('median\n')
+    #kern_size = int(medfiltsize*freq)
+    #if (kern_size % 2) == 0:
+    #    kern_size += 1
+    sys.stdout.write('gmean\n')
     sys.stdout.flush()
-    h[:] = scipy.signal.medfilt(h, kernel_size=kern_size) + 0.1*h
+    #h[:] = scipy.signal.medfilt(h, kernel_size=kern_size) + 0.1*h
+    h[:] = gmean(h, kernel_size=gmeansize)
 
     n = args.numtaps
-    a = scipy.signal.firwin(n, [70, 1500], pass_zero=False, window='hanning', nyq=freq/2)
+    a = scipy.signal.firwin(n, [20, 1000], pass_zero=False, window='hanning', nyq=freq/2)
 
     sys.stdout.write('low pass\n')
     sys.stdout.flush()
     h[:] = np.convolve(h, a, mode='same')
 
-if args.chirps_file is not None:
-    chirps = np.loadtxt(args.chirps_file, unpack=True, dtype=np.int64)
-    nChirps = chirps.shape[1]
-outputFile = args.outfile
-#plt.plot(h[:10000])
-#plt.show()
+del h
+h = np.fromfile(args.hilbert_file, dtype=np.float32)
+#h = h[50*50000:51*50000]
 
-idxAbove = np.array([], dtype=np.int)
-last = 0
-sys.stdout.write('Applying threshold...\n')
+size10s = int(freq*2)
+step = 3
+hd = scipy.signal.decimate(h,step,zero_phase=True)
+tam = hd.size
+typMinSize = 12/step # Samples
+typMaxSize = 120/step # Samples
+typStep = 0.10
+thLim = 0 # On the filtered hilber signal
+
+NSteps = tam // size10s
+if (tam % size10s) > 0:
+    NSteps += 1
+
+import pymp
+locsp = pymp.shared.list()
+with pymp.Parallel(8) as p:
+    for i in p.range(0,NSteps):
+        beg = size10s * i
+        end = min( size10s*(i+1), tam )
+        sig = hd[beg:end]
+        sys.stdout.write('%d\t\t%d\n'%(i,NSteps))
+        sys.stdout.flush()
+
+        widths=np.arange(typMinSize, typMaxSize, typStep)
+
+        locs_now = step*beg + step*scipy.signal.find_peaks_cwt(sig, widths,noise_perc=10)
+        #locs_now, = scipy.signal.argrelmax(sig, order=40)
+        #locs_now = step*beg + step*locs_now
+        locsp.append(locs_now)
+locs = np.array([],dtype=np.int64)
+sys.stdout.write('concatenate\n')
 sys.stdout.flush()
-if args.chirps_file is not None:
-    thresholds = {}
-    for n in range(nChirps):
-        sys.stdout.write('%.03f%%\r'%((100.*n)/nChirps))
-        sys.stdout.flush()
-        beg, end = chirps[:, n]
-        idxAbovelow, = np.where( h[last:beg] > threshold )
-        idxAbovelow += last
-        b = beg
-        idxAbovehigh = np.array([], dtype=np.int)
-        while b < end:
-            sys.stdout.write('\t\t%d - %d                        \r'%(b-beg,end-beg))
-            sys.stdout.flush()
-            if b+chirpStep < end:
-                e = b+chirpStep
-            else:
-                e = end
-            th = h[b:e].max() * chirpGain
-            idxAbovehigh_now, = np.where( h[b:e] > th ) #############
-            thresholds.update({b:th})
-            idxAbovehigh_now += b
-            idxAbovehigh = np.concatenate( (idxAbovehigh, idxAbovehigh_now) )
-            b += chirpStep
-        idxAbove = np.concatenate( (idxAbove, idxAbovelow, idxAbovehigh))
-        last = end
-    idxAbovelow, = np.where( h[last:] > threshold )
-    idxAbovelow += last
-    idxAbove = np.concatenate( (idxAbove, idxAbovelow) )
-else:
-    idxAbove, = np.where( h > threshold )
+for i in range(NSteps):
+    sys.stdout.write('%d\r'%i)
+    sys.stdout.flush()
+    locs = np.concatenate( (locs, np.array(locsp[i]))  )
+sys.stdout.write('sorting - %d\n'%(locs.size))
+sys.stdout.flush()
+locs.sort()
+del locsp
 
-sys.stdout.write('\n')
+locs = locs[ np.where( h[locs] > hmin ) ]
+ilocs, = np.where(np.diff(locs) > int(0.001*freq))
+locs = locs[ilocs+1]
+locs = np.unique(locs)
 
-locs, = np.where( np.diff(idxAbove) > refrac )
+np.save('locs_'+args.hilbert_file.split('/')[-1].split('.')[0]+'.npy',locs)
+#locs = np.load('locs_'+args.hilbert_file.split('/')[-1].split('.')[0]+'.npy')
 
-onChirp = False
-chirpIdx = 0
-tamlocs = len(locs)
-offsets = np.zeros(tamlocs, dtype=np.int)
-M = np.zeros(tamlocs)
-l = np.zeros(tamlocs, dtype=np.int)
-lastLen = 0
-#possiveisSpikes = [None for i in range(tamlocs)]
-beg = idxAbove[0]
-n = 0
-if args.chirps_file is not None:
-    thkeys = list(thresholds.keys())
-    thkeys.sort()
-    lastthkey = thkeys[-1]
-offset=0
-for num,i in enumerate(locs):
-    if num % 300 == 0:
-        sys.stdout.write('\rWindowing: %d - %.03f%%'%(offset, 100.*num / (1.*tamlocs) ))
+
+'''import matplotlib.pyplot as plt
+plt.figure(1)
+plt.plot(locs[1:], np.diff(locs))
+plt.figure(2)
+plt.plot(h)
+for i in locs:
+    plt.plot( (i, i), (-0.2,1.2), 'k-', alpha=0.3)
+plt.show()'''
+
+argrelmaxorder=15
+from scipy.signal import argrelmax
+lastlen = 0
+num=0
+while num < (locs.size-1):
+    if num >= (locs.size-1):
+        sys.stdout.write('\n\nSTRANGE!!\n')
         sys.stdout.flush()
 
-    if beg - winSize//2 > 0:
-        offset = beg-winSize//2
-    else:
-        offset = 0
+    concat = False
+
+    loc = locs[num]
+
+    try:
+        l = (loc-step) + np.argmax(h[loc-step:loc+step])
+    except ValueError:
+        l = loc
 
 
+    #if (num) % 100 == 0:
+    sys.stdout.write('%.02f%%\t%d\t%d\r'%((100.*num/locs.size),loc,locs.size-1))
+    sys.stdout.flush()
 
-    offsetend = idxAbove[i]+winSize//2
-
-    begChirp = np.inf
-    endChirp = np.inf
-    if args.chirps_file is not None:
-        if chirpIdx < nChirps:
-            begChirp, endChirp = chirps[:, chirpIdx]
-
-    if offsetend > begChirp:
-        onChirp = True
-    if offset > endChirp:
-        chirpIdx += 1
-        onChirp = False
-
-    if onChirp == True:
-        if offset < lastthkey:
-            nIdx = next(n for n,k in enumerate(thkeys) if k > offset) 
-            th = thresholds[thkeys[nIdx]]
-        else:
-            th = thresholds[lastthkey]
-    else:
-        th = threshold
-
-    PS = h[offset : offsetend]
-    if PS.size < 20:
-        sys.stdout.write('Window too small (%d) %ld\n'%(offsetend-offset, offset))
-        sys.stdout.flush()
-        continue
-    possiveisSpikesSig =  [ np.array(inarr[c+NChan*offset: c + NChan*offsetend: NChan]) for c in range(NChan) ]
-
-        
-    #possiveisSpikes[num] = PS 
-    #l[num] = len(PS) 
-    beg = idxAbove[i+1]
-
-    if PS[winSize//2:-winSize//2] != []:
-        #M[num] = PS[winSize//2:-winSize//2].max() 
-        Mi = winSize//2 + PS[winSize//2:-winSize//2].argmax()
-    else:
-        #M[num] = PS.max()
-        Mi = PS.argmax()
-    Midx = offset + Mi
+    if single==False:
+        if locs[num+1] - l < winSize//2:
+            concat = True
 
 
-    flagOverlapBegin = True
-    begin = 0
-    counter = 0
-    for n,s in enumerate(PS[:Mi][::-1]):
-        if s < th*1.1:
-            counter += 1
-        else:
-            counter = 0
-        if counter == refrac :
-            begin = Mi - n + refrac//2
-            flagOverlapBegin = False
-            break
+    # Verify if there is an undetected neighbour
+    doubDetected = False
+    if concat == False and single == False:
+        sig = h[l-winSize//2:l+winSize//2]
+        indexes, = argrelmax(sig, order=argrelmaxorder)
+        bigs, = np.where(sig[indexes] > hmin)
+        bigs = indexes[bigs]
+        if len(bigs) == 2:
+            l1p = l-winSize//2 + bigs[0]
+            l2p = l-winSize//2 + bigs[1]
+            l1 = min(l1p,l2p)
+            l2 = max(l1p,l2p)
+            doubDetected = True
+        elif len(bigs) > 2:
+            temp = sig[bigs]
+            i1 = temp.argmax()
+            l2p = l-winSize//2 + bigs[i1]
+            temp[ i1 ] = 0
+            i2 = temp.argmax()
+            l1p = l-winSize//2 + bigs[i2]
+
+            l1 = min(l1p,l2p)
+            l2 = max(l1p,l2p)
+
+            doubDetected = True
+
+    #if loc == 2345598:
+    #    print('\n\n')
+    #    plt.plot(np.arange(l-winSize//2,l+winSize//2), sig)
+    #    plt.title(loc)
+    #    plt.show()
 
 
-    flagOverlapEnd = True
-    fim = PS.size-1
-    counter = 0
-    for n,s in enumerate(PS[Mi:]):
-        if s < th*1.1:
-            counter += 1
-        else:
-            counter = 0
-        if counter == refrac:
-            fim = Mi + n - refrac//2
-            flagOverlapEnd = False
-            break
+    if doubDetected == True:
+        if abs(l2 - locs[num+1]) < tol:
+            concat = True
+        if num > 0:
+            if abs(l1 - locs[num-1]) < (winSize//2):
+                doubDetected = False
+                l = l2
 
-    flagOverlapSize = False
-    if fim - begin > maxSize:
-        flagOverlapSize = True
-        
+    if loc > 26932059 and False:
+        print('\n\n')
+        print(loc)
+        print(repr(concat))
+        print(repr(doubDetected))
+        print(repr(bigs))
+        import matplotlib.pyplot as plt
+        plt.plot(h[l-winSize//2:l+winSize//2],'g-')
+        for b in bigs:
+            plt.plot( (b,b), (0,10), 'k-')
+        plt.show()
+        #sys.exit(-1)
+                
+    # Single EOD
+    if (concat == False and doubDetected == False) or single == True: 
+        size = winSize        
 
-    # Fill borders with DC sample
-    if flagOverlapBegin == False:
-        for c in range(NChan):
-            #possiveisSpikesSig[c][:begin] = possiveisSpikesSig[c][begin]
-            possiveisSpikesSig[c][:begin] = 0
-    if flagOverlapEnd == False:
-        for c in range(NChan):
-            #possiveisSpikesSig[c][fim:] = possiveisSpikesSig[c][fim]
-            possiveisSpikesSig[c][fim:] = 0
+        if l-winSize//2 < 0 or l+winSize//2 > h.size:
+            continue
 
-    #print('%d\t%d\t%d'%(flagOverlapEnd, flagOverlapBegin, flagOverlapSize))
-    if (flagOverlapEnd == False and flagOverlapBegin == False) or single == True:
-        b = Mi-winSize//2
-        e = min((Mi+winSize//2), possiveisSpikesSig[0].size)
-        size = e - (Mi-winSize//2)
-        center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]
-    elif flagOverlapEnd == True and flagOverlapBegin == False:
-        b = Mi-winSize//2
-        e = fim
-        size = fim - (Mi-winSize//2)
-        center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]
-    elif flagOverlapEnd == False and flagOverlapBegin == True:
-        b = begin
-        e = min((Mi+winSize//2), possiveisSpikesSig[0].size)
-        size = e - begin
-        center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]
-    #elif flagOverlapEnd == True and flagOverlapBegin == True:
-    else:
-        b = begin
-        e = fim
-        size = fim - begin
-        center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]
-    #print("%d\t%d\t%d\t%d\t%d\t%.03f"%(flagOverlapBegin, flagOverlapEnd, begin, fim, janelas[0].size, 100.*num / (1.*tamlocs)))
-   
-    if flagOverlapSize == True and single == False:
-        b = begin
-        e = fim
-        size = fim - begin
-        center = Mi - b
-        janelas = [possiveisSpikesSig[c][begin:fim] for c in range(NChan)]
+        possiveisSpikesSig = [ np.array(inarr[c+nchan*(l-winSize//2): c + nchan*(l+winSize//2): nchan]) for c in range(nchan) ]
+        tam = possiveisSpikesSig[0].size
 
-    '''if b - e < winSize and single == False:
-        b = max(0, Mi-winSize//2)
-        e = min(Mi+winSize//2, possiveisSpikesSig[0].size)
-        size = e - b
-        center = Mi - b
-        janelas = [possiveisSpikesSig[c][b:e] for c in range(NChan)]'''
+        ### Fill with zeros
+        try:
+            beg = winSize//2 - next(n for n,val in enumerate(h[l-winSize//2:l][::-1]) if val < thLim)
+        except StopIteration:
+            beg = 0
+        try:
+            # TODO: passar pra tempo
+            end = argrelmaxorder+tam - (winSize//2 - next(n for n,val in enumerate(h[l:l+winSize//2]) if val < thLim))
+        except:
+            end = tam
+        end = min(tam, end)
 
-    tooSmall = True
-    for pspk in janelas:
-        if np.any(pspk > minAmp):
-            tooSmall = False
+        #import matplotlib.pyplot as plt
+        #print('%d %d'%(beg, end))
+        #plt.plot(h[l-winSize//2:l+winSize//2])
+        for n in range(nchan):
+            possiveisSpikesSig[n][:beg] = 0.
+            possiveisSpikesSig[n][end:] = 0.
+            #plt.plot(possiveisSpikesSig[n])
+        #plt.show()
 
-    if single == True:
-        njanelas = 0
-        listjanelas = []
-        for n,s in enumerate(janelas):
-            if s.size > 0:
-                m = s.min()
-                M = s.max()
-                if M > satH or m < satL:
-                    continue
-                if abs(M) < onlyAbove and abs(m) < onlyAbove:
+        ### Remove spikes with too low amplitude on training
+        if single == True:
+            listjanelas = []
+            njanelas = 0
+            for n,s in enumerate(possiveisSpikesSig):
+                if np.abs(s).max() < onlyAbove:
                     continue
                 else:
-                    listjanelas.append( (n, s) )
+                    listjanelas.append( (n,s) )
                     njanelas += 1
-            else:
+
+            if njanelas == 0:
+                num += 1
                 continue
+        else:
+            njanelas = nchan
+            listjanelas = [(n,s) for n,s in enumerate(possiveisSpikesSig)]
+
+       
+        off = max(0, l-winSize//2) 
+        if l-winSize//2 > 26931932 and False:
+            print('\n')
+            print(beg)
+            print(off)
+            print(loc)
+            import matplotlib.pyplot as plt
+            plt.plot(np.arange(l-winSize//2, l+winSize//2), sig)
+            plt.plot( (off, off), (0,2), 'k-')
+            plt.plot( (off+winSize//2, off+winSize//2), (0,2), 'k-')
+            plt.show()
+            sys.exit(-1)
+        writewin(outputFile, (lastlen, off, size, njanelas, winSize//2, listjanelas) )
+
     else:
-        njanelas = NChan
-        listjanelas = [(n,s) for n,s in enumerate(janelas)]
-    
-    if njanelas == 0:
-        continue
 
-    if single == True:
-        if size != winSize:
-            sys.stdout.write('--')
-            sys.stdout.write(str(size))
-            sys.stdout.write('--')
-            sys.stdout.flush()
-            continue
-    if offset+b not in offsets:
-        if lastLen < 0 or offset+b < 0 or tooSmall:
-            continue
-        writewin(outputFile, (lastLen, offset+b, size, njanelas, center, listjanelas) )
-        offsets[num] = offset+b
-        lastLen = 6*4 + njanelas*4*(1 + size)
-        if lastLen > 700*njanelas*4:
-            sys.stdout.write(' Too large window: %d samples\n'%(lastLen/njanelas/4))
-            sys.stdout.flush()
-            #plt.plot(PS)
-            #plt.show()
-    #else:
-    #    print('Will not print same offset twice')
+        if doubDetected == False:
+            loc1 = loc
+            try:
+                l1p = (loc1-step) + np.argmax(h[loc1-step:loc1+step])
+            except ValueError:
+                l1p = loc1
+            loc2 = locs[num+1]
+            try:
+                l2p = (loc2-step) + np.argmax(h[loc2-step:loc2+step])
+            except ValueError:
+                l2p = loc2
 
-    if debug == True:
-        for c in xrange(NChan):
-            plt.plot(janelas[c], 'k-', alpha=0.1)
+            l1 = min(l1p, l2p)
+            l2 = max(l1p, l2p)
 
-        '''print("%d\t%d\t%d\t%d"%(flagOverlapBegin, flagOverlapEnd, begin, fim))
-        plt.plot(np.arange(-b, PS.size-b, 1), PS)
-        plt.plot([Mi-b, Mi-b], [0, 10], 'k-')
-        plt.plot([0-b,winSize], [threshold, threshold], 'k-')
-        plt.plot([begin-b, begin-b], [0, 10], 'c-')
-        plt.plot([fim-b, fim-b], [0, 10], 'm-')
-        plt.show()'''
+        possiveisSpikesSig = [ np.array(inarr[c+nchan*(l1-winSize//2): c + nchan*(l2+winSize//2): nchan]) for c in range(nchan) ]
+        tam = possiveisSpikesSig[0].size
 
-        if (num+1) % 500 == 0:
+        if loc > 103998 and False:
+            print('%d %d %d'%(l1,l2,l2-l1))
+            plt.plot(h[l1-winSize//2:l2+winSize//2],'g-')
+            for Signal in possiveisSpikesSig:
+                plt.plot(Signal,'b-')
             plt.show()
 
-print('')
+        ### Fill with zeros
+        try:
+            beg = winSize//2 - next(n for n,val in enumerate(h[l1-winSize//2:l1][::-1]) if val < thLim)
+        except StopIteration:
+            beg = 0
+        try:
+            end = (tam-winSize//2) + next(n for n,val in enumerate(h[l2:l2+winSize//2]) if val < thLim)
+        except:
+            end = tam
+        end = min(tam, end)
+
+        for n in range(nchan):
+            possiveisSpikesSig[n][:beg] = 0.
+            possiveisSpikesSig[n][end:] = 0.
+
+        if loc > 103998 and False:
+            print('%d %d %d %d'%(beg,end,tam,tam-winSize//2))
+            plt.plot(h[l1-winSize//2:l2+winSize//2],'g-')
+            for Signal in possiveisSpikesSig:
+                plt.plot(Signal,'b-')
+            plt.show()
+        njanelas = nchan
+
+        size = (l2+winSize//2)-(l1-winSize//2)
+        listjanelas = [(n,s) for n,s in enumerate(possiveisSpikesSig)]
+
+        off = max(0, l1-winSize//2)
+        if off == 26931932 and False:
+            print('\n\n')
+            print(loc)
+            sys.exit(-1)
+        writewin(outputFile, (lastlen, off, size, njanelas, size//2, listjanelas) )
+
+        if loc > 103998 and False:
+            plt.plot(h[l1-winSize//2:l2+winSize//2],'g-')
+            for n,Signal in listjanelas:
+                plt.plot(Signal,'b-')
+            plt.show()
+    #if off == 114673:
+    #    print('\n\n%d\t%d'%(off,loc))
+    #    sys.exit(-1)
+    lastlen = 6*4 + njanelas*4*(1+size)
+
+    if concat == False:
+        num += 1
+    else:
+        num += 2
+
+    sys.stdout.write('\t\t\t\tE: %d\t%d\t%.02f%%\n'%(num, locs.size-1, 100.*num/locs.size))
+    sys.stdout.flush()
+
+    if num >= locs.size-1:
+        sys.stdout.write('\n\nENDED\n')
+        sys.stdout.flush()
