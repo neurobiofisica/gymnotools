@@ -1,3 +1,5 @@
+common/sigcfg.h
+
 crosspat/crosspat
 features/features
 paramchooser/paramchooser
