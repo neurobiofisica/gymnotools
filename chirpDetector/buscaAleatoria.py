@@ -7,10 +7,8 @@ if sys.version_info.major == 3:
     xrange = range
     raw_input = input
 
-sys.path.append( os.path.abspath('..') )
-from read_param import *
-# import NChan, freq, winSize
-
+nChan = 7
+freq = 50000
 winSize = int(freq * 0.5) # 0.5s
 A = np.memmap(sys.argv[1], dtype='float32')
 

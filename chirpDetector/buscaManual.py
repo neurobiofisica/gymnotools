@@ -1,17 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
-import sys,os
+import sys
 
-sys.path.append( os.path.abspath('..') )
-from read_param import *
-# import NChan, freq, winSize
+freq = 45454.545454
+nchan = 11
 winsize = int(0.5*freq)
 
 S = np.memmap(sys.argv[1], mode='r', dtype=np.float32)
 out = open(sys.argv[1]+'.chirps', 'a')
 
-tam = S.size / NChan
+tam = S.size / nchan
 
 class Geral(object):
     def __init__(self, outputfile, fig, ax, lines):
@@ -42,12 +41,12 @@ class Geral(object):
         self.plota()
 
     def plota(self):
-        for i in range(NChan):
-            sig = S[ i + NChan*self.loc : i + NChan*(self.loc+winsize) : NChan ]
+        for i in range(nchan):
+            sig = S[ i + nchan*self.loc : i + nchan*(self.loc+winsize) : nchan ]
             self.lines[i].set_ydata(3*i + sig)
             self.lines[i].set_xdata(np.linspace(self.loc / freq, (self.loc+winsize)/freq,sig.size))
         self.ax.set_xlim( (self.loc/freq, (self.loc+winsize)/freq) )
-        self.ax.set_ylim( (-5, 35))#3*NChan+10) )
+        self.ax.set_ylim( (-5, 35))#3*nchan+10) )
         self.ax.set_title('%.03f%%'%(100.*self.loc / (1.*tam)))
         self.fig.canvas.draw()
 
@@ -56,7 +55,7 @@ class Geral(object):
 f = plt.figure(1, figsize=(26,14))
 ax = f.add_subplot(111)
 l = []
-for i in range(NChan):
+for i in range(nchan):
     ltmp, = ax.plot([], [])
     l.append(ltmp)
 

@@ -1,16 +1,13 @@
-import sys,os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
-sys.path.append( os.path.abspath('..') )
-from read_param import *
-# import NChan, freq, winSize
-
 chirps = np.load('chirps.npy')
 
 A = np.memmap(sys.argv[1], dtype='float32')
-
+nChan = 7
+freq = 50000
 winSize = int(freq * 0.5)
 
 ch = []

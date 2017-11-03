@@ -32,7 +32,7 @@ parser.add_argument('-z', '--saturation', type=str, help='low,high saturation le
 
 args = parser.parse_args()
 
-nChan = 8
+nChan = 7
 windowSize = 2000
 win = 100
 minsat = -9.9 # TODO: pegar do .h

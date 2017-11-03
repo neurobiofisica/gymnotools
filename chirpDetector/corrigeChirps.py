@@ -1,13 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
-import sys,os
+import sys
 
-sys.path.append( os.path.abspath('..') )
-from read_param import *
-# import NChan, freq, winSize
-
+freq = 50000
 arredor = int(0.1*freq)
+nc = 7
 
 chirps = np.loadtxt(sys.argv[1])
 f = open(sys.argv[1]+'_corr', 'w')
@@ -37,8 +35,8 @@ for n,(beg,end) in enumerate(chirps):
 
     callback.carregaDados(beg, end)
 
-    for i in range(NChan):
-        plt.plot(S[i + NChan*(beg-arredor): i + NChan*(end+arredor): NChan])
+    for i in range(nc):
+        plt.plot(S[i + nc*(beg-arredor): i + nc*(end+arredor): nc])
     plt.title('%d - %f%%'%(n, (100.*n)/l) )
 
     axNo = plt.axes([0.8, 0.05, 0.1, 0.075])
