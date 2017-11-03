@@ -156,7 +156,7 @@ def delete(db, k):
         return None
 
     try: 
-        db.pop(key)
+        del db[key]
     except:
         sys.stderr.write('pop failed\n')
         sys.stderr.flush()
@@ -304,9 +304,12 @@ def writeEntry(db, k, presentFish, direction, distA, distB, distAB, flags, corre
 
     key = struct.pack('=q',k)
     headerdata = binarizeDBHeader( (presentFish, direction, distA, distB, distAB, flags, correctedPosA, correctedPosB, svm, pairsvm, probA, probB) )
-    spkdata = struct.pack('ii', 0, signals[0].size) #0 is the offset for that fish
-    for sig in signals:
-        spkdata += sig.astype('float32').tostring()
+    if type(signals) is str:
+        spkdata = signals
+    else:
+        spkdata = struct.pack('ii', 0, signals[0].size) #0 is the offset for that fish
+        for sig in signals:
+            spkdata += sig.astype('float32').tostring()
     data = headerdata + spkdata
         
     db.update( [(key, data), ] )
