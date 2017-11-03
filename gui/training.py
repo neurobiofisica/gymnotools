@@ -312,14 +312,22 @@ class TrainingWindow(QtWidgets.QDialog):
             return True
     
     def printAllStandardOutput(self):
-        print('stdout:%s\n'%self.programname)
+        #print('stdout:%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
-            print(program.readAllStandardOutput())
+            if sys.version_info.major == 3:
+                sys.stdout.write(program.readAllStandardOutput().data().decode())
+            else:
+                sys.stdout.write(program.readAllStandardOutput().data())
+            sys.stdout.flush()
     
     def printAllStandardError(self):
-        print('stderr:%s\n'%self.programname)
+        #print('%s\n'%self.programname)
         for program in self.dicProgram[self.programname]:
-            print(program.readAllStandardError())
+            if sys.version_info.major == 3:
+                sys.stderr.write(program.readAllStandardError().data().decode())
+            else:
+                sys.stderr.write(program.readAllStandardError().data())
+            sys.stderr.flush()
     
     def verifySpikes1(self):
         print('winview 1')
@@ -1293,6 +1301,8 @@ class TrainingWindow(QtWidgets.QDialog):
         gValue = self.ui.gValueLineEdit.text()
         train1Name = self.ui.trainingLoadFish1LineEdit.text()
         train2Name = self.ui.trainingLoadFish2LineEdit.text()
+        feats1Name = self.ui.loadFeatures1LineEdit.text()
+        feats2Name = self.ui.loadFeatures2LineEdit.text()
         
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
