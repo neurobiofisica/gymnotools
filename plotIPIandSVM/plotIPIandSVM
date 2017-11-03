@@ -7,16 +7,6 @@ import argparse
 
 import matplotlib
 matplotlib.use("Qt5Agg")
-'''def patch_qt4agg():
-    import matplotlib.backends.backend_qt4agg as backend
-    code = """
-def draw( self ):
-    FigureCanvasAgg.draw(self)
-    self.repaint()
-FigureCanvasQTAgg.draw = draw    
-"""
-    exec(code, backend.__dict__)
-patch_qt4agg()'''
 
 import numpy as np
 
@@ -25,6 +15,7 @@ from matplotlib.mlab import find
 from matplotlib.ticker import FuncFormatter
 from matplotlib.widgets import Button
 from matplotlib.backend_bases import MouseEvent, KeyEvent
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from graphicalInterface import Ui_Dialog #########
@@ -108,6 +99,9 @@ class MyParser(argparse.ArgumentParser): # Prints help message in case of error
 for v in plt.rcParams.keys():
     if 'keymap' in v:
         plt.rcParams[v] = ''
+# Old legend behavior
+matplotlib.rcParams['legend.fancybox'] = False
+matplotlib.rcParams['legend.loc'] = 'upper right'
 
 class PickPoints:
     lock = None
@@ -178,11 +172,14 @@ class PickPoints:
         axprev = self.fig.add_axes([0.001, 0.005, 0.1, 0.07])
         axhome = self.fig.add_axes([0.111, 0.005, 0.1, 0.07])
         axnext = self.fig.add_axes([0.221, 0.005, 0.1, 0.07])
+        axupdate = self.fig.add_axes([0.521, 0.005, 0.1, 0.07])
         axzoom = self.fig.add_axes([0.899, 0.006, 0.1, 0.07])
         self.bnext = Button(axnext, 'Next')
         self.bnext.on_clicked(self.next)
         self.bprev = Button(axprev, 'Previous')
         self.bprev.on_clicked(self.prev)
+        self.bupdate = Button(axupdate, 'Update')
+        self.bupdate.on_clicked(self.updateSig)
         self.bhome = Button(axhome, 'Home')
         self.bhome.on_clicked(self.home)
 
@@ -266,6 +263,7 @@ class PickPoints:
                 self.ax.legend()
                 self.fig.canvas.draw()
                 
+                self.plotObject.dialogIPI.replot = False # TODO: GAMBIARA!!!
                 if self.plotObject.dialogIPI.replot == True:
                     
                     self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -482,23 +480,24 @@ class PickPoints:
             elif ret == 0: # Fish A
                 self.dialogIPI.modify.insertIPI(key, 1, winSize=SPKSIZE)
 
-                self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
-                self.plotObject.loadDataFromDB()
-                self.plotObject.formatSVM2Plot()
-                self.plotObject.formatModified2Plot()
+		#TODO: GAMBI!
+                #self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+                #self.plotObject.loadDataFromDB()
+                #self.plotObject.formatSVM2Plot()
+                #self.plotObject.formatModified2Plot()
                 
-                self.plotObject.replotData()
-                self.plotObject.app.restoreOverrideCursor()
+                #self.plotObject.replotData()
+                #self.plotObject.app.restoreOverrideCursor()
             elif ret == 1: # Fish B
                 self.dialogIPI.modify.insertIPI(key, 2, winSize=SPKSIZE)
 
-                self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
-                self.plotObject.loadDataFromDB()
-                self.plotObject.formatSVM2Plot()
-                self.plotObject.formatModified2Plot()
+                #self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+                #self.plotObject.loadDataFromDB()
+                #self.plotObject.formatSVM2Plot()
+                #self.plotObject.formatModified2Plot()
                 
-                self.plotObject.replotData()
-                self.plotObject.app.restoreOverrideCursor()
+                #self.plotObject.replotData()
+                #self.plotObject.app.restoreOverrideCursor()
 
     def button_release(self, event):
         if event.button != 3:
@@ -523,6 +522,9 @@ class PickPoints:
         cur_yrange = (cur_ylim[1] - cur_ylim[0])
         xdata = event.xdata # get event x location
         ydata = event.ydata # get event y location
+
+        if (xdata is None) or (ydata is None):
+            return
 
         relposx = (xdata - cur_xlim[0]) / cur_xrange
         relposy = (ydata - cur_ylim[0]) / cur_yrange
@@ -575,7 +577,13 @@ class PickPoints:
         self.ax.set_ylim( self.ylim )
         self.ax.get_figure().canvas.draw()
 
+    def getIndex(self):
+        xm, xM = self.ax.get_xlim()
+        x = (xm + xM) / 2
+        self.ind = max(0, int(x / self.plotObject.stepSize))
+
     def prev(self, event):
+        self.getIndex()
         if self.ind > 0:
             self.ind -= 1
         else:
@@ -583,9 +591,19 @@ class PickPoints:
         self.update()
 
     def next(self, event):
+        self.getIndex()
         if self.plotObject.stepSize*(self.ind+1) < self.end:
             self.ind += 1
         self.update()
+
+    def updateSig(self, event):
+        self.plotObject.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+        self.plotObject.loadDataFromDB()
+        self.plotObject.formatSVM2Plot()
+        self.plotObject.formatModified2Plot()
+
+        self.plotObject.replotData()
+        self.plotObject.app.restoreOverrideCursor()
 
     def home(self, event):
         self.update()
@@ -595,7 +613,7 @@ class PickPoints:
 class PlotData(QtWidgets.QMainWindow):
     DPI = 80
 
-    def __init__(self, app, dbf, spikesf, datafile, undoFilename, folder, ipifilename, saturation, winSize, stepSize, parent=None):
+    def __init__(self, app, dbf, datafile, undoFilename, folder, ipifilename, saturation, winSize, stepSize, parent=None):
         self.app = app
         
         QtWidgets.QMainWindow.__init__(self)
@@ -608,6 +626,8 @@ class PlotData(QtWidgets.QMainWindow):
         self.ui.graphIPI.canvas.setFocusPolicy( QtCore.Qt.ClickFocus )
         self.ui.graphIPI.canvas.setFocus()
 
+        self.mpl_toolbar = NavigationToolbar(self.ui.graphIPI.canvas, self.ui.graphIPI)
+
         self.resizeEvent = self.onResize
         self.showMaximized()
 
@@ -619,7 +639,6 @@ class PlotData(QtWidgets.QMainWindow):
         
         self.scatterFlag = True
 
-        self.spikesname = spikesf.name
         self.ipifilename = ipifilename
 
         self.undoFilename = undoFilename
@@ -651,7 +670,7 @@ class PlotData(QtWidgets.QMainWindow):
         self.datafile = datafile
         self.TS = self.TS
         
-        self.dialogIPI = IPIWindow(self.db, undoFilename, folder, self.datafile, self.spikesname)
+        self.dialogIPI = IPIWindow(self.db, undoFilename, folder, self.datafile)
 
         self.statusBar().showMessage("")
 
@@ -811,6 +830,7 @@ class PlotData(QtWidgets.QMainWindow):
         self.SVMY0 = np.array( self.Tam0 * [Min,Max,Min] )
         self.SVMY1 = np.array( self.Tam1 * [Min,Max,Min] )
         
+        
     
     def formatModified2Plot(self):
         self.Tam0 = self.Modified[0].size
@@ -872,13 +892,19 @@ class PlotData(QtWidgets.QMainWindow):
         loadsurr = 10*spksurroudings
          
         centralts, color = self.selectedIPI
-        nextP1 = next(n for n,spk in enumerate(self.TS[0]) if spk >= centralts)
-        surrP1 = self.TS[0][nextP1-25:nextP1+25]
+        try:
+            nextP1 = next(n for n,spk in enumerate(self.TS[0]) if spk >= centralts)
+        except StopIteration:
+            nextP1 = self.TS[0].size-1
+        surrP1 = self.TS[0][max(0,nextP1-25):min(nextP1+25,self.TS[0].size-1)]
+        
+        try:
+            nextP2 = next(n for n,spk in enumerate(self.TS[1]) if spk >= centralts)
+        except StopIteration:
+            nextP2 = self.TS[1].size-1
+        surrP2 = self.TS[1][max(0,nextP2-25):min(nextP2+25,self.TS[1].size-1)]
 
-        nextP2 = next(n for n,spk in enumerate(self.TS[1]) if spk >= centralts)
-        surrP2 = self.TS[1][nextP2-25:nextP2+25]
-
-        samples = int(round(centralts * freq)) - loadsurr/2 # The timestamp is on the zero crossing
+        samples = max(0,int(round(centralts * freq)) - loadsurr/2) # The timestamp is on the zero crossing
         f = self.datafile
         f.seek(int(round(samples*NChan*4)))
         data = np.frombuffer(f.read(4*loadsurr*NChan), dtype=np.float32)
@@ -888,14 +914,18 @@ class PlotData(QtWidgets.QMainWindow):
         tmin = centralts - (spksurroudings/freq)
         tmax = centralts + (spksurroudings/freq)
 
-        ymax = max(data)
-        ymin = min(data)
-        ylim = max(abs(ymax),abs(ymin))
         for i in xrange(NChan):
             ax = self.sigaxes[i]
             ax.get_lines()[0].set_xdata(t)
             ax.get_lines()[0].set_ydata(data[i::NChan])
-            ax.set_ylim( (data[i::NChan].min(), data[i::NChan].max()) ) # Auto scale
+
+            ymin = data[i::NChan].min()
+            ymax = data[i::NChan].max()
+            yabs = max( abs(ymax), abs(ymin) )
+            ymax = yabs
+            ymin = -yabs
+
+            ax.set_ylim( (ymin, ymax) ) # Auto scale
             ax.set_xlim( (tmin,tmax) )
             #ax.set_ylim( (-ylim, ylim) )# Remove auto scale
             for ts in surrP1:
@@ -1151,7 +1181,6 @@ if __name__ == '__main__':
 
     parser.add_argument('db_file', type=str, help='Databank generated file')
     parser.add_argument('timeseries_file', type=argparse.FileType('r'+openmode), help='Location of the timeseries (I32) file')
-    parser.add_argument('spikes_file', type=argparse.FileType('r'+openmode), help='Location of the file generated by the spikes tool')
     parser.add_argument('ipi_file', type=str, help='Location of the file with the timestamps, in the case of the DB is modified')
     parser.add_argument('--saturation', type=str, help='low,high saturation level')
     parser.add_argument('--stepSize', type=float, default=60., help='Step size for moving on the IPI time series. Default = 90s')
@@ -1159,7 +1188,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     dbf = args.db_file
-    spikesf = args.spikes_file
     datafile = args.timeseries_file
     ipifilename = args.ipi_file
     saturation = args.saturation
@@ -1202,7 +1230,7 @@ if __name__ == '__main__':
 
     sys.stdout.write(datafilename)
     sys.stdout.flush()
-    myapp = PlotData(app, dbf, spikesf, datafile, undoFilename, datafilename, ipifilename, (lowsaturation, highsaturation), winSize, stepSize)
+    myapp = PlotData(app, dbf, datafile, undoFilename, datafilename, ipifilename, (lowsaturation, highsaturation), winSize, stepSize)
 
     Pick = PickPoints(myapp, ipifilename)
 
