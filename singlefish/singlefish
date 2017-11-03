@@ -14,7 +14,6 @@ sys.path.append( os.path.abspath('..') )
 from read_param import *
 # import NChan, freq, winSize
 
-numFeatures = 20 #TODO: Pass as a parameters
 
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
@@ -195,6 +194,8 @@ for n, (curOff, winSamples, sigs) in enumerate(inSpk):
     if winSamples == winSize: #### Novo
         probA = 1.
         probB = 1.
+        #probA = 0.
+        #probB = 0.
         totalMaxAmp = 0.
         for m, (ch, sig) in enumerate(sigs.items()):
             if winOk[ch] == False:
@@ -217,6 +218,8 @@ for n, (curOff, winSamples, sigs) in enumerate(inSpk):
 
             M = np.abs(sig).max()
 
+            #probA += probs[0]*M
+            #probB += probs[1]*M
             probA *= probs[0] ** M
             probB *= probs[1] ** M
             totalMaxAmp += M
@@ -224,6 +227,8 @@ for n, (curOff, winSamples, sigs) in enumerate(inSpk):
         if totalMaxAmp > 0:
             probA  = probA ** (1./totalMaxAmp)
             probB  = probB ** (1./totalMaxAmp)
+            #probA = probA / totalMaxAmp
+            #probB = probB / totalMaxAmp
         else:
             probA = 0.
             probB = 0.
