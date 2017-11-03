@@ -75,7 +75,7 @@ dicFields = {'presentFish': 'int',
 }
 
 class ModifySelector:
-    def __init__(self, db, undoFilename, folder, datafile, spikesName):
+    def __init__(self, db, undoFilename, folder, datafile):
         self.db = db
         self.undoFilename = undoFilename
         self.folder = folder
@@ -83,7 +83,6 @@ class ModifySelector:
         self.datafile = datafile
         
         self.single2overlapWindow = single2overlap(db, NChan, datafile)
-        self.spikesName = spikesName
         
         # if to avoid warning of loadtxt from empty file
         if os.stat(undoFilename).st_size != 0:
@@ -599,21 +598,6 @@ class ModifySelector:
         
         assert fish in ['A', 'B']
 
-        if sys.version_info.major == 3:
-            winF = winFile(open(self.spikesName, 'rb'))
-        else:
-            winF = winFile(open(self.spikesName, 'r'))
-
-        ret = winF.nextWin()
-        while ret is not None:
-            lastLen, off, samples, channels, center, sigs = ret
-            if off == key:
-                newCorrectedPos = off + center
-                break
-
-            ret = winF.nextWin()
-            
-        
         keyundofile = open(self.folder + '/' + str(key) + '.undo', 'a')
         
         # Read old data
@@ -637,7 +621,7 @@ class ModifySelector:
             newDistB = float('Inf')
             newDistAB = float('Inf')
 
-            newCorrectedPosA = newCorrectedPos
+            newCorrectedPosA = oldCorrectedPosA
             newCorrectedPosB = -1
         elif fish == 'B':
             newPresentFish = 2
@@ -647,7 +631,7 @@ class ModifySelector:
             newDistAB = float('Inf')
 
             newCorrectedPosA = -1
-            newCorrectedPosB = newCorrectedPos
+            newCorrectedPosB = oldCorrectedPosB
        
         # UpdateDB
         recogdb.updateHeaderEntry(self.db, key, 'presentFish', newPresentFish, sync=False)
@@ -1052,14 +1036,14 @@ class IPIWindow(QtWidgets.QDialog):
     RUndoLabelSize = 100
     RUndoStep = 140
 
-    def __init__(self, db, undoFilename, folder, datafile, spikesName):
+    def __init__(self, db, undoFilename, folder, datafile):
         QtWidgets.QWidget.__init__(self)
         self.uiObject = Ui_IPIClick()
         self.uiObject.setupUi(self)
         
         self.db = db
         
-        self.modify = ModifySelector(db, undoFilename, folder, datafile, spikesName)
+        self.modify = ModifySelector(db, undoFilename, folder, datafile)
 
         self.uiObject.okButton.clicked.connect(self.okClicked)
         self.uiObject.cancelButton.clicked.connect(self.close)
