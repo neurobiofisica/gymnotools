@@ -5,8 +5,10 @@ import pymp
 import numpy as np
 import recogdb
 import struct
+import scipy.signal
+import peakutils
 
-import sys, os
+import sys,os
 import argparse
 
 from windowfile import winFile
@@ -15,8 +17,13 @@ sys.path.append( os.path.abspath('..') )
 from read_param import *
 # import NChan, freq, winSize
 
+complete = False
+NChanloc = 4
+hmin = 0.05
+
 jump = False
-startOn = int(40*freq)
+#startOn = int(40*freq)
+startOn = 22375500
 onDirection = 1
 
 if sys.version_info.major == 3:
@@ -116,6 +123,7 @@ class recog:
             cond1 = (self.off+self.center > self.lastTSB + self.lastIPIB - overlapRange)
             cond2 = (self.off+self.center < self.lastTSB + self.lastIPIB + overlapRange)
         else:
+            # lastIPIB is negative in this situation
             cond1 = (self.off+self.center > self.lastTSB + self.lastIPIB - overlapRange)
             cond2 = (self.off+self.center < self.lastTSB + self.lastIPIB + overlapRange)
             
@@ -129,8 +137,8 @@ class recog:
         else:
             self.wins.end()
             winfunc = self.wins.prevWin
-            singlefishIdx = svmpairsTam-1
-            adder = -1 
+        singlefishIdx = 0
+        adder = +1
 
         ret = not None
         while (ret is not None):
@@ -145,8 +153,10 @@ class recog:
                 print('Spikes file ended')
                 continue
 
-            perc = 100.*self.off / (1.*self.svmpairs[-1,1])
-
+            if direction == 1:
+                perc = 100.*self.off / (1.*self.svmpairs[-1,1])
+            else:
+                perc = -100.*(self.off-self.svmpairs[0,1]) / (1.*self.svmpairs[0,1])
 
             if singlefishIdx < svmpairsTam:
                 self.pair[:] = svmpairs[singlefishIdx,:]
@@ -166,121 +176,497 @@ class recog:
                 if self.pair[0] == 1:
                     if self.lastTSB is not None and self.lastIPIB is not None:
                         if (self.off+self.center > self.lastTSB + self.lastIPIB - overlapRange) and (self.off+self.center < self.lastTSB + self.lastIPIB + overlapRange):
-                            sys.stdout.write('%d\t%.03f%%\tOverlap A predicted'%(self.off, perc))
-                            sys.stdout.flush()
-                            self.continuity(sigs)
+                            if (self.templateA is not None) and (self.templateB is not None):
+                                sys.stdout.write('%d\t%.03f%%\tOverlap A predicted'%(self.off, perc))
+                                sys.stdout.flush()
+                                self.continuity(sigs, predicted=True)
 
                         else:
 
-                            print('%d\t%.03f%%\tEmmiting single A\t%.02f%% A'%(self.off, perc, 100*self.probA))
+                            print('%d\t%.03f%%\tEmmiting single A\t%.02f%%\t\tA'%(self.off, perc, 100*self.probA))
                             self.emitSingleA(sigs)
                     else:
 
-                        print('%d\t%.03f%%\tEmmiting single A\t%.02f%% A'%(self.off, perc, 100*self.probA))
+                        print('%d\t%.03f%%\tEmmiting single A\t%.02f%%\t\tA'%(self.off, perc, 100*self.probA))
                         self.emitSingleA(sigs)
 
                     singlefishIdx += adder
                 else:
                     if self.lastTSA is not None and self.lastIPIA is not None:
                         if (self.off+self.center > self.lastTSA + self.lastIPIA - overlapRange) and (self.off+self.center < self.lastTSA + self.lastIPIA + overlapRange):
-                            sys.stdout.write('%d\t%.03f%%\tOverlap B predicted'%(self.off, perc))
-                            sys.stdout.flush()
-                            self.continuity(sigs)
+                            if (self.templateA is not None) and (self.templateB is not None):
+                                sys.stdout.write('%d\t%.03f%%\tOverlap B predicted'%(self.off, perc))
+                                sys.stdout.flush()
+                                self.continuity(sigs, predicted=True)
                         else:
 
-                            print('%d\t%.03f%%\tEmmiting single B\t%.02f%% B'%(self.off, perc, 100*self.probB))
+                            print('%d\t%.03f%%\tEmmiting single B\t%.02f%%\t\tB'%(self.off, perc, 100*self.probB))
                             self.emitSingleB(sigs)
                     else:
 
-                        print('%d\t%.03f%%\tEmmiting single B\t%.02f%% B'%(self.off, perc, 100*self.probB))
+                        print('%d\t%.03f%%\tEmmiting single B\t%.02f%%\t\tB'%(self.off, perc, 100*self.probB))
                         self.emitSingleB(sigs)
                     singlefishIdx += adder
             else:
                 if (self.templateA is None) or (self.templateB is None):
-                    print('%d\t%.03f%%\tLooking for first SVM'%(self.off, perc))
+                    print('%d\t%.03f%%\tLooking for first SVM\t%d\t%d'%(self.off, perc, self.pair[1], singlefishIdx))
                     continue
                 sys.stdout.write('%d\t%.03f%%\tCalling continuity'%(self.off, perc))
                 sys.stdout.flush()
                 self.continuity(sigs)
 
-    def continuity(self, sigs):
+    def continuity(self, sigs, predicted=False):
+
+        #if self.off < 3280000:
+        #    return
+
+        useChans = np.zeros(NChanloc, dtype=np.int)
+        maxes = np.zeros(NChan)
+        # Use only the NChanloc channels with highest amplitude
+        for n, sig in sigs.items():
+            maxes[n] = np.abs(sig).max()
+        for n in range(NChanloc):
+            useChans[n] = maxes.argmax()
+            maxes[ useChans[n] ] = -1            
+
+
         if jump:
             if self.off < startOn and self.direction == onDirection: #################################
                 return
+
+        h = H[self.off:self.off+sigs[0].size]
+
+
+        if self.off == -123456789:
+            import matplotlib.pyplot as plt
+            plt.plot(h,'b-')
+            plt.plot(sigs[0])
+        # Remove extremities
+        if True:
+            try:
+                rem = next(n for n,i in enumerate(sigs[0]) if i != 0)
+            except StopIteration:
+                rem = 0
+            try:
+                reme = h.size-next(n for n,i in enumerate(sigs[0][::-1]) if i != 0)
+            except StopIteration:
+                reme = h.size
+            h = h[rem:reme]
+        else:
+            rem = 0
+        if self.off == -123456789:
+            print('\n\n%d %d'%(rem, reme))
+            import matplotlib.pyplot as plt
+            plt.plot(np.arange(rem,reme), h,'g-')
+            plt.show()
+        locs_raw = scipy.signal.argrelmax(h,order=15)
+        #locs_raw = scipy.signal.find_peaks_cwt(h,np.arange(12,180,1), noise_perc=10)
+        #locs_raw = peakutils.indexes(h, thres=0.1, min_dist=15)
+        locs = np.unique(locs_raw)
+        locs = locs[ np.where(h[locs] > hmin) ]
+        locs += rem
+
+        #locs = np.unique(locs)
+        if len(locs) > 2:
+            doublet = True
+            v1 = -1
+            m1 = -1
+            v2 = -1
+            m2 = -1
+            for l in locs:
+                if h[l-rem] > v1:
+                    m1 = l
+                    v1 = h[l-rem]
+            for l in locs:
+                if h[l-rem] > v2 and h[l-rem] < v1 and abs(l - m1) > 15:
+                    m2 = l
+                    v2 = h[l-rem]
+        elif len(locs) == 2:
+            doublet = True
+            m1 = locs[0]
+            m2 = locs[1]
+        elif len(locs) == 1:
+            doublet = False # It can still be a doublet!
+            m1 = locs[0]
+            m2 = locs[0]
+        else:
+            doublet = False
+            m1 = sigs[0].size//2
+            m2 = sigs[0].size//2
+            '''import matplotlib.pyplot as plt
+            for n in range(NChan):
+                plt.plot(sigs[n], 'C0-')
+            plt.plot(np.arange(rem,rem+h.size),h,'C2-')
+            plt.title(self.off)
+            plt.show()
+            sys.exit(-1)'''
+
+        if self.off == -123456789:
+            print('\n\n')
+            print(locs)
+            print('%d %d'%(m1,m2))
+            print('777777777777777777777 - %d %d'%(self.templateAsize, self.templateBsize))
+            import matplotlib.pyplot as plt
+            plt.figure(1)
+            for n in range(NChan):
+                plt.plot(sigs[n], 'C0-')
+            plt.plot(np.arange(rem,rem+h.size),h,'C2-')
+            plt.plot( (m1, m1), (0,2), 'k-')
+            plt.plot( (m2, m2), (0,2), 'k-')
+            plt.title(self.off)
+            plt.show()
+
         tamA = self.templateAsize
         tamB = self.templateBsize
 
-        zfill = max(self.templateAsize, self.templateBsize) // 2
+
+        zfill = 128
+        tamTotal = sigs[0].size + 2*zfill
+        bA = 0
+        eA = tamTotal - bA - tamA
+        bB = 0
+        eB = tamTotal - bB - tamB
         data = np.array([], dtype=np.float32)
         tempA = np.array([], dtype=np.float32)
         tempB = np.array([], dtype=np.float32)
         for ch, s in sigs.items():
-            #if s.size > 800:
-            #    print('\nToo large spike (%d). Truncating on 800...'%(s.size))
-            #    s = s[:800]
+
+            if ch not in useChans:
+                continue
 
             data = np.concatenate( (data, np.concatenate( (np.zeros(zfill), s, np.zeros(zfill)) )) )
-            tempA = np.concatenate( (tempA, self.templateA[ch], np.zeros(2*zfill+s.size-tamA)) )
-            tempB = np.concatenate( (tempB, self.templateB[ch], np.zeros(2*zfill+s.size-tamB)) )
+            tempA = np.concatenate( (tempA, self.templateA[ch], np.zeros(eA)) )
+            tempB = np.concatenate( (tempB, self.templateB[ch], np.zeros(eB)) )
         
-        dif = np.zeros(data.size, dtype=np.float32)
-
-        tempsA = np.zeros((self.samples+2*zfill - tamA, tempA.size), dtype=np.float32)
-        for i in xrange(self.samples+2*zfill - tamA):
+        tempsA = np.zeros((tamTotal, tempA.size), dtype=np.float32)
+        for i in xrange(tamTotal):
             tempsA[i,i:] = tempA[:tempA.size-i]
-        tempsB = np.zeros((self.samples+2*zfill - tamB, tempB.size), dtype=np.float32)
-        for i in xrange(self.samples+2*zfill - tamB):
+        tempsB = np.zeros((tamTotal, tempB.size), dtype=np.float32)
+        for i in xrange(tamTotal):
             tempsB[i,i:] = tempB[:tempB.size-i]
 
-        # Minimize A
-        sys.stdout.write('A ')
-        sys.stdout.flush()
-        distAm = np.array( [np.sum(np.absolute(data-tempsA[i,:])) for i in xrange(self.samples+2*zfill - tamA)] , dtype=np.float32)
-        posA = distAm.argmin()
-        distA = distAm[posA]
-        '''distA = np.inf
-        for i in xrange(self.samples+2*zfill - tamA):
-            distA_now = np.abs(data - tempsA[i,:]).sum()
+        if doublet == False:
+            if complete == True:
+                arounds = winSize
+            else:
+                arounds = 64
+            cPos = m1
+            beg = max(0,cPos - arounds)
+            end = min(tempsA[:,0].size, cPos + arounds)
 
-            if distA_now < distA:
-                distA = distA_now
-                posA = i'''
+            # Minimize A
+            sys.stdout.write('A ')
+            sys.stdout.flush()
+            distAm = np.array( [np.sum(np.absolute(data-tempsA[i,:])) for i in xrange(beg,end)] , dtype=np.float32)
+            posA = distAm.argmin()
+            distA = distAm[posA]
+            posA += beg
 
-        # Minimize B
-        sys.stdout.write('B ')
-        sys.stdout.flush()
-        distBm = np.array( [np.sum(np.absolute(data-tempsB[i,:])) for i in xrange(self.samples+2*zfill - tamB)] , dtype=np.float32)
-        posB = distBm.argmin()
-        distB = distBm[posB]
-        '''distB = np.inf
-        for i in xrange(self.samples+2*zfill - tamB):
-            distB_now = np.abs(data - tempsB[i,:]).sum()
+            # Minimize B
+            sys.stdout.write('B ')
+            sys.stdout.flush()
+            distBm = np.array( [np.sum(np.absolute(data-tempsB[i,:])) for i in xrange(beg,end)] , dtype=np.float32)
+            posB = distBm.argmin()
+            distB = distBm[posB]
+            posB += beg
 
-            if distB_now < distB:
-                distB = distB_now
-                posB = i'''
 
-        distABm = pymp.shared.array( (self.samples+2*zfill - tamA, self.samples+2*zfill - tamB) ,dtype=np.float32)
-        distABm.fill(np.inf)
-        datap = pymp.shared.array( data.size, dtype=np.float32)
-        datap[:] = data[:]
+            sys.stdout.write('AB ')
+            #sys.stdout.write('\n')
+            sys.stdout.flush()
+            if complete == True:
+                distABm = pymp.shared.array( (tamTotal, tamTotal) ,dtype=np.float32)
+                distABm.fill(np.inf)
+                datap = pymp.shared.array( data.size, dtype=np.float32)
+                datap[:] = data[:]
+                with pymp.Parallel(8) as p:
+                    for i in p.range(beg,end):
+                        tA = tempsA[i,:]
+                        for j in range(beg,end):
+                            distABm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
+            else:
+                distABm = np.empty( (tamTotal, tamTotal), dtype=np.float32)
+                distABm.fill(np.inf)
+                datap = data
+                for i in range(beg,end):
+                    tA = tempsA[i,:]
+                    for j in range(beg,end):
+                        distABm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
+            
+            posA_AB, posB_AB = np.unravel_index(distABm.argmin(), distABm.shape)
+            distAB = distABm[posA_AB, posB_AB]
 
-        sys.stdout.write('AB ')
-        #sys.stdout.write('\n')
-        sys.stdout.flush()
-        with pymp.Parallel(8) as p:
-            for i in p.range(self.samples+2*zfill - tamA):
-                #if i % 30 == 0:
-                    #sys.stdout.write('%.02f%%\t%d\r'%((100.*i) / (self.samples+2*zfill - tamA), self.samples+2*zfill - tamA))
-                    #sys.stdout.flush()
-                tA = tempsA[i,:]
-                for j in range(self.samples+2*zfill - tamB):
-                    distABm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
-        
-        posA_AB, posB_AB = np.unravel_index(distABm.argmin(), distABm.shape)
-        distAB = distABm[posA_AB, posB_AB]
+            if self.off == -123456789:
+                #print(l)
+                import matplotlib.pyplot as plt
+                fig = plt.figure(1)
+                ax1 = fig.add_subplot(311)
+                ax1.set_title(self.off)
+                ax1.plot(data, 'k-')
+                ax1.plot(tempsA[posA,:], 'b-')
+                ax1.plot(np.abs(data - tempsA[posA,:]), 'b-', alpha=0.3)
+                ax1.plot( (cPos, cPos), (-1,1), 'k-')
+                ax2 = fig.add_subplot(312, sharex=ax1)
+                ax2.plot(data, 'k-')
+                ax2.plot(tempsB[posB,:], 'r-')
+                ax2.plot(np.abs(data - tempsB[posB,:]), 'r-', alpha=0.3)
+                ax2.plot( (cPos, cPos), (-1,1), 'k-')
+                ax3 = fig.add_subplot(313, sharex=ax1)
+                ax3.plot(data, 'k-')
+                ax3.plot(tempsA[posA_AB,:], 'b-')
+                ax3.plot(tempsB[posB_AB,:], 'r-')
+                ax3.plot(np.abs(data - tempsA[posA_AB,:] - tempsB[posB_AB,:]), 'g-',alpha=0.3)
+                ax3.plot( (cPos, cPos), (-1,1), 'k-')
+                plt.show()
+        else:
+            l1 = min(m1,m2)
+            l2 = max(m1,m2)
 
-        '''if self.off == 35211:
+            if self.off == -123456789:
+                import matplotlib.pyplot as plt
+                fig = plt.figure(3)
+                ax1 = fig.add_subplot(311)
+                ax1.plot(data)
+                ax2 = fig.add_subplot(312,sharex=ax1)
+                ax2.plot(tempsA[l1,:])
+                ax3 = fig.add_subplot(313, sharex=ax1)
+                ax3.plot(tempsA[l2,:])
+
+            if complete == True:
+                aroundd = winSize
+            else:
+                aroundd = 40
+            beg1d = max(0,l1 - aroundd)
+            end1d = min(l1 + aroundd, self.samples+2*zfill - tamA)
+            beg2d = max(0,l2 - aroundd)
+            end2d = min(l2 + aroundd, self.samples+2*zfill - tamA)
+
+            if beg2d < end1d:
+                doOnce = True
+                begd = beg1d
+                endd = end2d
+            else:
+                doOnce = False
+
+
+            if doOnce == False:
+                '''if self.off == -123456789:
+                    import matplotlib.pyplot as plt
+                    print('############ %d %d %d'%(beg1d, beg2d, zfill))
+                    print('############ %d %d'%(l1, l2))
+                    beg1d = 0
+                    beg2d = 0
+                    end1d = self.samples+2*zfill - tamA
+                    end2d = self.samples+2*zfill - tamA
+                    plt.figure(30)
+                    plt.subplot(311)
+                    plt.plot(data,'k-')
+                    plt.subplot(312)
+                    plt.plot(tempsA[0,:],'b-')
+                    plt.subplot(313)
+                    plt.plot(tempsB[0,:],'r-')
+                    plt.figure(10)
+                    plt.subplot(411)
+                    plt.plot(np.arange(beg1d,end1d), np.array( [np.sum(np.absolute(data - tempsA[i,:])) for i in xrange(beg1d,end1d)], dtype=np.float32))
+                    plt.subplot(412)
+                    plt.plot(np.arange(beg2d,end2d), np.array( [np.sum(np.absolute(data - tempsA[i,:])) for i in xrange(beg2d,end2d)], dtype=np.float32))
+                    plt.subplot(413)
+                    plt.plot(np.arange(beg1d,end1d), np.array( [np.sum(np.absolute(data - tempsB[i,:])) for i in xrange(beg1d,end1d)], dtype=np.float32))
+                    plt.subplot(414)
+                    plt.plot(np.arange(beg2d,end2d), np.array( [np.sum(np.absolute(data - tempsB[i,:])) for i in xrange(beg2d,end2d)], dtype=np.float32))
+                    plt.figure(20)
+                    distABm = np.empty( (self.samples+2*zfill - tamA, self.samples+2*zfill - tamB) ,dtype=np.float32)
+                    distABm.fill(np.inf)
+                    for i in xrange(0,distABm.shape[0]):
+                        tA = tempsA[i,:]
+                        for j in xrange(0,distABm.shape[1]):
+                            distABm[i,j] = np.sum(np.absolute(data - tA - tempsB[j,:]))
+                    plt.pcolormesh(distABm)
+                    plt.colorbar()
+                    plt.show()'''
+
+
+                distA1 = np.array( [np.sum(np.absolute(data - tempsA[i,:])) for i in xrange(beg1d,end1d)], dtype=np.float32)
+                posA1 = distA1.argmin()
+                distA1 = distA1[posA1]
+                posA1 += beg1d
+                distA2 = np.array( [np.sum(np.absolute(data - tempsA[i,:])) for i in xrange(beg2d,end2d)], dtype=np.float32)
+                posA2 = distA2.argmin()
+                distA2 = distA2[posA2]
+                posA2 += beg2d
+
+                distB1 = np.array( [np.sum(np.absolute(data - tempsB[i,:])) for i in xrange(beg1d,end1d)], dtype=np.float32)
+                posB1 = distB1.argmin()
+                distB1 = distB1[posB1]
+                posB1 += beg1d
+                distB2 = np.array( [np.sum(np.absolute(data - tempsB[i,:])) for i in xrange(beg2d,end2d)], dtype=np.float32)
+                posB2 = distB2.argmin()
+                distB2 = distB2[posB2]
+                posB2 += beg2d
+
+
+
+                if complete == True:
+                    distABm = pymp.shared.array( (tamTotal, tamTotal) ,dtype=np.float32)
+                    distABm.fill(np.inf)
+                    distBAm = pymp.shared.array( (tamTotal, tamTotal) ,dtype=np.float32)
+                    distBAm.fill(np.inf)
+                    datap = pymp.shared.array( data.size, dtype=np.float32)
+                    datap[:] = data[:]
+                    with pymp.Parallel(8) as p:
+                        for i in p.range(beg1d,end1d):
+                            tA = tempsA[i,:]
+                            for j in xrange(beg2d,end2d):
+                                distABm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
+                else:
+                    distABm = np.empty( (self.samples+2*zfill - tamA, self.samples+2*zfill - tamB) ,dtype=np.float32)
+                    distABm.fill(np.inf)
+                    distBAm = np.empty( (self.samples+2*zfill - tamA, self.samples+2*zfill - tamB) ,dtype=np.float32)
+                    distBAm.fill(np.inf)
+                    datap = data
+                    for i in xrange(beg1d,end1d):
+                        tA = tempsA[i,:]
+                        for j in xrange(beg2d,end2d):
+                            distABm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
+
+                posA_AB, posB_AB = np.unravel_index(distABm.argmin(), distABm.shape)
+                distAB = distABm[posA_AB, posB_AB]
+                if complete == True:
+                    with pymp.Parallel(8) as p:
+                        for i in p.range(beg2d,end2d):
+                            tA = tempsA[i,:]
+                            for j in xrange(beg1d,end1d):
+                                distBAm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
+                else:
+                    for i in xrange(beg2d,end2d):
+                        tA = tempsA[i,:]
+                        for j in xrange(beg1d,end1d):
+                            distBAm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
+                posA_BA, posB_BA = np.unravel_index(distBAm.argmin(), distBAm.shape)
+                distBA = distBAm[posA_BA, posB_BA]
+
+            else:
+                distA1 = np.array( [np.sum(np.absolute(data - tempsA[i,:])) for i in xrange(begd,endd)], dtype=np.float32)
+                posA1 = distA1.argmin()
+                distA1 = distA1[posA1]
+                posA1 += begd
+                distA2 = distA1
+                posA2 = posA1
+                
+                distB1 = np.array( [np.sum(np.absolute(data - tempsB[i,:])) for i in xrange(begd,endd)], dtype=np.float32)
+                posB1 = distB1.argmin()
+                distB1 = distB1[posB1]
+                posB1 += begd
+                distB2 = distB1
+                posB2 = posB1
+
+                distABm = pymp.shared.array( (tamTotal, tamTotal) ,dtype=np.float32)
+                distABm.fill(np.inf)
+                datap = pymp.shared.array( data.size, dtype=np.float32)
+                datap[:] = data[:]
+
+                with pymp.Parallel(8) as p:
+                    for i in p.range(begd,endd):
+                        tA = tempsA[i,:]
+                        for j in range(begd,endd):
+                            distABm[i,j] = np.sum(np.absolute(datap - tA - tempsB[j,:]))
+                posA_AB, posB_AB = np.unravel_index(distABm.argmin(), distABm.shape)
+                distAB = distABm[posA_AB, posB_AB]
+
+                distBA = distAB
+                posA_BA = posA_AB
+                posB_BA = posB_AB
+
+
+
+            l = [distA1, distA2, distB1, distB2, distAB, distBA]
+            l2 = [posA1, posA2, posB1, posB2, posA_AB, posB_AB, posA_BA, posB_BA]
+
+            if self.off == -123456789:
+                print(l)
+                print(l2)
+                import matplotlib.pyplot as plt
+                fig = plt.figure(1)
+                ax1 = fig.add_subplot(611)
+                ax1.set_title(self.off)
+                ax1.plot(data, 'k-')
+                ax1.plot(tempsA[posA1,:], 'b-')
+                ax1.plot(np.abs(data - tempsA[posA1,:]), 'b-', alpha=0.3)
+                ax2 = fig.add_subplot(612, sharex=ax1)
+                ax2.plot(data, 'k-')
+                ax2.plot(tempsB[posB2,:], 'r-')
+                ax2.plot(np.abs(data - tempsB[posB2,:]), 'r-', alpha=0.3)
+                ax3 = fig.add_subplot(613, sharex=ax1)
+                ax3.plot(data, 'k-')
+                ax3.plot(tempsA[posA_AB,:], 'b-')
+                ax3.plot(tempsB[posB_AB,:], 'r-')
+                ax3.plot(np.abs(data - tempsA[posA_AB,:] - tempsB[posB_AB,:]), 'g-',alpha=0.3)
+                ax4 = fig.add_subplot(614,sharex=ax1)
+                ax4.plot(data, 'k-')
+                ax4.plot(tempsA[posA2,:], 'b-')
+                ax4.plot(np.abs(data - tempsA[posA2,:]), 'b-', alpha=0.3)
+                ax5 = fig.add_subplot(615,sharex=ax1)
+                ax5.plot(data, 'k-')
+                ax5.plot(tempsB[posB1,:], 'r-')
+                ax5.plot(np.abs(data - tempsB[posB1,:]), 'r-', alpha=0.3)
+                ax6 = fig.add_subplot(616,sharex=ax1)
+                ax6.plot(data, 'k-')
+                ax6.plot(tempsA[posA_BA,:], 'b-')
+                ax6.plot(tempsB[posB_BA,:], 'r-')
+                ax6.plot(np.abs(data - tempsA[posA_BA,:] - tempsB[posB_BA,:]), 'g-',alpha=0.3)
+                plt.show()
+                #sys.exit(-1)
+
+            if np.argmin(l) == 0:
+                posA = posA1
+                distA = l[0]
+                posB = 0
+                distB = np.inf
+                posA_AB = 0
+                posB_AB = 0
+                distAB = np.inf
+            elif np.argmin(l) == 1:
+                posA = posA2
+                distA = l[1]
+                posB = 0
+                distB = np.inf
+                posA_AB = 0
+                posB_AB = 0
+                distAB = np.inf
+            elif np.argmin(l) == 2:
+                posA = 0
+                distA = np.inf
+                posB = posB1
+                distB = l[2]
+                posA_AB = 0
+                posB_AB = 0
+                distAB = np.inf
+            elif np.argmin(l) == 3:
+                posA = 0
+                distA = np.inf
+                posB = posB2
+                distB = l[3]
+                posA_AB = 0
+                posB_AB = 0
+                distAB = np.inf
+            elif np.argmin(l) == 4:
+                posA = 0
+                distA = np.inf
+                posB = 0
+                distB = np.inf
+                posA_AB = posA_AB
+                posB_AB = posB_AB
+                distAB = l[4]
+            else:
+                posA = 0
+                distA = np.inf
+                posB = 0
+                distB = np.inf
+                posA_AB = posA_BA
+                posB_AB = posB_BA
+                distAB = l[5]
+
+        '''if  self.off==32680:
             import matplotlib.pyplot as plt
             plt.figure(1)
             plt.subplot(211)
@@ -311,7 +697,14 @@ class recog:
 
         #sys.stdout.write('distsOk ')
         #sys.stdout.flush()
-        if False:
+        if self.off== -123456789:
+       # if False:
+            sys.stdout.write('\n\n\n')
+            sys.stdout.write(repr(posA)+'\n')
+            sys.stdout.write(repr(zfill)+'\n')
+            sys.stdout.write(repr(self.samples)+'\n')
+            sys.stdout.write(repr(tamA)+'\n')
+            sys.stdout.flush()
             import matplotlib.pyplot as plt
 
             plt.figure(1, figsize=(22,16))
@@ -346,7 +739,7 @@ class recog:
                 plt.plot([posinicial+posA_AB+self.lastCenterA, posinicial+posA_AB+self.lastCenterA], [-10,10], 'b-', alpha=0.3)
                 plt.plot([posinicial+posB_AB+self.lastCenterB, posinicial+posB_AB+self.lastCenterB], [-10,10], 'r-', alpha=0.3)
 
-            ax4 = plt.subplot2grid((3,4), (0,3))
+            '''ax4 = plt.subplot2grid((3,4), (0,3))
             plt.plot(distAm)
 
             ax5 = plt.subplot2grid((3,4), (1,3))
@@ -355,11 +748,12 @@ class recog:
             ax6 = plt.subplot2grid((3,4), (2,3))
             plt.pcolormesh(distABm)
             plt.axis('tight')
-            plt.colorbar()
+            plt.colorbar()'''
 
             plt.show()
-        else:
-            del distABm
+            #sys.exit(-1)
+        #posA = posA + self.lastCenterA - zfill
+        #posB = posB + self.lastCenterB - zfill
 
         ###########################################
         ############### Verificar se existe no db #
@@ -373,9 +767,11 @@ class recog:
             dbdistB = data[ recogdb.dicFields['distB'] ]
             dbdistAB = data[ recogdb.dicFields['distAB'] ]
             mindistDB = min(dbdistA, dbdistB, dbdistAB)
+            if predicted == True and data[ recogdb.dicFields['svm'] ] == 's':
+                mindist = np.inf
             if mindistDB < mindist:
                 #sys.stdout.write('Leaving DB as is')
-                sys.stdout.write('L ')
+                sys.stdout.write('L\n')
 
                 # Update lastTS and lastIPI with DB data
                 idx = np.argmin( (dbdistA, dbdistB, dbdistAB) )
@@ -417,12 +813,13 @@ class recog:
             else:
                 recogdb.writeEntry(self.db, self.off, 1, self.direction, distA, distB, distAB, 0, self.off+posA, -1, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
                 self.tsoutput.write('1 %d\n'%(self.off+posA))
-            sys.stdout.write('\tsingle A')
+            sys.stdout.write('\tsingle\tA')
             sys.stdout.flush()
 
             # Replace template
-            self.templateA = sigs.copy()
-            self.templateAsize = self.samples
+            if self.samples == winSize:
+                self.templateA = sigs.copy()
+                self.templateAsize = winSize
             self.lastCenterA = posA
 
             if self.lastTSA is None:
@@ -439,12 +836,13 @@ class recog:
             else:
                 recogdb.writeEntry(self.db, self.off, 2, self.direction, distA, distB, distAB, 0, -1, self.off+posB, self.svmcause, -1, self.probA, self.probB, list(sigs.values()))
                 self.tsoutput.write('-1 %d\n'%(self.off+posB))
-            sys.stdout.write('\tsingle B')
+            sys.stdout.write('\tsingle\tB')
             sys.stdout.flush()
 
             # Replace template
-            self.templateB = sigs.copy()
-            self.templateBsize = self.samples
+            if self.samples == winSize:
+                self.templateB = sigs.copy()
+                self.templateBsize = winSize
             self.lastCenterB = posB
 
             if self.lastTSB is None:
@@ -467,7 +865,7 @@ class recog:
                 else:
                     self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
                     self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
-                sys.stdout.write('\toverlap AB')
+                sys.stdout.write('\toverlap\tAB')
                 sys.stdout.flush()
             else:
                 if jump:
@@ -477,7 +875,7 @@ class recog:
                 else:
                     self.tsoutput.write('-1 %d\n'%(self.off+posB_AB))
                     self.tsoutput.write('1 %d\n'%(self.off+posA_AB))
-                sys.stdout.write('\toverlap BA')
+                sys.stdout.write('\toverlap\tBA')
                 sys.stdout.flush()
 
             if self.lastTSA is None:
@@ -551,6 +949,7 @@ if __name__ == '__main__':
 
     iterate_parser = subparsers.add_parser('iterate', help='Iterate over all time series')
     iterate_parser.add_argument('db_file', type=str, help='Database file name') 
+    iterate_parser.add_argument('hilb_file', type=str, help='Hilbert transform file name') 
     iterate_parser.add_argument('spikes_file', type=argparse.FileType(mode+'r'), help='Spikes window file')
     iterate_parser.add_argument('singlefish_file', type=argparse.FileType(mode+'r'), help='Singlefish file')
     iterate_parser.add_argument('probs_file', type=argparse.FileType('r'), help='Spike probability file')
@@ -565,11 +964,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.mode == 'iterate':
-        db = recogdb.openDB(args.db_file, 'rw')
+        db = recogdb.openDB(args.db_file, 'w')
+        hilbFileName = args.hilb_file
+        H = np.fromfile(hilbFileName,dtype=np.float32)
+
         wins = winFile(args.spikes_file)
         svmpairs = np.loadtxt(args.singlefish_file, dtype=np.int64)
         svmpairsTam = svmpairs.shape[0]
         direction = args.direction
+        if direction != 1:
+            svmpairs = svmpairs[::-1]
 
         probsfile = args.probs_file
         probs = {}
