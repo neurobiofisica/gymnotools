@@ -497,7 +497,6 @@ class DiscriminateWindow(QtWidgets.QDialog):
         self.plotIPIandSVMProgram.start('./../plotIPIandSVM/plotIPIandSVM', \
                                         [DBName, \
                                         timeseriesFile, \
-                                        spikesFile, \
                                         timestampsFile, \
                                         ])
 
