@@ -18,7 +18,7 @@ from windowfile import writewin
 def gmean(arr, kernel_size=3):
     tam = arr.size
     out = np.memmap('/tmp/tmp.f32', dtype=np.float32, shape=(tam+kernel_size,), mode='w+')
-    out[:] = [ np.prod(arr[max(0,n):min(n+kernel_size,tam)])**(1./kernel_size) for n in range(-kernel_size//2,tam+kernel_size//2) ]
+    out[:] = [ np.prod(arr[max(0,n-kernel_size//2):min(n+kernel_size//2,tam)])**(1./kernel_size) for n in range(-kernel_size//2,tam+kernel_size//2) ]
     return out[kernel_size//2:tam+kernel_size//2]
 
 #medfiltsize= 0.0010
