@@ -12,9 +12,9 @@ try:
     from PyQt5.QtCore import QString
 except:
     QString = str
-from .training_interface import Ui_trainingWindow
+from training_interface import Ui_trainingWindow
 
-from .clickAux import ClickQLabel, ClickQLineEdit
+from clickAux import ClickQLabel, ClickQLineEdit
 
 # Default SVM values TODO: pegar de aquivo externo
 defcStart = -5.0
