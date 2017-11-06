@@ -499,5 +499,5 @@ class Ui_discriminateWindow(object):
         self.loadChirpsModelLabel.setText(_translate("discriminateWindow", "Load chirps model:"))
         self.detectChirpsBut.setText(_translate("discriminateWindow", "detectChirps"))
 
-from clickAux import ClickQLabel, ClickQLineEdit
-import resource_rc
+from gui.clickAux import ClickQLabel, ClickQLineEdit
+from gui import resource_rc

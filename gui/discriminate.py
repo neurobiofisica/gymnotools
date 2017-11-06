@@ -9,7 +9,7 @@ try:
     from PyQt5.QtCore import QString
 except:
     QString = str
-from discriminate_interface import Ui_discriminateWindow
+from gui.discriminate_interface import Ui_discriminateWindow
 
 sys.path.append( os.path.realpath('../') )
 #from python.plotIPIandSVM import plotIPIandSVM
