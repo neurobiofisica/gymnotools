@@ -1362,11 +1362,11 @@ class TrainingWindow(QtWidgets.QDialog):
                                        self.testingName2])
         
         def getOutput():
-            stdout = self.svmtoolROCProgram.readAllStandardOutput()
+            stdout = self.svmtoolROCProgram.readAllStandardOutput().data().decode()
             self.svmOutput = self.svmOutput + stdout
             if stdout != '':
                 print('stdout:\t%s'%str(stdout).strip())
-            stderr = self.svmtoolROCProgram.readAllStandardError()
+            stderr = self.svmtoolROCProgram.readAllStandardError().data().decode()
             self.svmOutput = self.svmOutput + stderr
             if stderr != '':
                 print('stderr:\t%s'%str(stderr).strip())
@@ -1374,9 +1374,9 @@ class TrainingWindow(QtWidgets.QDialog):
         self.cancelled = False
         def svmtoolROCFinish(ret, exitStatus):
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                stdout = self.svmtoolROCProgram.readAllStandardOutput()
+                stdout = self.svmtoolROCProgram.readAllStandardOutput().data().decode()
                 self.svmOutput = self.svmOutput + stdout
-                stderr = self.svmtoolROCProgram.readAllStandardError()
+                stderr = self.svmtoolROCProgram.readAllStandardError().data().decode()
                 self.svmOutput = self.svmOutput + stderr
                 
                 ROCList = self.svmOutput.split('\n')
