@@ -753,15 +753,15 @@ class TrainingWindow(QtWidgets.QDialog):
         def fillInfoLabel1(ret, exitStatus):
             self.app.restoreOverrideCursor()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit):
-                stdout = self.sliceInfo1Program.readAllStandardOutput()
-                stderr = self.sliceInfo1Program.readAllStandardError()
+                stdout = self.sliceInfo1Program.readAllStandardOutput().data().decode()
+                stderr = self.sliceInfo1Program.readAllStandardError().data().decode()
                 if stdout != '':
                     if len(str(stdout))>1:
-                        text, self.NWindows1 = self.formatInfoText(str(stdout))
+                        text, self.NWindows1 = self.formatInfoText(stdout)
                         self.ui.sliceInfoFish1Label.setText(text)
                 else:
                     if len(str(stderr))>1:
-                        text, self.NWindows1 = self.formatInfoText(str(stderr))
+                        text, self.NWindows1 = self.formatInfoText(stderr)
                         self.ui.sliceInfoFish1Label.setText(text)
             else:
                 return None
@@ -769,15 +769,15 @@ class TrainingWindow(QtWidgets.QDialog):
         def fillInfoLabel2(ret, exitStatus):
             self.app.restoreOverrideCursor()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit):
-                stdout = self.sliceInfo2Program.readAllStandardOutput()
-                stderr = self.sliceInfo2Program.readAllStandardError()
+                stdout = self.sliceInfo2Program.readAllStandardOutput().data().decode()
+                stderr = self.sliceInfo2Program.readAllStandardError().data().decode()
                 if stdout != '':
                     if len(str(stdout))>1:
-                        text, self.NWindows2 = self.formatInfoText(str(stdout))
+                        text, self.NWindows2 = self.formatInfoText(stdout)
                         self.ui.sliceInfoFish2Label.setText(text)
                 else:
                     if len(str(stderr))>1:
-                        text, self.NWindows2 = self.formatInfoText(str(stderr))
+                        text, self.NWindows2 = self.formatInfoText(stderr)
                         self.ui.sliceInfoFish2Label.setText(text)
             else:
                 return None
@@ -1100,12 +1100,12 @@ class TrainingWindow(QtWidgets.QDialog):
                 fish = 2
             
             if fish == 1:
-                if self.NWindows1 != 0:
+                if self.NWindows1 != 0 and len(text)>0:
                     prob = np.floor(1e6*(float(text) / float(self.NWindows1)))/1e6
                 else:
                     prob = -1
             else:
-                if self.NWindows2 != 0:
+                if self.NWindows2 != 0 and len(text)>0:
                     prob = np.floor(1e6*(float(text) / float(self.NWindows2)))/1e6
                 else:
                     prob = -1
@@ -1258,12 +1258,12 @@ class TrainingWindow(QtWidgets.QDialog):
                                          ])
         
         def getOutput():
-            stdout = self.svmtoolOptimProgram.readAllStandardOutput()
+            stdout = self.svmtoolOptimProgram.readAllStandardOutput().data().decode()
             self.svmOutput = self.svmOutput + stdout
             if stdout != '':
                 print('stdout:\t%s'%str(stdout).strip())
                 self.f.write(str(stdout).strip()+'\n')
-            stderr = self.svmtoolOptimProgram.readAllStandardError()
+            stderr = self.svmtoolOptimProgram.readAllStandardError().data().decode()
             self.svmOutput = self.svmOutput + stderr
             if stderr != '':
                 print('stderr:\t%s'%str(stderr).strip())
@@ -1277,9 +1277,9 @@ class TrainingWindow(QtWidgets.QDialog):
             self.f.close()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 
-                stdout = self.svmtoolOptimProgram.readAllStandardOutput()
+                stdout = self.svmtoolOptimProgram.readAllStandardOutput().data().decode()
                 self.svmOutput = self.svmOutput + stdout
-                stderr = self.svmtoolOptimProgram.readAllStandardError()
+                stderr = self.svmtoolOptimProgram.readAllStandardError().data().decode()
                 self.svmOutput = self.svmOutput + stderr
                 
                 parse = re.search('(.*)Best: c=(.*), g=(.*)\n(.*)', self.svmOutput)

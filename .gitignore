@@ -21,3 +21,5 @@ pygymnext/_pygymnext.so
 pygymnext/pygymnext.py
 pygymnext/pygymnext_wrap.cxx
 
+gui/*.npy
+gui/output.txt
