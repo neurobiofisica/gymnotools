@@ -39,13 +39,13 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>1375</width>
-        <height>1182</height>
+        <width>1393</width>
+        <height>1241</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="1" column="0">
-        <layout class="QVBoxLayout" name="step1Layout" stretch="0,4,0">
+        <layout class="QVBoxLayout" name="step1Layout" stretch="0,0,0">
          <item>
           <widget class="ClickQLabel" name="step1TitleLabel">
            <property name="font">
@@ -57,150 +57,30 @@
             </font>
            </property>
            <property name="text">
-            <string>1. Select parameters for spike detection &gt;</string>
+            <string>1. Calculate Hilbert Transform &gt;</string>
            </property>
           </widget>
          </item>
          <item>
           <layout class="QGridLayout" name="step1ParametersLayout">
-           <item row="2" column="0">
-            <widget class="QLabel" name="SaveLoadHilbLabel">
-             <property name="text">
-              <string>Save/Load Hilbert Transform</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="2">
-            <widget class="QLineEdit" name="taps2LineEdit">
-             <property name="text">
-              <string>301</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="2">
-            <widget class="QLineEdit" name="highSaturation2LineEdit"/>
-           </item>
-           <item row="5" column="2">
-            <widget class="QLineEdit" name="lowSaturation2LineEdit"/>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLabel" name="spikeParametersFish2Label">
-             <property name="text">
-              <string>Fish 2</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="0">
-            <widget class="QLabel" name="cutoffLabel">
-             <property name="text">
-              <string>Cutoff frequency (Hz):</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QLabel" name="tapsLabel">
-             <property name="text">
-              <string>Number of taps:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="highSaturationLabel">
-             <property name="text">
-              <string>HIGH saturation level (V):</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="lowSaturationLabel">
-             <property name="text">
-              <string>LOW saturation level (V):</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="2">
-            <widget class="QLineEdit" name="cutoff2LineEdit">
-             <property name="text">
-              <string>1.0</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="loadTSLabel">
-             <property name="text">
-              <string>Load timeseries data:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="1">
-            <widget class="QLineEdit" name="cutoff1LineEdit">
-             <property name="text">
-              <string>1.0</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="spikeParametersFish1Label">
-             <property name="text">
-              <string>Fish 1</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
            <item row="5" column="1">
-            <widget class="QLineEdit" name="lowSaturation1LineEdit"/>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="saturationLabel">
-             <property name="font">
-              <font>
-               <family>Sans Serif</family>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
+            <widget class="ClickQLineEdit" name="lowCutoffLineEdit">
              <property name="text">
-              <string>Saturation level:</string>
+              <string>20</string>
              </property>
             </widget>
            </item>
-           <item row="8" column="1">
-            <widget class="QLineEdit" name="taps1LineEdit">
+           <item row="3" column="0">
+            <widget class="QLabel" name="gmeanLabel">
+             <property name="layoutDirection">
+              <enum>Qt::LeftToRight</enum>
+             </property>
              <property name="text">
-              <string>301</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Geometric mean kernel size:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="ClickQLineEdit" name="loadTS1LineEdit"/>
-           </item>
-           <item row="6" column="1">
-            <widget class="QLineEdit" name="highSaturation1LineEdit"/>
-           </item>
-           <item row="7" column="0">
+           <item row="2" column="0">
             <widget class="QLabel" name="filterLabel">
              <property name="font">
               <font>
@@ -210,40 +90,141 @@
               </font>
              </property>
              <property name="text">
-              <string>High-pass filter parameters:</string>
+              <string>Band-pass filter parameters:</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="2">
-            <widget class="ClickQLineEdit" name="loadTS2LineEdit"/>
+           <item row="9" column="0">
+            <widget class="QLabel" name="SaveLoadHilbLabel">
+             <property name="text">
+              <string>Save Hilbert Transform</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
            </item>
-           <item row="2" column="1">
-            <widget class="ClickQLineEdit" name="saveLoadHilb1LineEdit"/>
+           <item row="5" column="0">
+            <widget class="QLabel" name="cutoffLabel">
+             <property name="text">
+              <string>Low/High cutoff (Hz):</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
            </item>
-           <item row="3" column="0">
+           <item row="9" column="1">
+            <widget class="ClickQLineEdit" name="saveHilb1LineEdit"/>
+           </item>
+           <item row="10" column="0">
             <widget class="QLabel" name="UseExistingHilb">
              <property name="text">
-              <string>Use Existing Hilbert Transform file?</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="ClickQLineEdit" name="saveLoadHilb2LineEdit"/>
-           </item>
-           <item row="3" column="1" alignment="Qt::AlignHCenter">
-            <widget class="QCheckBox" name="useHilb1CheckBox">
-             <property name="layoutDirection">
-              <enum>Qt::LeftToRight</enum>
-             </property>
-             <property name="text">
-              <string notr="true"/>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="2" alignment="Qt::AlignHCenter">
-            <widget class="QCheckBox" name="useHilb2CheckBox">
-             <property name="text">
               <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="2">
+            <widget class="ClickQLineEdit" name="saveHilb2LineEdit"/>
+           </item>
+           <item row="5" column="2">
+            <widget class="ClickQLineEdit" name="highCutoffLineEdit">
+             <property name="text">
+              <string>1000</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="2">
+            <widget class="ClickQLineEdit" name="loadTS2LineEdit"/>
+           </item>
+           <item row="4" column="1" colspan="2">
+            <widget class="ClickQLineEdit" name="tapsLineEdit">
+             <property name="text">
+              <string>10001</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="1">
+            <widget class="ClickQLineEdit" name="loadTS1LineEdit"/>
+           </item>
+           <item row="10" column="2">
+            <widget class="QPushButton" name="hilb2But">
+             <property name="text">
+              <string>Calculate Hilbert</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="tapsLabel">
+             <property name="text">
+              <string>Number of taps:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="10" column="1">
+            <widget class="QPushButton" name="hilb1But">
+             <property name="text">
+              <string>Calculate Hilbert</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="0">
+            <widget class="QLabel" name="loadTSLabel">
+             <property name="text">
+              <string>Load timeseries data:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="2">
+            <widget class="QLabel" name="spikeParametersFish2Label">
+             <property name="text">
+              <string>Fish 2</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="hilbLabel">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Hilbert Transform</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="1">
+            <widget class="QLabel" name="spikeParametersFish1Label">
+             <property name="text">
+              <string>Fish 1</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0" colspan="3">
+            <widget class="Line" name="line_6">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1" colspan="2">
+            <widget class="ClickQLineEdit" name="gmeanLineEdit">
+             <property name="text">
+              <string>31</string>
              </property>
             </widget>
            </item>
@@ -290,7 +271,7 @@
         </widget>
        </item>
        <item row="1" column="2">
-        <layout class="QVBoxLayout" name="step2Layout" stretch="0,4">
+        <layout class="QVBoxLayout" name="step2Layout" stretch="0,0">
          <item>
           <widget class="ClickQLabel" name="step2TitleLabel">
            <property name="font">
@@ -310,62 +291,35 @@
           </widget>
          </item>
          <item>
-          <layout class="QGridLayout" name="step2ParametersLayout" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="4,0,0">
+          <layout class="QGridLayout" name="step2ParametersLayout" rowstretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0" columnstretch="4,0,0">
            <property name="horizontalSpacing">
             <number>6</number>
            </property>
            <property name="verticalSpacing">
             <number>0</number>
            </property>
-           <item row="5" column="0" colspan="3">
-            <widget class="QLabel" name="maxSizeLabel">
+           <item row="10" column="0" colspan="3">
+            <widget class="ClickQLineEdit" name="onlyAboveLineEdit">
              <property name="text">
-              <string>Maximum size (s):</string>
+              <string>0.100</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="0" colspan="2">
-            <widget class="QLabel" name="detectFish1Label">
+           <item row="14" column="0" rowspan="2" colspan="2">
+            <widget class="ClickQLineEdit" name="loadHilb1LineEdit">
              <property name="text">
-              <string>Fish 1</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
+              <string/>
              </property>
             </widget>
            </item>
-           <item row="9" column="0" colspan="3">
-            <widget class="QLabel" name="saveSpikesLabel">
+           <item row="7" column="0" colspan="3">
+            <widget class="QLabel" name="toleranceLabel">
              <property name="text">
-              <string>Save detected spikes as: </string>
+              <string>Minimum distance (ms):</string>
              </property>
             </widget>
            </item>
-           <item row="17" column="2">
-            <widget class="QPushButton" name="verifySpikes2But">
-             <property name="text">
-              <string>Verify detection</string>
-             </property>
-            </widget>
-           </item>
-           <item row="15" column="0" colspan="3">
-            <widget class="QLabel" name="loadSpikesLabel">
-             <property name="text">
-              <string>Load spikes file:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="16" column="2">
-            <widget class="ClickQLineEdit" name="loadSpikes2LineEdit"/>
-           </item>
-           <item row="17" column="0" colspan="2">
-            <widget class="QPushButton" name="verifySpikes1But">
-             <property name="text">
-              <string>Verify detection</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
+           <item row="12" column="2">
             <widget class="QLabel" name="detectFish2Label">
              <property name="text">
               <string>Fish 2</string>
@@ -375,30 +329,68 @@
              </property>
             </widget>
            </item>
-           <item row="10" column="2">
-            <widget class="ClickQLineEdit" name="saveSpikes2LineEdit"/>
-           </item>
-           <item row="10" column="0" colspan="2">
-            <widget class="ClickQLineEdit" name="saveSpikes1LineEdit"/>
-           </item>
-           <item row="13" column="0" colspan="2">
-            <widget class="QPushButton" name="detectSpikes1But">
+           <item row="3" column="0">
+            <widget class="ClickQLineEdit" name="subSampLineEdit">
              <property name="text">
-              <string>Calculate Hilbert and detect Spikes</string>
+              <string>3</string>
              </property>
             </widget>
            </item>
-           <item row="16" column="0" colspan="2">
-            <widget class="ClickQLineEdit" name="loadSpikes1LineEdit"/>
+           <item row="22" column="0" colspan="2">
+            <widget class="ClickQLineEdit" name="saveSpikes1LineEdit"/>
            </item>
-           <item row="13" column="2">
+           <item row="13" column="0" colspan="3" alignment="Qt::AlignLeft">
+            <widget class="QLabel" name="thresholdLevelLabel">
+             <property name="text">
+              <string>Load hilbert File:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="14" column="2">
+            <widget class="ClickQLineEdit" name="loadHilb2LineEdit">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="29" column="0" colspan="2">
+            <widget class="QPushButton" name="verifySpikes1But">
+             <property name="text">
+              <string>Verify detection</string>
+             </property>
+            </widget>
+           </item>
+           <item row="22" column="2">
+            <widget class="ClickQLineEdit" name="saveSpikes2LineEdit"/>
+           </item>
+           <item row="2" column="2">
+            <widget class="QLabel" name="waveletLabel">
+             <property name="text">
+              <string>Min/Max/Step wavelet parameters:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="28" column="2">
+            <widget class="ClickQLineEdit" name="loadSpikes2LineEdit"/>
+           </item>
+           <item row="27" column="0" colspan="3">
+            <widget class="QLabel" name="loadSpikesLabel">
+             <property name="text">
+              <string>Load spikes file:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="25" column="2">
             <widget class="QPushButton" name="detectSpikes2But">
              <property name="text">
               <string>Calculate Hilbert and detect Spikes</string>
              </property>
             </widget>
            </item>
-           <item row="14" column="0" colspan="3">
+           <item row="26" column="0" colspan="3">
             <spacer name="step2ParametersSpacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -414,59 +406,118 @@
              </property>
             </spacer>
            </item>
-           <item row="2" column="0" colspan="2">
-            <widget class="QLineEdit" name="thresholdLevel1LineEdit">
+           <item row="29" column="2">
+            <widget class="QPushButton" name="verifySpikes2But">
              <property name="text">
-              <string>1.0</string>
+              <string>Verify detection</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="2">
-            <widget class="QLineEdit" name="refractory2LineEdit"/>
-           </item>
-           <item row="4" column="0" colspan="2">
-            <widget class="QLineEdit" name="refractory1LineEdit"/>
-           </item>
-           <item row="1" column="0" colspan="3" alignment="Qt::AlignLeft">
-            <widget class="QLabel" name="thresholdLevelLabel">
+           <item row="25" column="0" colspan="2">
+            <widget class="QPushButton" name="detectSpikes1But">
              <property name="text">
-              <string>Threshold level (V):</string>
+              <string>Calculate Hilbert and detect Spikes</string>
+             </property>
+            </widget>
+           </item>
+           <item row="28" column="0" colspan="2">
+            <widget class="ClickQLineEdit" name="loadSpikes1LineEdit"/>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="subsampLabel">
+             <property name="text">
+              <string>Subsamp Hilbert:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="peakLabel">
+             <property name="text">
+              <string>Peak detection Order:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="12" column="0" colspan="2">
+            <widget class="QLabel" name="detectFish1Label">
+             <property name="text">
+              <string>Fish 1</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
              </property>
             </widget>
            </item>
-           <item row="2" column="2">
-            <widget class="QLineEdit" name="thresholdLevel2LineEdit">
+           <item row="3" column="2">
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="ClickQLineEdit" name="minWaveletLineEdit">
+               <property name="text">
+                <string>12</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="ClickQLineEdit" name="maxWaveletLineEdit">
+               <property name="text">
+                <string>120</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="ClickQLineEdit" name="stepWaveletLineEdit">
+               <property name="text">
+                <string>0.1</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="3" column="1">
+            <widget class="ClickQLineEdit" name="peakLineEdit">
              <property name="text">
-              <string>1.0</string>
+              <string>15</string>
              </property>
             </widget>
            </item>
-           <item row="6" column="2">
-            <widget class="QLineEdit" name="maxSize2LineEdit"/>
-           </item>
-           <item row="3" column="0" colspan="3">
-            <widget class="QLabel" name="refractoryLabel">
+           <item row="8" column="0" colspan="3">
+            <widget class="ClickQLineEdit" name="toleranceLineEdit">
              <property name="text">
-              <string>Refractory period (s):</string>
+              <string>0.5</string>
              </property>
             </widget>
            </item>
-           <item row="6" column="0" colspan="2">
-            <widget class="QLineEdit" name="maxSize1LineEdit"/>
+           <item row="4" column="0" colspan="2">
+            <widget class="QLabel" name="minHilbLabel">
+             <property name="text">
+              <string>Minimum Hilbert (V):</string>
+             </property>
+            </widget>
            </item>
-           <item row="8" column="2">
-            <widget class="QLineEdit" name="onlyAbove2LineEdit"/>
-           </item>
-           <item row="8" column="0" colspan="2">
-            <widget class="QLineEdit" name="onlyAbove1LineEdit"/>
-           </item>
-           <item row="7" column="0" colspan="3">
+           <item row="9" column="0" colspan="3">
             <widget class="QLabel" name="onlyAboveLabel">
              <property name="text">
-              <string>Only output spikes above (V) (Needed to avoid noise)</string>
+              <string>Only output spikes above (V):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="20" column="0" rowspan="2" colspan="3">
+            <widget class="QLabel" name="saveSpikesLabel">
+             <property name="text">
+              <string>Save detected spikes as: </string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0" colspan="3">
+            <widget class="ClickQLineEdit" name="minHilbLineEdit">
+             <property name="text">
+              <string>0.060</string>
+             </property>
+            </widget>
+           </item>
+           <item row="11" column="0" colspan="3">
+            <widget class="Line" name="line">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
              </property>
             </widget>
            </item>
@@ -1189,16 +1240,6 @@
   <tabstop>scrollArea</tabstop>
   <tabstop>saveParametersBut</tabstop>
   <tabstop>loadParametersBut</tabstop>
-  <tabstop>loadTS1LineEdit</tabstop>
-  <tabstop>lowSaturation1LineEdit</tabstop>
-  <tabstop>highSaturation1LineEdit</tabstop>
-  <tabstop>taps1LineEdit</tabstop>
-  <tabstop>cutoff1LineEdit</tabstop>
-  <tabstop>loadTS2LineEdit</tabstop>
-  <tabstop>lowSaturation2LineEdit</tabstop>
-  <tabstop>highSaturation2LineEdit</tabstop>
-  <tabstop>taps2LineEdit</tabstop>
-  <tabstop>cutoff2LineEdit</tabstop>
   <tabstop>saveSpikes1LineEdit</tabstop>
   <tabstop>detectSpikes1But</tabstop>
   <tabstop>saveSpikes2LineEdit</tabstop>

@@ -45,50 +45,27 @@ class TrainingWindow(QtWidgets.QDialog):
         self.ax = self.ui.ROCWidget.canvas.ax
         self.plotData, = self.ui.ROCWidget.canvas.ax.plot([],[],'k.')
        
-        self.defaultValues = {self.ui.lowSaturation1LineEdit: -9.9, \
-                              self.ui.lowSaturation2LineEdit: -9.9, \
-
-                              self.ui.highSaturation1LineEdit: 9.9, \
-                              self.ui.highSaturation2LineEdit: 9.9, \
-
-                              self.ui.taps1LineEdit: 301, \
-                              self.ui.taps2LineEdit: 301, \
-
-                              self.ui.cutoff1LineEdit: 1.0, \
-                              self.ui.cutoff2LineEdit: 1.0, \
-                        
-                              self.ui.thresholdLevel1LineEdit: 1.0, \
-                              self.ui.thresholdLevel2LineEdit: 1.0, \
-                             }
-
-        for field in self.defaultValues.keys():
-            field.setText(str(self.defaultValues[field]))
- 
         # LineFields List -> for saving parameters
-        self.lineFieldsList = (self.ui.loadTS1LineEdit, \
+        self.lineFieldsList = (
+                               self.ui.gmeanLineEdit, \
+                               self.ui.tapsLineEdit, \
+                               self.ui.lowCutoffLineEdit, \
+                               self.ui.loadTS1LineEdit, \
                                self.ui.loadTS2LineEdit, \
-                               self.ui.saveLoadHilb1LineEdit, \
-                               self.ui.saveLoadHilb2LineEdit, \
-                               self.ui.useHilb1CheckBox, \
-                               self.ui.useHilb2CheckBox, \
-                               self.ui.lowSaturation1LineEdit, \
-                               self.ui.lowSaturation2LineEdit, \
-                               self.ui.highSaturation1LineEdit, \
-                               self.ui.highSaturation2LineEdit, \
-                               self.ui.taps1LineEdit, \
-                               self.ui.taps2LineEdit, \
-                               self.ui.cutoff1LineEdit, \
-                               self.ui.cutoff2LineEdit, \
-                               self.ui.thresholdLevel1LineEdit, \
-                               self.ui.thresholdLevel2LineEdit, \
-                               self.ui.refractory1LineEdit, \
-                               self.ui.refractory2LineEdit, \
-                               self.ui.maxSize1LineEdit, \
-                               self.ui.maxSize2LineEdit, \
+                               self.ui.saveHilb1LineEdit, \
+                               self.ui.saveHilb2LineEdit, \
+                               self.ui.subSampLineEdit, \
+                               self.ui.peakLineEdit, \
+                               self.ui.minWaveletLineEdit, \
+                               self.ui.maxWaveletLineEdit, \
+                               self.ui.stepWaveletLineEdit, \
+                               self.ui.minHilbLineEdit, \
+                               self.ui.toleranceLineEdit, \
+                               self.ui.onlyAboveLineEdit, \
+                               self.ui.loadHilb1LineEdit, \
+                               self.ui.loadHilb2LineEdit, \
                                self.ui.saveSpikes1LineEdit, \
                                self.ui.saveSpikes2LineEdit, \
-                               self.ui.onlyAbove1LineEdit, \
-                               self.ui.onlyAbove2LineEdit, \
                                self.ui.loadSpikes1LineEdit, \
                                self.ui.loadSpikes2LineEdit, \
                                self.ui.saveFeatures1LineEdit, \
@@ -135,6 +112,8 @@ class TrainingWindow(QtWidgets.QDialog):
 
         # Program objects -> they must be parameters for the GarbageCollector
         # do not clean them
+        self.calcHilb1Program = QtCore.QProcess()
+        self.calcHilb2Program = QtCore.QProcess()
         self.verifySpikes1Program = QtCore.QProcess()
         self.verifySpikes2Program = QtCore.QProcess()
         self.detectSpikes1Program = QtCore.QProcess()
@@ -155,6 +134,8 @@ class TrainingWindow(QtWidgets.QDialog):
         self.svmtoolROCProgram = QtCore.QProcess()
 
         self.dicProgram = {'winview': (self.verifySpikes1Program, self.verifySpikes2Program), \
+                           'hilb Fish 1': (self.calcHilb1Program, ), \
+                           'hilb Fish 2': (self.calcHilb2Program, ), \
                            'spikes Fish 1': (self.detectSpikes1Program, ), \
                            'spikes Fish 2': (self.detectSpikes2Program, ), \
                            'features compute': (self.featuresCompute1Program, self.featuresCompute2Program), \
@@ -220,19 +201,22 @@ class TrainingWindow(QtWidgets.QDialog):
         # Connect cValue and gValue to warning window
         self.ui.cValueLineEdit.clicked.connect(self.SVMValuesWarningWindow)
         self.ui.gValueLineEdit.clicked.connect(self.SVMValuesWarningWindow)
-        #QtCore.QObject.connect(self.ui.cValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
-        #QtCore.QObject.connect(self.ui.gValueLineEdit, QtCore.SIGNAL('clicked()'), self.SVMValuesWarningWindow)
-        
+
         self.connectFileFields()
         self.connectUnlockFields()
         self.connectButtons()
-        
+
         self.NWindows1 = 0.
         self.NWindows2 = 0.
         self.connectSliceFields()
         
         self.initialClickState()
-    
+
+        # Unlock fields based on default values
+        for field,unlock in self.Fields.items():
+            self.tryUnlockRaw(field)
+
+
     def saveParameters(self):
         saveFilename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Parameters File', '', 'Parameters File (*.trainparameters) (*.trainparameters);;All files (*.*) (*.*)')
         if saveFilename[0] != u'':
@@ -266,6 +250,8 @@ class TrainingWindow(QtWidgets.QDialog):
     def connectButtons(self):
         self.ui.saveParametersBut.clicked.connect(self.saveParameters)
         self.ui.loadParametersBut.clicked.connect(self.loadParameters)
+        self.ui.hilb1But.clicked.connect(self.calcHilb1)
+        self.ui.hilb2But.clicked.connect(self.calcHilb2)
         self.ui.verifySpikes1But.clicked.connect(self.verifySpikes1)
         self.ui.verifySpikes2But.clicked.connect(self.verifySpikes2)
         self.ui.detectSpikes1But.clicked.connect(self.detectSpikes1)
@@ -278,28 +264,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.ui.trainSVMBut.clicked.connect(self.SVMToolTrain)
         self.ui.generateROCBut.clicked.connect(self.generateROC)
 
-        #QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
-        #QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
-        
-        #QtCore.QObject.connect(self.ui.verifySpikes1But, QtCore.SIGNAL('clicked()'), self.verifySpikes1)
-        #QtCore.QObject.connect(self.ui.verifySpikes2But, QtCore.SIGNAL('clicked()'), self.verifySpikes2)
-        
-        #QtCore.QObject.connect(self.ui.detectSpikes1But, QtCore.SIGNAL('clicked()'), self.detectSpikes1)
-        #QtCore.QObject.connect(self.ui.detectSpikes2But, QtCore.SIGNAL('clicked()'), self.detectSpikes2)
-        
-        #QtCore.QObject.connect(self.ui.extractFeaturesBut, QtCore.SIGNAL('clicked()'), self.extractFeatures)
-        
-        #QtCore.QObject.connect(self.ui.sliceFish1But, QtCore.SIGNAL('clicked()'), self.sliceRandom1)
-        #QtCore.QObject.connect(self.ui.sliceFish2But, QtCore.SIGNAL('clicked()'), self.sliceRandom2)
-        
-        #QtCore.QObject.connect(self.ui.defaultSVMValuesBut, QtCore.SIGNAL('clicked()'), self.defaultSVMValues)
-        
-        #QtCore.QObject.connect(self.ui.optimizeSVMBut, QtCore.SIGNAL('clicked()'), self.SVMToolOptim)
-        
-        #QtCore.QObject.connect(self.ui.trainSVMBut, QtCore.SIGNAL('clicked()'), self.SVMToolTrain)
-        
-        #QtCore.QObject.connect(self.ui.generateROCBut, QtCore.SIGNAL('clicked()'), self.generateROC)
-    
     def isReturnCodeOk(self, ret):
         if ret != 0:
             print('\n---\tERROR (%s): %d\t---\n'%(self.programname, ret))
@@ -317,7 +281,7 @@ class TrainingWindow(QtWidgets.QDialog):
             if sys.version_info.major == 3:
                 sys.stdout.write(program.readAllStandardOutput().data().decode())
             else:
-                sys.stdout.write(program.readAllStandardOutput().data())
+                sys.stdout.write(program.readAllStandardOutput().data().decode())
             sys.stdout.flush()
     
     def printAllStandardError(self):
@@ -326,7 +290,7 @@ class TrainingWindow(QtWidgets.QDialog):
             if sys.version_info.major == 3:
                 sys.stderr.write(program.readAllStandardError().data().decode())
             else:
-                sys.stderr.write(program.readAllStandardError().data())
+                sys.stderr.write(program.readAllStandardError().data().decode())
             sys.stderr.flush()
     
     def verifySpikes1(self):
@@ -376,43 +340,120 @@ class TrainingWindow(QtWidgets.QDialog):
             
         self.verifySpikes2Program.finished.connect(verifySpikes2Finish)    
         #QtCore.QObject.connect(self.verifySpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikes2Finish)
-    
+
+    def calcHilb1(self):
+        print('hilb 1')
+        TSName = self.ui.loadTS1LineEdit.text()
+        hilbName = self.ui.saveHilb1LineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        gmeansize = self.ui.gmeanLineEdit.text()
+        lowCutoff = self.ui.lowCutoffLineEdit.text()
+        highCutoff = self.ui.highCutoffLineEdit.text()
+
+        listArgs = ['--numtaps=%s'%(taps), \
+                        '--gmeansize=%s'%(gmeansize), \
+                        '--lowcutoff=%s'%(lowCutoff), \
+                        '--highcutoff=%s'%(highCutoff), \
+                        TSName, \
+                        hilbName, \
+                        ]
+
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+
+        # Same name of self.dicProgram
+        self.programname = 'hilb Fish 1'
+        # Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        self.calcHilb1Program.start('./../spikes/hilb', \
+                            listArgs)
+
+        self.cancelled = False
+        def calcHilb1Finish(ret, exitStatus):
+            self.app.restoreOverrideCursor()
+            dialog.hide()
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
+                self.ui.loadHilb1LineEdit.setText(hilbName)
+            else:
+                return None
+
+        self.calcHilb1Program.finished.connect(calcHilb1Finish)
+        self.calcHilb1Program.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.calcHilb1Program.readyReadStandardError.connect(self.printAllStandardError)
+
+    def calcHilb2(self):
+        print('hilb 2')
+        TSName = self.ui.loadTS2LineEdit.text()
+        hilbName = self.ui.saveHilb2LineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        gmeansize = self.ui.gmeanLineEdit.text()
+        lowCutoff = self.ui.lowCutoffLineEdit.text()
+        highCutoff = self.ui.highCutoffLineEdit.text()
+
+        listArgs = ['--numtaps=%s'%(taps), \
+                        '--gmeansize=%s'%(gmeansize), \
+                        '--lowcutoff=%s'%(lowCutoff), \
+                        '--highcutoff=%s'%(highCutoff), \
+                        TSName, \
+                        hilbName, \
+                        ]
+
+        dialog = self.raiseLongTimeInformation()
+        self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
+
+        # Same name of self.dicProgram
+        self.programname = 'hilb Fish 2'
+        # Be sure that is on current directory
+        os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
+        self.calcHilb2Program.start('./../spikes/hilb', \
+                            listArgs)
+
+        self.cancelled = False
+        def calcHilb2Finish(ret, exitStatus):
+            self.app.restoreOverrideCursor()
+            dialog.hide()
+            if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
+                self.ui.loadHilb2LineEdit.setText(hilbName)
+            else:
+                return None
+
+        self.calcHilb2Program.finished.connect(calcHilb2Finish)
+        self.calcHilb2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.calcHilb2Program.readyReadStandardError.connect(self.printAllStandardError)
+
+
     def detectSpikes1(self):
         print('spikes 1')
         TSName = self.ui.loadTS1LineEdit.text()
-        hilbName = self.ui.saveLoadHilb1LineEdit.text()
-        lowSat = self.ui.lowSaturation1LineEdit.text()
-        highSat = self.ui.highSaturation1LineEdit.text()
-        taps = self.ui.taps1LineEdit.text()
-        cutoff = self.ui.cutoff1LineEdit.text()
-        threshold = self.ui.thresholdLevel1LineEdit.text()
-        refractory = self.ui.refractory1LineEdit.text()
-        maxSize = self.ui.maxSize1LineEdit.text()
+        hilbName = self.ui.loadHilb1LineEdit.text()
         saveSpikes = self.ui.saveSpikes1LineEdit.text()
-        onlyAbove = self.ui.onlyAbove1LineEdit.text()
-        useHilb = self.ui.useHilb1CheckBox.isChecked()
-
+        locs_file = os.path.dirname(saveSpikes) +'/'+ os.path.basename(saveSpikes)+'_locs.npy'
+        detection = self.ui.minHilbLineEdit.text()
+        tolerance = self.ui.toleranceLineEdit.text()
+        subsamp = self.ui.subSampLineEdit.text()
+        minwavelet = self.ui.minWaveletLineEdit.text()
+        maxwavelet = self.ui.maxWaveletLineEdit.text()
+        stepwavelet = self.ui.stepWaveletLineEdit.text()
+        argmaxorder = self.ui.peakLineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        onlyAbove = self.ui.onlyAboveLineEdit.text()
 
         listArgs = ['--fixedwin', \
-                            '--detection=%s'%(threshold), \
-                            '--refractory=%s'%(refractory), \
-                            '--max_size=%s'%(maxSize), \
-                            '--saturation=%s,%s'%(lowSat,highSat), \
-                            '--detection=%s'%threshold, \
+                            '--detection=%s'%detection, \
                             '--onlyabove=%s'%onlyAbove, \
+                            '--tolerance=%s'%tolerance, \
+                            '--subsamp=%s'%subsamp, \
+                            '--minWavelet=%s'%minwavelet, \
+                            '--maxWavelet=%s'%maxwavelet, \
+                            '--stepWavelet=%s'%stepwavelet, \
+                            '--argmaxorder=%s'%argmaxorder, \
                             TSName, \
                             hilbName, \
+                            locs_file, \
                             saveSpikes]
-        if useHilb == True:
-            listArgs.insert(0, '--useHilbert')
-        else:
-            listArgs.insert(3, '--numtaps=%s'%taps)
-            listArgs.insert(4, '--cutoff=%s'%cutoff)
 
-        print(repr(useHilb))
         print(listArgs)
  
-
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
@@ -434,43 +475,40 @@ class TrainingWindow(QtWidgets.QDialog):
         self.detectSpikes1Program.finished.connect(detectSpikes1Finish)
         self.detectSpikes1Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
         self.detectSpikes1Program.readyReadStandardError.connect(self.printAllStandardError)    
-        #QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikes1Finish)
-        #QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.detectSpikes1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
         
     def detectSpikes2(self):
         print('spikes 2')
         TSName = self.ui.loadTS2LineEdit.text()
-        hilbName = self.ui.saveLoadHilb2LineEdit.text()
-        lowSat = self.ui.lowSaturation2LineEdit.text()
-        highSat = self.ui.highSaturation2LineEdit.text()
-        taps = self.ui.taps2LineEdit.text()
-        cutoff = self.ui.cutoff2LineEdit.text()
-        threshold = self.ui.thresholdLevel2LineEdit.text()
-        refractory = self.ui.refractory2LineEdit.text()
-        maxSize = self.ui.maxSize2LineEdit.text()
+        hilbName = self.ui.loadHilb2LineEdit.text()
         saveSpikes = self.ui.saveSpikes2LineEdit.text()
-        onlyAbove = self.ui.onlyAbove2LineEdit.text()
-        useHilb = self.ui.useHilb2CheckBox.isChecked()
+        locs_file = os.path.dirname(saveSpikes) +'/'+ os.path.basename(saveSpikes)+'_locs.npy'
+        detection = self.ui.minHilbLineEdit.text()
+        tolerance = self.ui.toleranceLineEdit.text()
+        subsamp = self.ui.subSampLineEdit.text()
+        minwavelet = self.ui.minWaveletLineEdit.text()
+        maxwavelet = self.ui.maxWaveletLineEdit.text()
+        stepwavelet = self.ui.stepWaveletLineEdit.text()
+        argmaxorder = self.ui.peakLineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        onlyAbove = self.ui.onlyAboveLineEdit.text()
 
+        print(locs_file)
 
         listArgs = ['--fixedwin', \
-                            '--detection=%s'%(threshold), \
-                            '--refractory=%s'%(refractory), \
-                            '--max_size=%s'%(maxSize), \
-                            '--saturation=%s,%s'%(lowSat,highSat), \
-                            '--detection=%s'%threshold, \
+                            '--detection=%s'%detection, \
                             '--onlyabove=%s'%onlyAbove, \
+                            '--tolerance=%s'%tolerance, \
+                            '--subsamp=%s'%subsamp, \
+                            '--minWavelet=%s'%minwavelet, \
+                            '--maxWavelet=%s'%maxwavelet, \
+                            '--stepWavelet=%s'%stepwavelet, \
+                            '--argmaxorder=%s'%argmaxorder, \
                             TSName, \
                             hilbName, \
+                            locs_file, \
                             saveSpikes]
-        if useHilb == True:
-            listArgs.insert(0, '--useHilbert')
-        else:
-            listArgs.insert(3, '--numtaps=%s'%taps)
-            listArgs.insert(4, '--cutoff=%s'%cutoff)
-        
+
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
@@ -493,9 +531,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.detectSpikes2Program.finished.connect(detectSpikes2Finish)
         self.detectSpikes2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
         self.detectSpikes2Program.readyReadStandardError.connect(self.printAllStandardError)    
-        #QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikes2Finish)
-        #QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.detectSpikes2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     
     def extractFeatures(self):
@@ -563,12 +598,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.featuresCompute2Program.finished.connect(featuresComputeFinish)
         self.featuresCompute2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
         self.featuresCompute2Program.readyReadStandardError.connect(self.printAllStandardError)    
-        #QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresComputeFinish)
-        #QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresComputeFinish)
-        #QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.featuresCompute1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
-        #QtCore.QObject.connect(self.featuresCompute2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresRescalePrepare(self):        
         print('features rescale prepare')
@@ -599,9 +628,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.featuresRescalePrepareProgram.finished.connect(featuresRescalePrepareFinish)
         self.featuresRescalePrepareProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)    
         self.featuresRescalePrepareProgram.readyReadStandardError.connect(self.printAllStandardError)    
-        #QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresRescalePrepareFinish)
-        #QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.featuresRescalePrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresRescaleApply(self):
         print('features rescale apply')
@@ -632,9 +658,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.featuresRescaleApplyProgram.finished.connect(featuresRescaleApplyFinish)
         self.featuresRescaleApplyProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)    
         self.featuresRescaleApplyProgram.readyReadStandardError.connect(self.printAllStandardError)    
-        #QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresRescaleApplyFinish)
-        #QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.featuresRescaleApplyProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresFilterPrepare(self):
         print('features filter prepare')
@@ -667,9 +690,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.featuresFilterPrepareProgram.finished.connect(featuresFilterPrepareFinish)
         self.featuresFilterPrepareProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)    
         self.featuresFilterPrepareProgram.readyReadStandardError.connect(self.printAllStandardError)    
-        #QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterPrepareFinish)
-        #QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.featuresFilterPrepareProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
         
     def featuresFilterApply(self):
@@ -725,12 +745,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.featuresFilterApply2Program.finished.connect(featuresFilterApplyFinish)
         self.featuresFilterApply2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
         self.featuresFilterApply2Program.readyReadStandardError.connect(self.printAllStandardError)    
-        #QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterApplyFinish)
-        #QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), featuresFilterApplyFinish)
-        #QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.featuresFilterApply1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
-        #QtCore.QObject.connect(self.featuresFilterApply2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     def featuresFinish(self):
         print('end features')
@@ -836,9 +850,6 @@ class TrainingWindow(QtWidgets.QDialog):
             self.sliceRandom1Program.finished.connect(sliceRandomFinish)
             self.sliceRandom1Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
             self.sliceRandom1Program.readyReadStandardError.connect(self.printAllStandardError)    
-            #QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), sliceRandomFinish)
-            #QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-            #QtCore.QObject.connect(self.sliceRandom1Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         else:
             QtWidgets.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities must be on the interval (0,1), and their sum on the interval [0,1]', QtWidgets.QMessageBox.Ok)
     
@@ -878,9 +889,6 @@ class TrainingWindow(QtWidgets.QDialog):
             self.sliceRandom2Program.finished.connect(sliceRandomFinish)
             self.sliceRandom2Program.readyReadStandardOutput.connect(self.printAllStandardOutput)    
             self.sliceRandom2Program.readyReadStandardError.connect(self.printAllStandardError)    
-            #QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), sliceRandomFinish)
-            #QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-            #QtCore.QObject.connect(self.sliceRandom2Program, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         else:
             QtWidgets.QMessageBox.critical(self, "ERROR", 'Please check your parameters!\nAll the probabilities and their sum must be on the interval [0,1]', QtWidgets.QMessageBox.Ok)
     
@@ -914,7 +922,6 @@ class TrainingWindow(QtWidgets.QDialog):
         dialog.setModal(True)
         self.CancelBut = dialog.addButton(QtWidgets.QMessageBox.Cancel)
         self.CancelBut.clicked.connect(self.cancelApp)
-        #QtCore.QObject.connect(self.CancelBut, QtCore.SIGNAL('clicked()'), self.cancelApp)
         dialog.show()
         return dialog
     
@@ -931,37 +938,30 @@ class TrainingWindow(QtWidgets.QDialog):
     
     def defineFieldsType(self):
         self.fieldsType = {self.ui.loadTS1LineEdit: 'load', \
-                       self.ui.saveLoadHilb1LineEdit: 'save', \
-                       self.ui.useHilb1CheckBox: 'not-check', \
-                       self.ui.useHilb2CheckBox: 'not-check', \
-                       
+                       self.ui.saveHilb1LineEdit: 'save', \
+                       self.ui.loadHilb1LineEdit: 'load', \
+
                        self.ui.loadTS2LineEdit: 'load', \
-                       self.ui.saveLoadHilb2LineEdit: 'save', \
-                       
-                       self.ui.lowSaturation1LineEdit: 'float', \
-                       self.ui.highSaturation1LineEdit: 'float', \
-                       self.ui.taps1LineEdit: 'int', \
-                       self.ui.cutoff1LineEdit: 'float', \
-                       self.ui.thresholdLevel1LineEdit: 'float', \
-                       self.ui.refractory1LineEdit: 'float', \
-                       self.ui.maxSize1LineEdit: 'float', \
-                       
-                       self.ui.lowSaturation2LineEdit: 'float', \
-                       self.ui.highSaturation2LineEdit: 'float', \
-                       self.ui.taps2LineEdit: 'int', \
-                       self.ui.cutoff2LineEdit: 'float', \
-                       self.ui.thresholdLevel2LineEdit: 'float', \
-                       self.ui.refractory2LineEdit: 'float', \
-                       self.ui.maxSize2LineEdit: 'float', \
-                       
+                       self.ui.saveHilb2LineEdit: 'save', \
+                       self.ui.loadHilb2LineEdit: 'load', \
+
+                       self.ui.gmeanLineEdit: 'int', \
+                       self.ui.tapsLineEdit: 'int', \
+                       self.ui.lowCutoffLineEdit: 'float', \
+                       self.ui.highCutoffLineEdit: 'float', \
+                       self.ui.subSampLineEdit: 'int', \
+                       self.ui.peakLineEdit: 'int', \
+                       self.ui.minWaveletLineEdit: 'float', \
+                       self.ui.maxWaveletLineEdit: 'float', \
+                       self.ui.stepWaveletLineEdit: 'float', \
+                       self.ui.toleranceLineEdit: 'float', \
+                       self.ui.minHilbLineEdit: 'float', \
+                       self.ui.onlyAboveLineEdit: 'float', \
+
                        self.ui.saveSpikes1LineEdit: 'save', \
-                       self.ui.onlyAbove1LineEdit: 'float', \
-                       
-                       self.ui.saveSpikes2LineEdit: 'save', \
-                       self.ui.onlyAbove2LineEdit: 'float', \
-                       
                        self.ui.loadSpikes1LineEdit: 'load', \
-                       
+
+                       self.ui.saveSpikes2LineEdit: 'save', \
                        self.ui.loadSpikes2LineEdit: 'load', \
                        
                        self.ui.saveFeatures1LineEdit: 'save', \
@@ -1024,8 +1024,10 @@ class TrainingWindow(QtWidgets.QDialog):
         self.fileFieldsExtension = {
             self.ui.loadTS1LineEdit: 'Timeseries on format I32 file (*.*) (*.*)', \
             self.ui.loadTS2LineEdit: 'Timeseries on format I32 file (*.*) (*.*)', \
-            self.ui.saveLoadHilb1LineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
-            self.ui.saveLoadHilb2LineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
+            self.ui.saveHilb1LineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
+            self.ui.saveHilb2LineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
+            self.ui.loadHilb1LineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
+            self.ui.loadHilb2LineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
             self.ui.saveSpikes1LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.saveSpikes2LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.loadSpikes1LineEdit: 'Spikes File (*.spikes) (*.spikes)', \
@@ -1291,9 +1293,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.svmtoolOptimProgram.readyReadStandardOutput.connect(getOutput) 
         self.svmtoolOptimProgram.readyReadStandardError.connect(getOutput) 
         self.svmtoolOptimProgram.finished.connect(svmtoolOptimFinish)
-        #QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOutput)
-        #QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('readyReadStandardError()'), getOutput)
-        #QtCore.QObject.connect(self.svmtoolOptimProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolOptimFinish)
         
     def SVMToolTrain(self):
         SVMModelName = self.ui.saveSVMLineEdit.text()
@@ -1329,9 +1328,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.svmtoolTrainProgram.finished.connect(SVMToolTrainFinish)
         self.svmtoolTrainProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
         self.svmtoolTrainProgram.readyReadStandardError.connect(self.printAllStandardError)
-        #QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), SVMToolTrainFinish)
-        #QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardOutput()'),self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.svmtoolTrainProgram, QtCore.SIGNAL('readyReadStandardError()'),self.printAllStandardError)
     
     def generateROC(self):
         self.svmModelName = self.ui.loadSVMLineEdit.text()
@@ -1396,9 +1392,6 @@ class TrainingWindow(QtWidgets.QDialog):
         self.svmtoolROCProgram.readyReadStandardOutput.connect(getOutput)
         self.svmtoolROCProgram.readyReadStandardError.connect(getOutput)
         self.svmtoolROCProgram.finished.connect(svmtoolROCFinish)
-        #QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardOutput()'), getOutput)
-        #QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('readyReadStandardError()'), getOutput)
-        #QtCore.QObject.connect(self.svmtoolROCProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), svmtoolROCFinish)
     
     def plotROC(self):
         f = plt.figure(1, figsize=(10,10))
@@ -1419,104 +1412,92 @@ class TrainingWindow(QtWidgets.QDialog):
         
         # The first element of the unlockers is the list of fields that block others
         # The second element are the fields that are release by that edition
-        self.loadTSFish1Unlocker = ( \
+        self.hilbParametersUnlocker = ( \
             ( \
-                (self.ui.loadTS1LineEdit, \
+                 (self.ui.gmeanLineEdit, \
+                 self.ui.tapsLineEdit, \
+                 self.ui.lowCutoffLineEdit, \
+                 self.ui.highCutoffLineEdit, \
                  ), \
-                (self.ui.saveLoadHilb1LineEdit, \
-                 self.ui.lowSaturation1LineEdit, \
-                 self.ui.highSaturation1LineEdit, \
-                 self.ui.taps1LineEdit, \
-                 self.ui.cutoff1LineEdit, \
-                 ) \
-            ), \
-        )
-
-        self.clickUseHilb1 = ( \
-            ( \
-                (self.ui.useHilb1CheckBox, \
-                ), \
-                (self.ui.taps1LineEdit, \
-                 self.ui.cutoff1LineEdit, \
+                (self.ui.saveHilb1LineEdit, \
+                self.ui.saveHilb2LineEdit, \
+                self.ui.loadTS1LineEdit, \
+                self.ui.loadTS2LineEdit, \
                 ) \
             ), \
+            ( \
+                 (self.ui.gmeanLineEdit, \
+                 self.ui.tapsLineEdit, \
+                 self.ui.lowCutoffLineEdit, \
+                 self.ui.highCutoffLineEdit, \
+                 self.ui.saveHilb1LineEdit, \
+                 self.ui.loadTS1LineEdit, \
+                 ), \
+                 (self.ui.hilb1But, \
+                 )
+             ), \
+             ( \
+                 (self.ui.gmeanLineEdit, \
+                 self.ui.tapsLineEdit, \
+                 self.ui.lowCutoffLineEdit, \
+                 self.ui.highCutoffLineEdit, \
+                 self.ui.saveHilb2LineEdit, \
+                 self.ui.loadTS2LineEdit, \
+                 ), \
+                 (self.ui.hilb2But, \
+                 )
+             ), \
         )
 
-        self.clickUseHilb2 = ( \
+        self.spikeParametersUnlocker = ( \
             ( \
-                (self.ui.useHilb2CheckBox, \
-                ), \
-                (self.ui.taps2LineEdit, \
-                 self.ui.cutoff2LineEdit, \
-                ) \
-            ), \
-        ) 
-        
-        self.loadTSFish2Unlocker = ( \
-            ( \
-                (self.ui.loadTS2LineEdit, \
-                 ), \
-                (self.ui.saveLoadHilb2LineEdit, \
-                 self.ui.lowSaturation2LineEdit, \
-                 self.ui.highSaturation2LineEdit, \
-                 self.ui.taps2LineEdit, \
-                 self.ui.cutoff2LineEdit, \
-                 ) \
-            ), \
-        )
-        
-        self.spikeParametersFish1Unlocker = ( \
-            ( \
-                (self.ui.saveLoadHilb1LineEdit, \
-                 self.ui.lowSaturation1LineEdit, \
-                 self.ui.highSaturation1LineEdit, \
-                 self.ui.taps1LineEdit, \
-                 self.ui.cutoff1LineEdit, \
-                 self.ui.thresholdLevel1LineEdit, \
-                 self.ui.refractory1LineEdit, \
-                 self.ui.maxSize1LineEdit, \
-                 self.ui.onlyAbove1LineEdit, \
+                (self.ui.onlyAboveLineEdit, \
+                 self.ui.subSampLineEdit, \
+                 self.ui.peakLineEdit, \
+                 self.ui.minWaveletLineEdit, \
+                 self.ui.maxWaveletLineEdit, \
+                 self.ui.stepWaveletLineEdit, \
+                 self.ui.minHilbLineEdit, \
+                 self.ui.toleranceLineEdit, \
                  ), \
                 (self.ui.saveSpikes1LineEdit, \
+                 self.ui.saveSpikes2LineEdit, \
+                 self.ui.loadHilb1LineEdit, \
+                 self.ui.loadHilb2LineEdit, \
                 ) \
             ), \
-            #( \
-            #    (self.ui.taps1LineEdit, \
-            #     self.ui.cutoff1LineEdit, \
-            #     ), \
-            #    (self.ui.thresholdAssist1But, \
-            #     self.ui.thresholdLevel1LineEdit, \
-            #     self.ui.minlevel1But, \
-            #     self.ui.minlevel1LineEdit, \
-            #     ) \
-            #), \
-        )
-        
-        self.spikeParametersFish2Unlocker = ( \
             ( \
-                (self.ui.saveLoadHilb2LineEdit, \
-                 self.ui.lowSaturation2LineEdit, \
-                 self.ui.highSaturation2LineEdit, \
-                 self.ui.taps2LineEdit, \
-                 self.ui.cutoff2LineEdit, \
-                 self.ui.thresholdLevel2LineEdit, \
-                 self.ui.refractory2LineEdit, \
-                 self.ui.maxSize2LineEdit, \
-                 self.ui.onlyAbove2LineEdit, \
+                (self.ui.loadTS1LineEdit, \
+                 self.ui.onlyAboveLineEdit, \
+                 self.ui.subSampLineEdit, \
+                 self.ui.peakLineEdit, \
+                 self.ui.minWaveletLineEdit, \
+                 self.ui.maxWaveletLineEdit, \
+                 self.ui.stepWaveletLineEdit, \
+                 self.ui.minHilbLineEdit, \
+                 self.ui.toleranceLineEdit, \
+                 self.ui.loadHilb1LineEdit, \
+                 self.ui.saveSpikes1LineEdit, \
                  ), \
-                (self.ui.saveSpikes2LineEdit, \
-                ) \
+                 (self.ui.detectSpikes1But, \
+                 )
             ), \
-            #( \
-            #    (self.ui.taps2LineEdit, \
-            #     self.ui.cutoff2LineEdit, \
-            #     ), \
-            #    (self.ui.thresholdAssist2But, \
-            #     self.ui.thresholdLevel2LineEdit, \
-            #     self.ui.minlevel2But, \
-            #     self.ui.minlevel2LineEdit, \
-            #     ) \
-            #), \
+            ( \
+                (self.ui.loadTS2LineEdit, \
+                 self.ui.onlyAboveLineEdit, \
+                 self.ui.subSampLineEdit, \
+                 self.ui.peakLineEdit, \
+                 self.ui.minWaveletLineEdit, \
+                 self.ui.maxWaveletLineEdit, \
+                 self.ui.stepWaveletLineEdit, \
+                 self.ui.minHilbLineEdit, \
+                 self.ui.toleranceLineEdit, \
+                 self.ui.loadHilb2LineEdit, \
+                 self.ui.saveSpikes2LineEdit, \
+                 ), \
+                 (self.ui.detectSpikes2But, \
+                 )
+            ), \
         )
         
         self.spikeSavefilesFish1Unlocker = ( \
@@ -1729,36 +1710,32 @@ class TrainingWindow(QtWidgets.QDialog):
         )
         
         # Connects each field to its unlocker (dependencies and unlockers)
-        self.Fields = {self.ui.loadTS1LineEdit: self.loadTSFish1Unlocker, \
+        self.Fields = {self.ui.loadTS1LineEdit: self.hilbParametersUnlocker, \
                        
-                       self.ui.loadTS2LineEdit: self.loadTSFish2Unlocker, \
+                       self.ui.loadTS2LineEdit: self.hilbParametersUnlocker, \
 
-                       self.ui.useHilb1CheckBox: self.clickUseHilb1, \
-                       self.ui.useHilb2CheckBox: self.clickUseHilb2, \
-                      
-                       self.ui.saveLoadHilb1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.lowSaturation1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.highSaturation1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.taps1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.cutoff1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.thresholdLevel1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.refractory1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.maxSize1LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.onlyAbove1LineEdit: self.spikeParametersFish1Unlocker, \
+                       self.ui.saveHilb1LineEdit: self.hilbParametersUnlocker, \
+                       self.ui.tapsLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.lowCutoffLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.highCutoffLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.gmeanLineEdit: self.hilbParametersUnlocker, \
                        
-                       self.ui.saveLoadHilb2LineEdit: self.spikeParametersFish2Unlocker, \
-                       self.ui.lowSaturation2LineEdit: self.spikeParametersFish2Unlocker, \
-                       self.ui.highSaturation2LineEdit: self.spikeParametersFish2Unlocker, \
-                       self.ui.taps2LineEdit: self.spikeParametersFish2Unlocker, \
-                       self.ui.cutoff2LineEdit: self.spikeParametersFish2Unlocker, \
-                       self.ui.thresholdLevel2LineEdit: self.spikeParametersFish2Unlocker, \
-                       self.ui.refractory2LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.maxSize2LineEdit: self.spikeParametersFish1Unlocker, \
-                       self.ui.onlyAbove2LineEdit: self.spikeParametersFish2Unlocker, \
-                       
-                       self.ui.saveSpikes1LineEdit: self.spikeSavefilesFish1Unlocker, \
-                       
-                       self.ui.saveSpikes2LineEdit: self.spikeSavefilesFish2Unlocker, \
+                       self.ui.saveHilb1LineEdit: self.hilbParametersUnlocker, \
+                       self.ui.saveHilb2LineEdit: self.hilbParametersUnlocker, \
+
+                       self.ui.subSampLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.peakLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.minWaveletLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.maxWaveletLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.stepWaveletLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.minHilbLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.toleranceLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.onlyAboveLineEdit: self.spikeParametersUnlocker, \
+
+                       self.ui.saveSpikes1LineEdit: self.spikeParametersUnlocker, \
+                       self.ui.saveSpikes2LineEdit: self.spikeParametersUnlocker, \
+                       self.ui.loadHilb1LineEdit: self.spikeParametersUnlocker, \
+                       self.ui.loadHilb2LineEdit: self.spikeParametersUnlocker, \
                        
                        self.ui.loadSpikes1LineEdit: self.loadSpikesFish1Unlocker, \
                        
@@ -1828,8 +1805,10 @@ class TrainingWindow(QtWidgets.QDialog):
         
         FileFields = [self.ui.loadTS1LineEdit, \
                            self.ui.loadTS2LineEdit, \
-                           self.ui.saveLoadHilb1LineEdit, \
-                           self.ui.saveLoadHilb2LineEdit, \
+                           self.ui.saveHilb1LineEdit, \
+                           self.ui.saveHilb2LineEdit, \
+                           self.ui.loadHilb1LineEdit, \
+                           self.ui.loadHilb2LineEdit, \
                            self.ui.saveSpikes1LineEdit, \
                            self.ui.saveSpikes2LineEdit, \
                            self.ui.loadSpikes1LineEdit, \
@@ -1891,20 +1870,19 @@ class TrainingWindow(QtWidgets.QDialog):
     def switchLockState(self, lockerList, state):
         for el in lockerList:
             el.setEnabled(state)
-            if el in self.defaultValues.keys():
-                if state == False:
-                    el.setText( str(self.defaultValues[el]) )
-    
-    def tryUnlock(self, text):
-        field = self.sender()
-        
+
+    def tryUnlockRaw(self, field):
         for tup in self.Fields[field]:
             allChecked = True
             for f in tup[0]:
                 allChecked = allChecked and self.verifyField(f)
-        
+
             self.switchLockState(tup[1], allChecked)
+
+    def tryUnlock(self, text):
+        field = self.sender()
         
+        self.tryUnlockRaw(field)
     
     def initialClickState(self):
         # Manually locks testing line fields

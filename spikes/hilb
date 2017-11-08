@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import division
+
+import sys,os
+sys.path.append( os.path.abspath('..') )
+from read_param import *
+# import NChan, freq, winSize
+
+import scipy.signal
+import numpy as np
+import sys
+import matplotlib.pyplot as plt
+import argparse
+
+def gmean(arr, kernel_size=3):
+    tam = arr.size
+    out = np.memmap('/tmp/tmp.f32', dtype=np.float32, shape=(tam+kernel_size,), mode='w+')
+    out[:] = [ np.prod(arr[max(0,n-kernel_size//2):min(n+kernel_size//2,tam)])**(1./kernel_size) for n in range(-kernel_size//2,tam+kernel_size//2) ]
+    return out[kernel_size//2:tam+kernel_size//2]
+
+if sys.version_info.major == 3:
+    xrange = range
+    mode = 'b'
+else:
+    mode = ''
+
+class MyParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_help()
+        sys.stderr.write('\nerror: %s\n'%message)
+        sys.exit(2)
+
+description = 'Calculate hilbert transform on memmapf32 (DasyLab I32) format series'
+parser = MyParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+
+parser.add_argument('timeseries_file', type=argparse.FileType('r'), help='Timeseries (I32) file')
+parser.add_argument('hilbert_file', help='Output Absolute sum of Hilbert Transform of the signal on I32 format')
+parser.add_argument('-n', '--numtaps', type=int, default=10001, help='Number of taps for high pass filter on Hilbert Transform')
+parser.add_argument('--gmeansize', type=int, default=31, help='Geometric mean kernel size')
+parser.add_argument('--lowcutoff', type=float, default=20., help='Low cutoff of band-pass filter')
+parser.add_argument('--highcutoff', type=float, default=1000., help='High cutoff of band-pass filter')
+
+args = parser.parse_args()
+
+lowcutoff = args.lowcutoff
+highcutoff = args.highcutoff
+gmeansize = args.gmeansize
+
+debug = False
+
+num = [-0.127838238013738, -0.122122430298337, -0.207240989159078, -0.741109041690890,  1.329553577868309]
+den = [ 1.000000000000000, -0.445897866413142, -0.101209607292324, -0.047938888781208, -0.037189007185997]
+
+def myabshilbert(x):
+    return np.sqrt(scipy.signal.lfilter(num, den, x)[4:]**2 + x[:-4]**2)
+
+inarr = np.memmap(args.timeseries_file, dtype=np.float32, mode='r')
+sizein, = inarr.shape
+
+sys.stdout.write('Generating new Hilbert file\n')
+sys.stdout.flush()
+h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//NChan - 4))
+for i in xrange(NChan):
+    sys.stdout.write('\t%d\r'%i)
+    sys.stdout.flush()
+    h += myabshilbert(inarr[i::NChan])
+
+
+sys.stdout.write('gmean\n')
+sys.stdout.flush()
+h[:] = gmean(h, kernel_size=gmeansize)
+
+n = args.numtaps
+a = scipy.signal.firwin(n, [lowcutoff, highcutoff], pass_zero=False, window='hanning', nyq=freq/2)
+
+sys.stdout.write('band-pass\n')
+sys.stdout.flush()
+h[:] = np.convolve(h, a, mode='same')
+
+h.flush()

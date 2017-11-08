@@ -12,19 +12,9 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 import argparse
+from scipy.signal import argrelmax
 
 from windowfile import writewin
-
-def gmean(arr, kernel_size=3):
-    tam = arr.size
-    out = np.memmap('/tmp/tmp.f32', dtype=np.float32, shape=(tam+kernel_size,), mode='w+')
-    out[:] = [ np.prod(arr[max(0,n-kernel_size//2):min(n+kernel_size//2,tam)])**(1./kernel_size) for n in range(-kernel_size//2,tam+kernel_size//2) ]
-    return out[kernel_size//2:tam+kernel_size//2]
-
-#medfiltsize= 0.0010
-gmeansize = 31
-
-hmin = 0.060
 
 if sys.version_info.major == 3:
     xrange = range
@@ -32,115 +22,65 @@ if sys.version_info.major == 3:
 else:
     mode = ''
 
-tol = int(0.0005*freq)
-nchan = NChan
-chirpStep = int(0.300*freq)
-
 class MyParser(argparse.ArgumentParser):
     def error(self, message):
         self.print_help()
         sys.stderr.write('\nerror: %s\n'%message)
         sys.exit(2)
 
-description = 'Detect spikes on memmapf32 (DasyLab I32) format series'
+description = 'Detect spikes on hilbert Transform file'
 parser = MyParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
 
 parser.add_argument('timeseries_file', type=argparse.FileType('r'), help='Timeseries (I32) file')
 parser.add_argument('hilbert_file', help='Output Absolute sum of Hilbert Transform of the signal on I32 format')
+parser.add_argument('locs_file', help='Output the timestamps of dectected spikes')
 parser.add_argument('outfile', type=argparse.FileType('wb'), help='Output spike window file')
-parser.add_argument('--chirps_file', type=argparse.FileType('r'), help='Chirp regions file')
-parser.add_argument('--chirps_gain', type=float, default=0.3, help='Thresold ratio on chirp regions')
-parser.add_argument('-d', '--detection', type=float, default=1.00, help='Theshold for detecting a spike')
-parser.add_argument('-r', '--refractory', type=float, default=0.001, help='Refractory period for spike detection')
-parser.add_argument('-m', '--max_size', type=float, default=0.0035, help='Maximum size for a single spike')
-parser.add_argument('-n', '--numtaps', type=int, default=10001, help='Number of taps for high pass filter on Hilbert Transform')
-parser.add_argument('-z', '--saturation', type=str, help='low,high saturation level to filter out')
-parser.add_argument('-c', '--cutoff', type=float, default=1., help='Cutoff frequency of low pass filter')
+parser.add_argument('-d', '--detection', type=float, default=0.060, help='Hilbert transform must be above this value')
 parser.add_argument('-o', '--onlyabove', type=float, default=0.005, help='Only output spikes above this value')
+parser.add_argument('--tolerance', type=float, default=0.0005*1000, help='Spikes detected closer to this value will be put on the same window (ms)')
+parser.add_argument('--subsamp', type=int, default=3, help='Subsample hilbert for wavelet spike detection (speed purposes)')
 parser.add_argument('-f', '--fixedwin', help='Fixed window(use for single-fish data files)', action='store_true')
-parser.add_argument('-u', '--useHilbert', help='use already generated Hilbert file', action='store_true')
-
+parser.add_argument('--minWavelet', type=float, default=12, help='Minimum size for wavelet spike detection')
+parser.add_argument('--maxWavelet', type=float, default=120, help='Maximum size for wavelet spike detection')
+parser.add_argument('--stepWavelet', type=float, default=0.10, help='Step for wavelet spike detection')
+parser.add_argument('--argmaxorder', type=int, default=15, help='Peak detection inside windows')
 
 args = parser.parse_args()
 
-threshold = args.detection
-cutoff = args.cutoff
+locs_file = args.locs_file
+hmin = args.detection
 onlyAbove = args.onlyabove
-refrac = int(args.refractory * freq)
-maxSize = int(args.max_size * freq)
 single = args.fixedwin
-chirpGain = args.chirps_gain
 outputFile = args.outfile
-
-saturation = args.saturation
-satL = -9.9 # TODO: pegar do .h
-satH = 9.9
-if saturation is not None:
-    satL = float(saturation.split(',')[0].strip())
-    satH = float(saturation.split(',')[1].strip())
+tol = int((args.tolerance/1000.)*freq)
+step = args.subsamp
+typMinSize = args.minWavelet/step
+typMaxSize = args.maxWavelet/step
+typStep = args.subsamp
+argrelmaxorder = args.argmaxorder
 
 debug = False
-
-num = [-0.127838238013738, -0.122122430298337, -0.207240989159078, -0.741109041690890,  1.329553577868309]
-den = [ 1.000000000000000, -0.445897866413142, -0.101209607292324, -0.047938888781208, -0.037189007185997]
-
-def myabshilbert(x):
-    return np.sqrt(scipy.signal.lfilter(num, den, x)[4:]**2 + x[:-4]**2)
-
 
 inarr = np.memmap(args.timeseries_file, dtype=np.float32, mode='r')
 sizein, = inarr.shape
 
-if args.useHilbert == True:
-    h = np.memmap(args.hilbert_file, np.float32, 'r')
-else:
-    sys.stdout.write('Generating new Hilbert file\n')
-    sys.stdout.flush()
-    h = np.memmap(args.hilbert_file, np.float32, 'w+', shape=(sizein//nchan - 4))
-    for i in xrange(nchan):
-        sys.stdout.write('\t%d\r'%i)
-        sys.stdout.flush()
-        h += myabshilbert(inarr[i::nchan])
-
-
-    #kern_size = int(medfiltsize*freq)
-    #if (kern_size % 2) == 0:
-    #    kern_size += 1
-    sys.stdout.write('gmean\n')
-    sys.stdout.flush()
-    #h[:] = scipy.signal.medfilt(h, kernel_size=kern_size) + 0.1*h
-    h[:] = gmean(h, kernel_size=gmeansize)
-
-    n = args.numtaps
-    a = scipy.signal.firwin(n, [20, 1000], pass_zero=False, window='hanning', nyq=freq/2)
-
-    sys.stdout.write('low pass\n')
-    sys.stdout.flush()
-    h[:] = np.convolve(h, a, mode='same')
-
-del h
 h = np.fromfile(args.hilbert_file, dtype=np.float32)
-#h = h[50*50000:51*50000]
 
-size10s = int(freq*2)
-step = 3
+size2s = int(freq*2)
 hd = scipy.signal.decimate(h,step,zero_phase=True)
 tam = hd.size
-typMinSize = 12/step # Samples
-typMaxSize = 120/step # Samples
-typStep = 0.10
-thLim = 0 # On the filtered hilber signal
+thLim = hmin # On the filtered hilbert signal -> To complete with zeros
 
-NSteps = tam // size10s
-if (tam % size10s) > 0:
+NSteps = tam // size2s
+if (tam % size2s) > 0:
     NSteps += 1
 
 import pymp
 locsp = pymp.shared.list()
 with pymp.Parallel(8) as p:
     for i in p.range(0,NSteps):
-        beg = size10s * i
-        end = min( size10s*(i+1), tam )
+        beg = size2s * i
+        end = min( size2s*(i+1), tam )
         sig = hd[beg:end]
         sys.stdout.write('%d\t\t%d\n'%(i,NSteps))
         sys.stdout.flush()
@@ -168,7 +108,7 @@ ilocs, = np.where(np.diff(locs) > int(0.001*freq))
 locs = locs[ilocs+1]
 locs = np.unique(locs)
 
-np.save('locs_'+args.hilbert_file.split('/')[-1].split('.')[0]+'.npy',locs)
+np.save(locs_file,locs)
 #locs = np.load('locs_'+args.hilbert_file.split('/')[-1].split('.')[0]+'.npy')
 
 
@@ -181,8 +121,6 @@ for i in locs:
     plt.plot( (i, i), (-0.2,1.2), 'k-', alpha=0.3)
 plt.show()'''
 
-argrelmaxorder=15
-from scipy.signal import argrelmax
 lastlen = 0
 num=0
 while num < (locs.size-1):
@@ -270,7 +208,7 @@ while num < (locs.size-1):
         if l-winSize//2 < 0 or l+winSize//2 > h.size:
             continue
 
-        possiveisSpikesSig = [ np.array(inarr[c+nchan*(l-winSize//2): c + nchan*(l+winSize//2): nchan]) for c in range(nchan) ]
+        possiveisSpikesSig = [ np.array(inarr[c+NChan*(l-winSize//2): c + NChan*(l+winSize//2): NChan]) for c in range(NChan) ]
         tam = possiveisSpikesSig[0].size
 
         ### Fill with zeros
@@ -288,7 +226,7 @@ while num < (locs.size-1):
         #import matplotlib.pyplot as plt
         #print('%d %d'%(beg, end))
         #plt.plot(h[l-winSize//2:l+winSize//2])
-        for n in range(nchan):
+        for n in range(NChan):
             possiveisSpikesSig[n][:beg] = 0.
             possiveisSpikesSig[n][end:] = 0.
             #plt.plot(possiveisSpikesSig[n])
@@ -309,7 +247,7 @@ while num < (locs.size-1):
                 num += 1
                 continue
         else:
-            njanelas = nchan
+            njanelas = NChan
             listjanelas = [(n,s) for n,s in enumerate(possiveisSpikesSig)]
 
        
@@ -344,7 +282,7 @@ while num < (locs.size-1):
             l1 = min(l1p, l2p)
             l2 = max(l1p, l2p)
 
-        possiveisSpikesSig = [ np.array(inarr[c+nchan*(l1-winSize//2): c + nchan*(l2+winSize//2): nchan]) for c in range(nchan) ]
+        possiveisSpikesSig = [ np.array(inarr[c+NChan*(l1-winSize//2): c + NChan*(l2+winSize//2): NChan]) for c in range(NChan) ]
         tam = possiveisSpikesSig[0].size
 
         if loc > 103998 and False:
@@ -365,7 +303,7 @@ while num < (locs.size-1):
             end = tam
         end = min(tam, end)
 
-        for n in range(nchan):
+        for n in range(NChan):
             possiveisSpikesSig[n][:beg] = 0.
             possiveisSpikesSig[n][end:] = 0.
 
@@ -375,7 +313,7 @@ while num < (locs.size-1):
             for Signal in possiveisSpikesSig:
                 plt.plot(Signal,'b-')
             plt.show()
-        njanelas = nchan
+        njanelas = NChan
 
         size = (l2+winSize//2)-(l1-winSize//2)
         listjanelas = [(n,s) for n,s in enumerate(possiveisSpikesSig)]

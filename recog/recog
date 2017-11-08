@@ -6,7 +6,6 @@ import numpy as np
 import recogdb
 import struct
 import scipy.signal
-import peakutils
 
 import sys,os
 import argparse
@@ -260,8 +259,6 @@ class recog:
             plt.plot(np.arange(rem,reme), h,'g-')
             plt.show()
         locs_raw = scipy.signal.argrelmax(h,order=15)
-        #locs_raw = scipy.signal.find_peaks_cwt(h,np.arange(12,180,1), noise_perc=10)
-        #locs_raw = peakutils.indexes(h, thres=0.1, min_dist=15)
         locs = np.unique(locs_raw)
         locs = locs[ np.where(h[locs] > hmin) ]
         locs += rem

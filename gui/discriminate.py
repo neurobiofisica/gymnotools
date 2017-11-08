@@ -27,34 +27,23 @@ class DiscriminateWindow(QtWidgets.QDialog):
         self.ui = Ui_discriminateWindow()
         self.ui.setupUi(self)
 
-        self.defaultValues = {self.ui.lowSaturationLineEdit: -9.9, \
-                              self.ui.highSaturationLineEdit: 9.9, \
-
-                              self.ui.tapsLineEdit: 301, \
-
-                              self.ui.cutoffLineEdit: 1.0, \
-
-                              self.ui.thresholdLevelLineEdit: 1.0, \
-
-                              self.ui.loadChirpsModelLineEdit: os.path.dirname(os.path.realpath(__file__)) + '/../chirpDetector/chirpModel_abs.chirpmodel'
-                             }
-
-        for field in self.defaultValues.keys():
-            field.setText(str(self.defaultValues[field]))
-        
         # LineFields List -> for saving parameters
         self.lineFieldsList = (self.ui.loadTimeseriesLineEdit, \
-                               self.ui.loadChirpsModelLineEdit, \
-                               self.ui.saveChirpsLineEdit, \
-                               self.ui.loadChirpsLineEdit, \
-                               self.ui.saveLoadHilbLineEdit, \
+                               self.ui.saveHilbLineEdit, \
+                               self.ui.loadHilbLineEdit, \
                                self.ui.lowSaturationLineEdit, \
                                self.ui.highSaturationLineEdit, \
+                               self.ui.gmeanLineEdit, \
                                self.ui.tapsLineEdit, \
-                               self.ui.cutoffLineEdit, \
-                               self.ui.thresholdLevelLineEdit, \
-                               self.ui.refractoryLineEdit, \
-                               self.ui.maxSizeLineEdit, \
+                               self.ui.lowCutoffLineEdit, \
+                               self.ui.highCutoffLineEdit, \
+                               self.ui.subsampLineEdit, \
+                               self.ui.minWaveletLineEdit, \
+                               self.ui.maxWaveletLineEdit, \
+                               self.ui.stepWaveletLineEdit, \
+                               self.ui.peakLineEdit, \
+                               self.ui.minHilbLineEdit, \
+                               self.ui.toleranceLineEdit, \
                                self.ui.saveSpikesLineEdit, \
                                self.ui.loadSpikesLineEdit, \
                                self.ui.loadFilterLineEdit, \
@@ -74,10 +63,7 @@ class DiscriminateWindow(QtWidgets.QDialog):
         
         # Program objects -> they must be parameters for the GarbageCollector
         # do not clean them
-        self.detectChirpsProgram = QtCore.QProcess()
-        self.filterAssistProgram = QtCore.QProcess()
-        self.thresholdAssistProgram = QtCore.QProcess()
-        self.minlevelAssistProgram = QtCore.QProcess()
+        self.calcHilbProgram = QtCore.QProcess()
         self.verifySpikesProgram = QtCore.QProcess()
         self.detectSpikesProgram = QtCore.QProcess()
         self.applySVMProgram = QtCore.QProcess()
@@ -85,7 +71,7 @@ class DiscriminateWindow(QtWidgets.QDialog):
         self.detectTimestampsProgram = QtCore.QProcess()
         self.plotIPIandSVMProgram = QtCore.QProcess()
         
-        self.dicProgram = {'detectaChirp': (self.detectChirpsProgram, ), \
+        self.dicProgram = {'calcHilb': (self.calcHilbProgram, ), \
                            'winview': (self.verifySpikesProgram, ), \
                            'spikes': (self.detectSpikesProgram, ), \
                            'singlefish': (self.applySVMProgram, ), \
@@ -128,7 +114,6 @@ class DiscriminateWindow(QtWidgets.QDialog):
         
         for label in self.titleLabels:
             label.clicked.connect(self.expandLayout)
-            #QtCore.QObject.connect(label, QtCore.SIGNAL('clicked()'), self.expandLayout)
         
         self.defineFieldsType()
         self.connectFileFields()
@@ -137,11 +122,15 @@ class DiscriminateWindow(QtWidgets.QDialog):
         
         self.initialClickState()
         
+        # Unlock fields based on default values
+        for field,unlock in self.Fields.items():
+            self.tryUnlockRaw(field)
+
         # Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
     
     def connectButtons(self):
-        self.ui.detectChirpsBut.clicked.connect(self.detectChirps)
+        self.ui.calcHilbBut.clicked.connect(self.calcHilb)
         self.ui.saveParametersBut.clicked.connect(self.saveParameters)
         self.ui.loadParametersBut.clicked.connect(self.loadParameters)
         self.ui.detectSpikesBut.clicked.connect(self.detectSpikes)
@@ -151,91 +140,75 @@ class DiscriminateWindow(QtWidgets.QDialog):
         self.ui.detectTimestampsBut.clicked.connect(self.detectTimestamps)
         self.ui.verifyCorrectTimestampsBut.clicked.connect(self.verifyAndCorrect)
 
-        #QtCore.QObject.connect(self.ui.detectChirpsBut, QtCore.SIGNAL('clicked()'), self.detectChirps)
-
-        #QtCore.QObject.connect(self.ui.saveParametersBut, QtCore.SIGNAL('clicked()'), self.saveParameters)
-        #QtCore.QObject.connect(self.ui.loadParametersBut, QtCore.SIGNAL('clicked()'), self.loadParameters)
-        
-        #QtCore.QObject.connect(self.ui.detectSpikesBut, QtCore.SIGNAL('clicked()'), self.detectSpikes)
-        #QtCore.QObject.connect(self.ui.verifySpikesBut, QtCore.SIGNAL('clicked()'), self.verifySpikes)
-        
-        #QtCore.QObject.connect(self.ui.applySVMBut, QtCore.SIGNAL('clicked()'), self.applySVM)
-        
-        #QtCore.QObject.connect(self.ui.applyContinuityBut, QtCore.SIGNAL('clicked()'), self.applyContinuity)
-        
-        #QtCore.QObject.connect(self.ui.detectTimestampsBut, QtCore.SIGNAL('clicked()'), self.detectTimestamps)
-        
-        #QtCore.QObject.connect(self.ui.verifyCorrectTimestampsBut, QtCore.SIGNAL('clicked()'), self.verifyAndCorrect)
-
-    def detectChirps(self):
-        print('detectaChirp')
+    def calcHilb(self):
+        print('calcHilb')
 
         TSName = self.ui.loadTimeseriesLineEdit.text()
-        chirpsModel = self.ui.loadChirpsModelLineEdit.text()
-        saveChirps = self.ui.saveChirpsLineEdit.text()
-        lowSat = self.ui.lowSaturationLineEdit.text()
-        highSat = self.ui.highSaturationLineEdit.text()
+        hilbName = self.ui.saveHilbLineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        gmeansize = self.ui.gmeanLineEdit.text()
+        lowCutoff = self.ui.lowCutoffLineEdit.text()
+        highCutoff = self.ui.highCutoffLineEdit.text()
+
+        listArgs = ['--numtaps=%s'%(taps), \
+                        '--gmeansize=%s'%(gmeansize), \
+                        '--lowcutoff=%s'%(lowCutoff), \
+                        '--highcutoff=%s'%(highCutoff), \
+                        TSName, \
+                        hilbName, \
+                        ]
 
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
         
         # Same name of self.dicProgram
-        self.programname = 'detectaChirp'
+        self.programname = 'calcHilb'
         #Be sure that is on current directory
         os.chdir( os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) )
-        self.detectChirpsProgram.start('./../chirpDetector/detectaChirp', \
-                                        ['--saturation=%s,%s'%(lowSat,highSat), \
-                                        TSName, \
-                                        chirpsModel, \
-                                        saveChirps, \
-                                        ])
+        self.calcHilbProgram.start('./../spikes/hilb', \
+                                        listArgs)
 
         self.cancelled = False
-        def detectChirpsFinish(ret, exitStatus):
+        def calcHilbFinish(ret, exitStatus):
             self.app.restoreOverrideCursor()
             dialog.hide()
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
-                self.ui.loadChirpsLineEdit.setText(saveChirps)
+                self.ui.loadHilbLineEdit.setText(hilbName)
             else:
                 return None
 
-        self.detectChirpsProgram.finished.connect(detectChirpsFinish)
-        self.detectChirpsProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
-        self.detectChirpsProgram.readyReadStandardError.connect(self.printAllStandardError)
-        #QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectChirpsFinish)
-        #QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.detectChirpsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
+        self.calcHilbProgram.finished.connect(calcHilbFinish)
+        self.calcHilbProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
+        self.calcHilbProgram.readyReadStandardError.connect(self.printAllStandardError)
 
-
-    
     def detectSpikes(self):
         print('spikes')
         TSName = self.ui.loadTimeseriesLineEdit.text()
-        chirpsFile = self.ui.loadChirpsLineEdit.text()
-        hilbName = self.ui.saveLoadHilbLineEdit.text()
-        taps = self.ui.tapsLineEdit.text()
-        cutoff = self.ui.cutoffLineEdit.text()
-        threshold = self.ui.thresholdLevelLineEdit.text()
-        refractory = self.ui.refractoryLineEdit.text()
-        maxSize = self.ui.maxSizeLineEdit.text()
+        hilbName = self.ui.loadHilbLineEdit.text()
         saveSpikes = self.ui.saveSpikesLineEdit.text()
-        useHilb = self.ui.useHilbCheckBox.isChecked()
+        locs_file = os.path.dirname(saveSpikes) +'/'+ os.path.basename(saveSpikes)+'_locs.npy'
+        detection = self.ui.minHilbLineEdit.text()
+        tolerance = self.ui.toleranceLineEdit.text()
+        subsamp = self.ui.subsampLineEdit.text()
+        minwavelet = self.ui.minWaveletLineEdit.text()
+        maxwavelet = self.ui.maxWaveletLineEdit.text()
+        stepwavelet = self.ui.stepWaveletLineEdit.text()
+        argmaxorder = self.ui.peakLineEdit.text()
+        taps = self.ui.tapsLineEdit.text()
+        onlyAbove = self.ui.onlyAboveLineEdit.text()
 
-        #listArgs = ['--chirps_file=%s'%chirpsFile, \
-        listArgs = ['--detection=%s'%(threshold), \
-                            '--refractory=%s'%(refractory), \
-                            '--max_size=%s'%(maxSize), \
-                            '--detection=%s'%threshold, \
-                            '--numtaps=%s'%taps, \
-                            '--cutoff=%s'%cutoff, \
+        listArgs = ['--detection=%s'%detection, \
+                            '--onlyabove=%s'%onlyAbove, \
+                            '--tolerance=%s'%tolerance, \
+                            '--subsamp=%s'%subsamp, \
+                            '--minWavelet=%s'%minwavelet, \
+                            '--maxWavelet=%s'%maxwavelet, \
+                            '--stepWavelet=%s'%stepwavelet, \
+                            '--argmaxorder=%s'%argmaxorder, \
                             TSName, \
                             hilbName, \
+                            locs_file, \
                             saveSpikes]
-        if useHilb == True:
-            listArgs.insert(0, '--useHilbert')
-        else:
-            listArgs.insert(3, '--numtaps=%s'%taps)
-            listArgs.insert(4, '--cutoff=%s'%cutoff)
 
         dialog = self.raiseLongTimeInformation()
         self.app.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
@@ -259,9 +232,6 @@ class DiscriminateWindow(QtWidgets.QDialog):
         self.detectSpikesProgram.finished.connect(detectSpikesFinish)
         self.detectSpikesProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
         self.detectSpikesProgram.readyReadStandardError.connect(self.printAllStandardError)        
-        #QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectSpikesFinish)
-        #QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.detectSpikesProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def verifySpikes(self):
         print('winview')
@@ -282,12 +252,11 @@ class DiscriminateWindow(QtWidgets.QDialog):
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 pass
             else:
-                print('stdout:\n' + self.verifySpikesProgram.readAllStandardOutput())
-                print('stderr:\n' + self.verifySpikesProgram.readAllStandardError())
+                print('stdout:\n' + self.verifySpikesProgram.readAllStandardOutput().data().decode())
+                print('stderr:\n' + self.verifySpikesProgram.readAllStandardError().data().decode())
                 return None
         
         self.verifySpikesProgram.finished.connect(verifySpikesFinish)
-        #QtCore.QObject.connect(self.verifySpikesProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), verifySpikesFinish)
     
     def applySVM(self):
         print('singlefish')
@@ -336,22 +305,20 @@ class DiscriminateWindow(QtWidgets.QDialog):
                 self.ui.loadSinglefishLineEdit.setText(saveSinglefish)
                 self.ui.loadProbLineEdit.setText(saveProb)
             else:
-                print('stdout:\n' + self.applySVMProgram.readAllStandardOutput())
-                print('stderr:\n' + self.applySVMProgram.readAllStandardError())
+                print('stdout:\n' + self.applySVMProgram.readAllStandardOutput().data().decode())
+                print('stderr:\n' + self.applySVMProgram.readAllStandardError().data().decode())
                 return None
         
         self.applySVMProgram.finished.connect(applySVMFinish)
         self.applySVMProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
         self.applySVMProgram.readyReadStandardError.connect(self.printAllStandardError)
-        #QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), applySVMFinish)
-        #QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.applySVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def applyContinuity(self):
         print('recog')
         self.lowSaturation = self.ui.lowSaturationLineEdit.text()
         self.highSaturation = self.ui.highSaturationLineEdit.text()
         self.TSName = self.ui.loadTimeseriesLineEdit.text()
+        self.hilbName = self.ui.loadHilbLineEdit.text()
         self.spikesName = self.ui.loadSpikesLineEdit.text()
         self.singlefishName = self.ui.loadSinglefishLineEdit.text()
         self.probName = self.ui.loadProbLineEdit.text()
@@ -400,6 +367,7 @@ class DiscriminateWindow(QtWidgets.QDialog):
                                            '--saturation=%s,%s'%(self.lowSaturation, self.highSaturation), \
                                            '--direction=%d'%d, \
                                            self.saveDBName, \
+                                           self.hilbName, \
                                            self.spikesName, \
                                            self.singlefishName, \
                                            self.probName, \
@@ -420,17 +388,14 @@ class DiscriminateWindow(QtWidgets.QDialog):
                 else:
                     self.ui.loadDBLineEdit.setText(self.saveDBName)
             else:
-                print('stdout:\n' + self.applyContinuityProgram.readAllStandardOutput())
-                print('stderr:\n' + self.applyContinuityProgram.readAllStandardError())
+                print('stdout:\n' + self.applyContinuityProgram.readAllStandardOutput().data().decode())
+                print('stderr:\n' + self.applyContinuityProgram.readAllStandardError().data().decode())
                 return None
         
         
         self.applyContinuityProgram.finished.connect(recogFinish)
         self.applyContinuityProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
         self.applyContinuityProgram.readyReadStandardError.connect(self.printAllStandardError)
-        #QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), recogFinish)
-        #QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.applyContinuityProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
         
     
     def mean_stdWinLen(self, winlenFilename):
@@ -463,16 +428,13 @@ class DiscriminateWindow(QtWidgets.QDialog):
             if (self.isReturnCodeOk(ret) is True) and (exitStatus == QtCore.QProcess.NormalExit) and (self.cancelled is False):
                 self.ui.loadTimestampsLineEdit.setText(saveTimestamps)
             else:
-                print('stdout:\n' + self.detectSpikesProgram.readAllStandardOutput())
-                print('stderr:\n' + self.detectSpikesProgram.readAllStandardError())
+                print('stdout:\n' + self.detectSpikesProgram.readAllStandardOutput().data().decode())
+                print('stderr:\n' + self.detectSpikesProgram.readAllStandardError().data().decode())
                 return None
         
         self.detectTimestampsProgram.finished.connect(detectTimestampsFinish)
         self.detectTimestampsProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
         self.detectTimestampsProgram.readyReadStandardError.connect(self.printAllStandardError)
-        #QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), detectTimestampsFinish)
-        #QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.detectTimestampsProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
     
     def verifyAndCorrect(self):
         print('plotIPIandSVM')
@@ -512,9 +474,6 @@ class DiscriminateWindow(QtWidgets.QDialog):
         self.plotIPIandSVMProgram.finished.connect(plotIPIandSVMFinish)
         self.plotIPIandSVMProgram.readyReadStandardOutput.connect(self.printAllStandardOutput)
         self.plotIPIandSVMProgram.readyReadStandardError.connect(self.printAllStandardError)
-        #QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('finished(int, QProcess::ExitStatus)'), plotIPIandSVMFinish)
-        #QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('readyReadStandardOutput()'), self.printAllStandardOutput)
-        #QtCore.QObject.connect(self.plotIPIandSVMProgram, QtCore.SIGNAL('readyReadStandardError()'), self.printAllStandardError)
 
 
         
@@ -524,7 +483,7 @@ class DiscriminateWindow(QtWidgets.QDialog):
             if sys.version_info.major == 3:
                 sys.stdout.write(program.readAllStandardOutput().data().decode())
             else:
-                sys.stdout.write(program.readAllStandardOutput().data())
+                sys.stdout.write(program.readAllStandardOutput().data().decode())
             sys.stdout.flush()
     
     def printAllStandardError(self):
@@ -543,7 +502,6 @@ class DiscriminateWindow(QtWidgets.QDialog):
         dialog.setModal(True)
         self.CancelBut = dialog.addButton(QtWidgets.QMessageBox.Cancel)
         self.CancelBut.clicked.connect(self.cancelApp)
-        #QtCore.QObject.connect(self.CancelBut, QtCore.SIGNAL('clicked()'), self.cancelApp)
         dialog.show()
         return dialog
     
@@ -559,8 +517,8 @@ class DiscriminateWindow(QtWidgets.QDialog):
         if ret != 0:
             print('\n---\tERROR (%s): %d\t---\n'%(self.programname, ret))
             for program in self.dicProgram[self.programname]:
-                print(program.readAllStandardOutput())
-                print(program.readAllStandardError())
+                print(program.readAllStandardOutput().data().decode())
+                print(program.readAllStandardError().data().decode())
             self.raiseParameterError('%s ERROR!\n'%self.programname)
             return False
         else:
@@ -622,21 +580,24 @@ class DiscriminateWindow(QtWidgets.QDialog):
     
     def defineFieldsType(self):
         self.fieldsType = {self.ui.loadTimeseriesLineEdit: 'load', \
-                           self.ui.loadChirpsModelLineEdit: 'load', \
-                           self.ui.saveChirpsLineEdit: 'save', \
-                           self.ui.loadChirpsLineEdit: 'load', \
+                           self.ui.saveHilbLineEdit: 'save', \
+                           self.ui.loadHilbLineEdit: 'load', \
 
-                           self.ui.saveLoadHilbLineEdit: 'save', \
-                           self.ui.useHilbCheckBox: 'not-check', \
-                           
                            self.ui.lowSaturationLineEdit: 'float', \
                            self.ui.highSaturationLineEdit: 'float', \
+                           self.ui.gmeanLineEdit: 'int', \
                            self.ui.tapsLineEdit: 'int', \
-                           self.ui.cutoffLineEdit: 'float', \
-                           self.ui.thresholdLevelLineEdit: 'float', \
-                           self.ui.refractoryLineEdit: 'float', \
-                           self.ui.maxSizeLineEdit: 'float', \
-                           
+                           self.ui.lowCutoffLineEdit: 'float', \
+                           self.ui.highCutoffLineEdit: 'float', \
+
+                           self.ui.subsampLineEdit: 'int', \
+                           self.ui.minWaveletLineEdit: 'float', \
+                           self.ui.maxWaveletLineEdit: 'float', \
+                           self.ui.stepWaveletLineEdit: 'float', \
+                           self.ui.peakLineEdit: 'int', \
+                           self.ui.minHilbLineEdit: 'float', \
+                           self.ui.toleranceLineEdit: 'float', \
+
                            self.ui.saveSpikesLineEdit: 'save', \
                            
                            self.ui.loadSpikesLineEdit: 'load', \
@@ -669,10 +630,8 @@ class DiscriminateWindow(QtWidgets.QDialog):
         
         self.fileFieldsExtension = {
             self.ui.loadTimeseriesLineEdit: 'Timeseries on format I32 file (*.*) (*.*)', \
-            self.ui.loadChirpsModelLineEdit: 'Chirp model file (*.chirpmodel) (*.chirpmodel)', \
-            self.ui.saveChirpsLineEdit: 'Chirps location file (*.chirps) (*.chirps)', \
-            self.ui.loadChirpsLineEdit: 'Chirps location file (*.chirps), (*.chirps)', \
-            self.ui.saveLoadHilbLineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
+            self.ui.saveHilbLineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
+            self.ui.loadHilbLineEdit: 'Hilbert transform (*.hilb) (*.hilb)', \
             self.ui.saveSpikesLineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.loadSpikesLineEdit: 'Spikes File (*.spikes) (*.spikes)', \
             self.ui.loadFilterLineEdit: 'Filter File (*.filter) (*.filter)', \
@@ -705,10 +664,8 @@ class DiscriminateWindow(QtWidgets.QDialog):
     
     def connectFileFields(self):
         FileFields = (self.ui.loadTimeseriesLineEdit, \
-                      self.ui.loadChirpsModelLineEdit, \
-                      self.ui.saveChirpsLineEdit, \
-                      self.ui.loadChirpsLineEdit, \
-                      self.ui.saveLoadHilbLineEdit, \
+                      self.ui.saveHilbLineEdit, \
+                      self.ui.loadHilbLineEdit, \
                       self.ui.saveSpikesLineEdit, \
                       self.ui.loadSpikesLineEdit, \
                       self.ui.loadFilterLineEdit, \
@@ -726,85 +683,63 @@ class DiscriminateWindow(QtWidgets.QDialog):
         
         for field in FileFields:
             field.clicked.connect(self.fileFieldHandler)
-            #QtCore.QObject.connect(field, QtCore.SIGNAL('clicked()'), self.fileFieldHandler)
     
     def connectUnlockFields(self):
         
         # The first element of the unlockers is the list of fields that block others
         # The second element are the fields that are release by that edition
-        self.loadTimeseriesUnlocker = ( \
+
+        self.hilbParametersUnlocker = ( \
             ( \
                 (self.ui.loadTimeseriesLineEdit, \
+                self.ui.gmeanLineEdit, \
+                self.ui.tapsLineEdit, \
+                self.ui.lowCutoffLineEdit, \
+                self.ui.highCutoffLineEdit, \
                 ), \
-                (self.ui.saveChirpsLineEdit, \
-                 self.ui.lowSaturationLineEdit, \
-                 self.ui.highSaturationLineEdit, \
-                ) \
+                (self.ui.saveHilbLineEdit, \
+                )
             ), \
-        )
-
-        self.loadChirpsModelUnlocker = ( \
             ( \
-                (self.ui.loadChirpsModelLineEdit, \
-                 self.ui.saveChirpsLineEdit, \
+                (self.ui.loadTimeseriesLineEdit, \
+                self.ui.gmeanLineEdit, \
+                self.ui.tapsLineEdit, \
+                self.ui.lowCutoffLineEdit, \
+                self.ui.highCutoffLineEdit, \
+                self.ui.saveHilbLineEdit, \
                 ), \
-                (self.ui.detectChirpsBut, \
+                (self.ui.calcHilbBut, \
                 )
             ), \
         )
 
-        self.loadChirpsUnlocker = ( \
-            ( \
-                (self.ui.loadChirpsLineEdit, \
-                ), \
-                (self.ui.saveLoadHilbLineEdit, \
-                 self.ui.tapsLineEdit, \
-                 self.ui.cutoffLineEdit, \
-                ) \
-            ), \
-        )
-
-
-        self.clickUseHilb = ( \
-            ( \
-                (self.ui.useHilbCheckBox, \
-                ), \
-                (self.ui.tapsLineEdit, \
-                 self.ui.cutoffLineEdit, \
-                ) \
-            ), \
-        )
-        
         self.spikeParametersUnlocker = ( \
             ( \
-                (self.ui.loadTimeseriesLineEdit, \
-                 self.ui.lowSaturationLineEdit, \
-                 self.ui.highSaturationLineEdit, \
-                 self.ui.tapsLineEdit, \
-                 self.ui.cutoffLineEdit, \
-                 self.ui.thresholdLevelLineEdit, \
+                (self.ui.loadHilbLineEdit, \
+                 self.ui.subsampLineEdit, \
+                 self.ui.peakLineEdit, \
+                 self.ui.minWaveletLineEdit, \
+                 self.ui.maxWaveletLineEdit, \
+                 self.ui.stepWaveletLineEdit, \
+                 self.ui.minHilbLineEdit, \
+                 self.ui.toleranceLineEdit, \
                 ), \
                 (self.ui.saveSpikesLineEdit, \
-                ) \
+                )
             ), \
-            #( \
-            #    (self.ui.tapsLineEdit, \
-            #     self.ui.cutoffLineEdit, \
-            #    ), \
-            #    (self.ui.thresholdLevelLineEdit, \
-            #    )
-            #), \
-        )
-        
-        self.spikeSavefileUnlocker = ( \
             ( \
-                (self.ui.loadTimeseriesLineEdit, \
-                 self.ui.lowSaturationLineEdit, \
-                 self.ui.highSaturationLineEdit, \
+                (self.ui.loadHilbLineEdit, \
+                 self.ui.subsampLineEdit, \
+                 self.ui.peakLineEdit, \
+                 self.ui.minWaveletLineEdit, \
+                 self.ui.maxWaveletLineEdit, \
+                 self.ui.stepWaveletLineEdit, \
+                 self.ui.minHilbLineEdit, \
+                 self.ui.toleranceLineEdit, \
                  self.ui.saveSpikesLineEdit, \
                 ), \
                 (self.ui.detectSpikesBut, \
-                ) \
+                )
             ), \
         )
         
@@ -861,6 +796,7 @@ class DiscriminateWindow(QtWidgets.QDialog):
                  self.ui.lowSaturationLineEdit, \
                  self.ui.highSaturationLineEdit, \
                  self.ui.saveDBLineEdit, \
+                 self.ui.loadHilbLineEdit, \
                 ), \
                 (self.ui.applyContinuityBut, \
                 )
@@ -897,18 +833,23 @@ class DiscriminateWindow(QtWidgets.QDialog):
         )
         
         # Connects each field to its unlocker (dependencies and unlockers)
-        self.Fields = {self.ui.loadTimeseriesLineEdit: self.loadTimeseriesUnlocker, \
-                       self.ui.loadChirpsModelLineEdit: self.loadChirpsModelUnlocker, \
-                       self.ui.saveChirpsLineEdit: self.loadChirpsModelUnlocker, \
-                       self.ui.loadChirpsLineEdit: self.loadChirpsUnlocker, \
-                       self.ui.useHilbCheckBox: self.clickUseHilb, \
-                       self.ui.saveLoadHilbLineEdit: self.spikeParametersUnlocker, \
-                       self.ui.lowSaturationLineEdit: self.spikeParametersUnlocker, \
-                       self.ui.highSaturationLineEdit: self.spikeParametersUnlocker, \
-                       self.ui.tapsLineEdit: self.spikeParametersUnlocker, \
-                       self.ui.cutoffLineEdit: self.spikeParametersUnlocker, \
-                       self.ui.thresholdLevelLineEdit: self.spikeParametersUnlocker, \
-                       self.ui.saveSpikesLineEdit: self.spikeSavefileUnlocker, \
+        self.Fields = {self.ui.loadTimeseriesLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.saveHilbLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.lowSaturationLineEdit: self.SVMSaveParametersUnlocker, \
+                       self.ui.highSaturationLineEdit: self.SVMSaveParametersUnlocker, \
+                       self.ui.gmeanLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.tapsLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.lowCutoffLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.highCutoffLineEdit: self.hilbParametersUnlocker, \
+                       self.ui.loadHilbLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.subsampLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.peakLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.minWaveletLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.maxWaveletLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.stepWaveletLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.minHilbLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.toleranceLineEdit: self.spikeParametersUnlocker, \
+                       self.ui.saveSpikesLineEdit: self.spikeParametersUnlocker, \
                        self.ui.loadSpikesLineEdit: self.SVMLoadParametersUnlocker, \
                        self.ui.loadFilterLineEdit: self.SVMLoadParametersUnlocker, \
                        self.ui.loadRescaleLineEdit: self.SVMLoadParametersUnlocker, \
@@ -928,25 +869,28 @@ class DiscriminateWindow(QtWidgets.QDialog):
         for field in self.Fields.keys():
             if isinstance(field, QtWidgets.QLineEdit):
                 field.textChanged.connect(self.tryUnlock)
-                #QtCore.QObject.connect(field, QtCore.SIGNAL('textChanged(QString)'), self.tryUnlock)
             elif isinstance(field, QtWidgets.QCheckBox):
                 field.stateChanged.connect(self.tryUnlock)
-                #QtCore.QObject.connect(field, QtCore.SIGNAL('stateChanged(int)'), self.tryUnlock)
     
     def initialClickState(self):
-        for tup in self.Fields.values():
+        for field in self.Fields.keys():
+            tup = self.Fields[field]
+            print(field.objectName())
             for locker,locked in tup:
                 self.switchLockState(locked, False)
     
-    def tryUnlock(self, text):
-        field = self.sender()
-        
+    def tryUnlockRaw(self, field):
         for tup in self.Fields[field]:
             allChecked = True
             for f in tup[0]:
                 allChecked = allChecked and self.verifyField(f)
-        
+
             self.switchLockState(tup[1], allChecked)
+
+    def tryUnlock(self, text):
+        field = self.sender()
+
+        self.tryUnlockRaw(field)
     
     def verifyField(self, field):
         data = field.text()
@@ -979,9 +923,6 @@ class DiscriminateWindow(QtWidgets.QDialog):
     def switchLockState(self, lockerList, state):
         for el in lockerList:
             el.setEnabled(state)
-            if el in self.defaultValues.keys():
-                if state == False:
-                    el.setText( str(self.defaultValues[el]) )
 
 if __name__ == '__main__':
     
