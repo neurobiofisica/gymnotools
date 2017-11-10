@@ -20,9 +20,9 @@ complete = False
 NChanloc = 4
 hmin = 0.05
 
-jump = False
+jump = True
 #startOn = int(40*freq)
-startOn = 22375500
+startOn = 136006964
 onDirection = 1
 
 if sys.version_info.major == 3:
@@ -491,6 +491,7 @@ class recog:
                 posA2 = distA2.argmin()
                 distA2 = distA2[posA2]
                 posA2 += beg2d
+                sys.stdout.write('A ')
 
                 distB1 = np.array( [np.sum(np.absolute(data - tempsB[i,:])) for i in xrange(beg1d,end1d)], dtype=np.float32)
                 posB1 = distB1.argmin()
@@ -500,6 +501,8 @@ class recog:
                 posB2 = distB2.argmin()
                 distB2 = distB2[posB2]
                 posB2 += beg2d
+                sys.stdout.write('B ')
+                sys.stdout.write('   ')
 
 
 
