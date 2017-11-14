@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'training_interface.ui'
 #
-# Created by: PyQt5 UI code generator 5.9
+# Created by: PyQt5 UI code generator 5.5.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -26,10 +26,9 @@ class Ui_trainingWindow(object):
         self.scrollArea.setAlignment(QtCore.Qt.AlignCenter)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1393, 1241))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1438, 1118))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
-        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.step1Layout = QtWidgets.QVBoxLayout()
         self.step1Layout.setObjectName("step1Layout")
@@ -725,9 +724,9 @@ class Ui_trainingWindow(object):
         self.verifySpikes1But.setText(_translate("trainingWindow", "Verify detection"))
         self.waveletLabel.setText(_translate("trainingWindow", "Min/Max/Step wavelet parameters:"))
         self.loadSpikesLabel.setText(_translate("trainingWindow", "Load spikes file:"))
-        self.detectSpikes2But.setText(_translate("trainingWindow", "Calculate Hilbert and detect Spikes"))
+        self.detectSpikes2But.setText(_translate("trainingWindow", "Detect Spikes"))
         self.verifySpikes2But.setText(_translate("trainingWindow", "Verify detection"))
-        self.detectSpikes1But.setText(_translate("trainingWindow", "Calculate Hilbert and detect Spikes"))
+        self.detectSpikes1But.setText(_translate("trainingWindow", "Detect Spikes"))
         self.subsampLabel.setText(_translate("trainingWindow", "Subsamp Hilbert:"))
         self.peakLabel.setText(_translate("trainingWindow", "Peak detection Order:"))
         self.detectFish1Label.setText(_translate("trainingWindow", "Fish 1"))
