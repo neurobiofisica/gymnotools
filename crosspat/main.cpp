@@ -10,6 +10,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QTextStream>
 #include <QList>
 #include <QPair>
 #include <QtAlgorithms>
@@ -200,6 +201,7 @@ static void cmd_test_count(const CrossModel &model, WindowFile &testFile)
 
 static void cmd_test_list(const CrossModel &model, WindowFile &testFile)
 {
+    QTextStream ts(stdout);
     const QString fmt("%1: decision { %2 } @ %3 ch %4\n");
     static float buf[3*EODSamples] ALIGN(16) = { 0. };
 
@@ -212,11 +214,10 @@ static void cmd_test_list(const CrossModel &model, WindowFile &testFile)
         const double t = (testFile.getEventOffset() / BytesPerSample)/
                 (double)SamplingRate;
 
-        fputs(fmt.arg(subj)
+        ts << fmt.arg(subj)
                 .arg(decision, 0, 'f', 4)
                 .arg(t, 0, 'f', 6)
-                .arg(testFile.getChannelId())
-                .toAscii(), stdout);
+                .arg(testFile.getChannelId());
     }
 }
 
